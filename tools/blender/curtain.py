@@ -8,18 +8,12 @@ def drape_mat():
     if 'Sheen Weight' in b.inputs: b.inputs['Sheen Weight'].default_value=0.55
     return m
 def logo_mat():
+    # 로고가 합성된 단일 베이크 텍스처(UV 0..1) → glTF CLIP/CLAMP 번짐 없음
     m=bpy.data.materials.new("logo"); m.use_nodes=True; nt=m.node_tree; b=nt.nodes.get("Principled BSDF")
     b.inputs['Roughness'].default_value=0.72
     if 'Sheen Weight' in b.inputs: b.inputs['Sheen Weight'].default_value=0.55
-    tc=nt.nodes.new("ShaderNodeTexCoord"); mp=nt.nodes.new("ShaderNodeMapping")
-    # 로고(5:1)를 UV 중앙 폭0.5 높이0.1 영역에 배치 → out=scale*uv+loc
-    mp.inputs['Location'].default_value=(-0.5,-5.0,0); mp.inputs['Scale'].default_value=(2.0,10.0,1.0)
-    nt.links.new(tc.outputs['UV'],mp.inputs['Vector'])
-    img=nt.nodes.new("ShaderNodeTexImage"); img.image=bpy.data.images.load('/tmp/cut/merryon_logo_t.png'); img.extension='CLIP'
-    nt.links.new(mp.outputs['Vector'],img.inputs['Vector'])
-    mix=nt.nodes.new("ShaderNodeMixRGB"); mix.inputs['Color1'].default_value=(CREAM[0],CREAM[1],CREAM[2],1)
-    mix.inputs['Color2'].default_value=(0.12,0.10,0.10,1)
-    nt.links.new(img.outputs['Alpha'],mix.inputs['Fac']); nt.links.new(mix.outputs['Color'],b.inputs['Base Color'])
+    img=nt.nodes.new("ShaderNodeTexImage"); img.image=bpy.data.images.load('/tmp/cut/curtain_logo_tex.png')
+    nt.links.new(img.outputs['Color'],b.inputs['Base Color'])
     return m
 
 # 그리드 → 사인파 세로 주름(시뮬 없이 안정적)
