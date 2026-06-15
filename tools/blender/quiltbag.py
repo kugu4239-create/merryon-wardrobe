@@ -47,19 +47,17 @@ c1.rotation_euler=(math.radians(90),0,0); c1.data.materials.append(GOLD); allobj
 bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.004, location=(0,D/2+0.01,0.0), major_segments=20, minor_segments=8); c2=bpy.context.active_object
 c2.rotation_euler=(math.radians(90),0,0); c2.data.materials.append(GOLD); allobj.append(c2)
 
-# ---- 골드 체인 손잡이 (토러스 링 체인) ----
-import mathutils
-def chain(p0,p1,n=12,r=0.013):
-    p0=mathutils.Vector(p0); p1=mathutils.Vector(p1)
-    for i in range(n):
-        t=i/(n-1)
-        # arc 위로 솟게
-        pos=p0.lerp(p1,t); pos.z += math.sin(t*math.pi)*0.16
-        bpy.ops.mesh.primitive_torus_add(major_radius=r, minor_radius=0.004, location=pos, major_segments=10, minor_segments=5)
-        o=bpy.context.active_object
-        o.rotation_euler=(0, math.radians(90) if i%2 else 0, 0)
-        o.data.materials.append(GOLD); allobj.append(o)
-chain((-W/2+0.03, 0, Hh/2-0.01),(W/2-0.03, 0, Hh/2-0.01))
+# ---- 골드 체인 손잡이 (깔끔한 튜브 아치) ----
+cur=bpy.data.curves.new("handle","CURVE"); cur.dimensions='3D'; sp=cur.splines.new('NURBS'); sp.points.add(4)
+hx=W/2-0.04
+pts=[(-hx,0,Hh/2-0.01),(-hx*0.6,0,Hh/2+0.07),(0,0,Hh/2+0.10),(hx*0.6,0,Hh/2+0.07),(hx,0,Hh/2-0.01)]
+for i,p in enumerate(pts): sp.points[i].co=(p[0],p[1],p[2],1)
+sp.use_endpoint_u=True; sp.order_u=3; cur.bevel_depth=0.006; cur.bevel_resolution=3
+ho=bpy.data.objects.new("handle",cur); sc.collection.objects.link(ho); ho.data.materials.append(GOLD); allobj.append(ho)
+# 체인 질감(작은 링 몇 개만 손잡이 양 끝 고리에)
+for sgn in (-1,1):
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.012, minor_radius=0.004, location=(sgn*hx,0,Hh/2-0.01), major_segments=12, minor_segments=6)
+    o=bpy.context.active_object; o.data.materials.append(GOLD); allobj.append(o)
 
 sc.render.engine='CYCLES'; sc.cycles.samples=8; sc.cycles.device='CPU'
 bpy.ops.object.select_all(action='DESELECT')

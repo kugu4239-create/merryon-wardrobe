@@ -21,22 +21,16 @@ cu.modifiers.new("b","BEVEL").width=0.02; cu.modifiers.new("s","SUBSURF").levels
 
 # ---- 카브리올(휜) 다리 ----
 def cabriole(x,y,mx,my):
-    # 베지어 곡선 프로파일을 따라 가는 다리(위 굵고 아래 가늘게, S자 휨)
-    cur=bpy.data.curves.new("leg","CURVE"); cur.dimensions='3D'; sp=cur.splines.new('BEZIER'); sp.bezier_points.add(3)
-    pts=[(0,0,SH),(mx*0.05,my*0.05,SH*0.66),(mx*0.10,my*0.10,SH*0.33),(mx*0.02,my*0.02,0)]
-    for i,bp in enumerate(sp.bezier_points):
-        bp.co=pts[i]; bp.handle_left_type=bp.handle_right_type='AUTO'
-    cur.bevel_depth=0.022; cur.bevel_resolution=4
-    # taper: 아래로 가늘게
-    cur.taper_object=None
-    o=bpy.data.objects.new("leg",cur); sc.collection.objects.link(o); o.location=(x,y,0)
-    o.data.materials.append(WOOD); add(o)
+    # 단정한 테이퍼 다리(위 굵고 아래 가늘게) + 바깥 살짝 스플레이
+    bpy.ops.mesh.primitive_cone_add(vertices=16, radius1=0.028, radius2=0.016, depth=SH, location=(x,y,SH/2))
+    o=bpy.context.active_object; o.rotation_euler=(my*0.06, 0, -mx*0.06)
+    bpy.ops.object.shade_smooth(); o.data.materials.append(WOOD); add(o)
     # 골드 페럴(발끝)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.018, location=(x+mx*0.02, y+my*0.02, 0.012)); f=bpy.context.active_object
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.016, location=(x, y, 0.014)); f=bpy.context.active_object
     f.data.materials.append(GOLD); add(f)
 for sx in (-1,1):
     for sy in (-1,1):
-        cabriole(sx*(SW/2-0.05), sy*(SD/2-0.05), sx, sy)
+        cabriole(sx*(SW/2-0.06), sy*(SD/2-0.06), sx, sy)
 
 # ---- 등받이: 카브드 오벌 프레임 + 업홀스터 패드 + 크레스트 ----
 bz=SH+0.34; bd=-SD/2+0.04
