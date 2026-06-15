@@ -11,16 +11,25 @@ allobj=[]
 def add(o): allobj.append(o); return o
 
 SH=0.45; SW=0.50; SD=0.46
-SEAT_T=0.05   # 좌석판 반두께(전체 0.10 — 두툼한 한 덩어리)
-# ---- 시트: 두툼한 단일 좌석판(라운드) + 위에 푹신한 쿠션 ----
+SEAT_T=0.028   # 좌석 프레임 반두께(얇은 구조판)
+# ---- 시트: 얇은 좌석 프레임 + 그 위에 도톰하고 푹신한 쿠션(엉덩이 자리) ----
 bpy.ops.mesh.primitive_cube_add(size=1); fr=bpy.context.active_object
 fr.scale=(SW/2, SD/2, SEAT_T); fr.location=(0,0,SH); bpy.ops.object.transform_apply(scale=True)
-_bv=fr.modifiers.new("b","BEVEL"); _bv.width=0.02; _bv.segments=2; fr.modifiers.new("s","SUBSURF").levels=1
+_bv=fr.modifiers.new("b","BEVEL"); _bv.width=0.014; _bv.segments=2
 bpy.ops.object.shade_smooth(); fr.data.materials.append(WOOD); add(fr)
-# 쿠션(좌석 위 업홀스터리 — 푹신)
+# 푹신한 좌석 쿠션 — 도톰한 라운드 필로우(가장자리 둥글게 + 윗면 살짝 돔)
+cuZ=SH+SEAT_T+0.045
 bpy.ops.mesh.primitive_cube_add(size=1); cu=bpy.context.active_object
-cu.scale=(SW/2-0.03, SD/2-0.03, 0.035); cu.location=(0,0,SH+SEAT_T+0.03); bpy.ops.object.transform_apply(scale=True)
-cu.modifiers.new("b","BEVEL").width=0.025; cu.modifiers.new("s","SUBSURF").levels=2; bpy.ops.object.shade_smooth(); cu.data.materials.append(VELV); add(cu)
+cu.scale=(SW/2-0.008, SD/2-0.008, 0.05); cu.location=(0,0,cuZ); bpy.ops.object.transform_apply(scale=True)
+_cb=cu.modifiers.new("b","BEVEL"); _cb.width=0.05; _cb.segments=4; cu.modifiers.new("s","SUBSURF").levels=2
+bpy.ops.object.shade_smooth(); cu.data.materials.append(VELV); add(cu)
+# 시트 파이핑(쿠션 둘레 웰트) — 프렌치 디테일
+bpy.ops.mesh.primitive_torus_add(major_radius=SW/2-0.03, minor_radius=0.011, location=(0,0,cuZ-0.025), major_segments=40, minor_segments=10)
+pip=bpy.context.active_object; pip.scale=(1.0, (SD-0.06)/(SW-0.06), 1.0)
+bpy.ops.object.shade_smooth(); pip.data.materials.append(VELV); add(pip)
+# 가운데 버튼 텁(단정한 1점)
+bpy.ops.mesh.primitive_uv_sphere_add(radius=0.013, location=(0,0,cuZ+0.028)); bt=bpy.context.active_object
+bt.scale=(1,1,0.5); bpy.ops.object.shade_smooth(); bt.data.materials.append(WOOD); add(bt)
 
 # ---- 다리 4개: 수직 테이퍼 — 좌석판 코너 아래, 윗끝을 좌석판 속으로 확실히 박음 ----
 legTopZ=SH+SEAT_T-0.005   # 좌석판 윗면 근처까지(완전 관통 결합)
