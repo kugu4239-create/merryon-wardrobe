@@ -25,14 +25,15 @@ cu.modifiers.new("b","BEVEL").width=0.025; cu.modifiers.new("s","SUBSURF").level
 # ---- 다리 4개: 수직 테이퍼 — 좌석판 코너 아래, 윗끝을 좌석판 속으로 확실히 박음 ----
 legTopZ=SH+SEAT_T-0.005   # 좌석판 윗면 근처까지(완전 관통 결합)
 def leg(x,y):
-    bpy.ops.mesh.primitive_cone_add(vertices=16, radius1=0.028, radius2=0.016, depth=legTopZ, location=(x,y,legTopZ/2))
+    # 곧은 수직 다리(테이퍼 최소) — 받침이 똑바로 보이게
+    bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.024, depth=legTopZ, location=(x,y,legTopZ/2))
     o=bpy.context.active_object
     bpy.ops.object.shade_smooth(); o.data.materials.append(WOOD); add(o)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.017, location=(x, y, 0.013)); f=bpy.context.active_object
-    f.data.materials.append(GOLD); add(f)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.018, location=(x, y, 0.012)); f=bpy.context.active_object
+    f.scale=(1,1,0.7); f.data.materials.append(GOLD); add(f)
 for sx in (-1,1):
     for sy in (-1,1):
-        leg(sx*(SW/2-0.055), sy*(SD/2-0.055))
+        leg(sx*(SW/2-0.05), sy*(SD/2-0.05))
 
 # ---- 등받이: 카브드 오벌 프레임 + 업홀스터 패드 + 크레스트 ----
 bz=SH+0.34; bd=-SD/2+0.04
