@@ -2146,7 +2146,7 @@
   P._buildGoldRack = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(-2.5, 0, -3.55); g.rotation.y = 0; scene.add(g);   // 뒷벽 앞 빈 바닥(좌측, 옷장 왼편)
+    g.position.set(-4.9, 0, -3.3); g.rotation.y = Math.PI / 2; scene.add(g);   // 90° 회전, 좌측 벽에 붙임(실내 향함)
     var goldS = new T.MeshStandardMaterial({ color: PALETTE.gold, metalness: 1.0, roughness: 0.26, envMapIntensity: 1.3 });
 
     var HW = 0.72, PH = 1.62, railY = 1.5;   // 포스트 반폭 / 높이 / 레일 높이
