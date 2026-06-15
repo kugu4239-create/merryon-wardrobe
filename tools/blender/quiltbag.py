@@ -41,23 +41,22 @@ bpy.ops.object.transform_apply(scale=True)
 fl.modifiers.new("b","BEVEL").width=0.012; fl.modifiers.new("s","SUBSURF").levels=1
 bpy.ops.object.shade_smooth(); fl.data.materials.append(BLACK); allobj.append(fl)
 
-# ---- CC 턴락 클래스프 (골드) ----
-bpy.ops.mesh.primitive_cylinder_add(radius=0.022, depth=0.012, location=(0,D/2+0.004,0.0)); c1=bpy.context.active_object
+# ---- CC 턴락 클래스프 (골드) — 본체 앞면에 살짝 박아 부착(서브서프 수축 보정) ----
+bpy.ops.mesh.primitive_cylinder_add(radius=0.022, depth=0.016, location=(0,D/2-0.006,0.0)); c1=bpy.context.active_object
 c1.rotation_euler=(math.radians(90),0,0); c1.data.materials.append(GOLD); allobj.append(c1)
-bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.004, location=(0,D/2+0.01,0.0), major_segments=20, minor_segments=8); c2=bpy.context.active_object
+bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.004, location=(0,D/2+0.002,0.0), major_segments=20, minor_segments=8); c2=bpy.context.active_object
 c2.rotation_euler=(math.radians(90),0,0); c2.data.materials.append(GOLD); allobj.append(c2)
 
-# ---- 골드 체인 손잡이 (깔끔한 튜브 아치) — 끝을 본체 안으로 박아 연결 ----
+# ---- 골드 탑핸들 (튜브 아치) — 양끝을 본체 깊숙이 박아 확실히 연결(뜸/분리 방지) ----
 cur=bpy.data.curves.new("handle","CURVE"); cur.dimensions='3D'; sp=cur.splines.new('NURBS'); sp.points.add(4)
-hx=W/2-0.07
-zlow=Hh/2-0.05   # 본체 윗부분 안으로 들어가는 부착점
-pts=[(-hx,0,zlow),(-hx*0.65,0,Hh/2+0.05),(0,0,Hh/2+0.075),(hx*0.65,0,Hh/2+0.05),(hx,0,zlow)]
+hx=W/2-0.06
+pts=[(-hx,0,-0.01),(-hx*0.6,0,Hh/2+0.055),(0,0,Hh/2+0.085),(hx*0.6,0,Hh/2+0.055),(hx,0,-0.01)]  # 끝점 z<0 → 본체 속으로 관통
 for i,p in enumerate(pts): sp.points[i].co=(p[0],p[1],p[2],1)
-sp.use_endpoint_u=True; sp.order_u=3; cur.bevel_depth=0.006; cur.bevel_resolution=3
+sp.use_endpoint_u=True; sp.order_u=3; cur.bevel_depth=0.0065; cur.bevel_resolution=3
 ho=bpy.data.objects.new("handle",cur); sc.collection.objects.link(ho); ho.data.materials.append(GOLD); allobj.append(ho)
-# 부착 고리(D링) — 본체 윗면에서 손잡이가 걸리는 연결부
+# 부착 고리(D링) — 손잡이가 본체에서 나오는 지점(상단 모서리)에 정확히 배치
 for sgn in (-1,1):
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.013, minor_radius=0.0045, location=(sgn*hx,0,Hh/2-0.02), major_segments=14, minor_segments=7)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.014, minor_radius=0.005, location=(sgn*hx,0,Hh/2-0.015), major_segments=16, minor_segments=8)
     o=bpy.context.active_object; o.rotation_euler=(math.radians(90),0,0); o.data.materials.append(GOLD); allobj.append(o)
 
 sc.render.engine='CYCLES'; sc.cycles.samples=8; sc.cycles.device='CPU'
