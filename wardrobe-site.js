@@ -287,6 +287,7 @@
     this._buildStorageAndSpeaker();
     this._buildBookshelfVase();
     this._buildGoldRack();
+    this._buildTrunk();
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
@@ -2201,6 +2202,90 @@
           g.add(s);
         });
       }, undefined, function () { });
+    }
+  };
+
+  /* 빈티지 모노그램 스팀 트렁크 — 브라운 모노그램 캔버스 + 베이지 라스 스트립 + 브라스 하드웨어 */
+  P._buildTrunk = function () {
+    var T = this.T, scene = this.scene, gold = this.goldMat;
+    var g = new T.Group();
+    g.position.set(-1.45, 0, 2.55); g.rotation.y = 0.35; scene.add(g);   // 소파 앞쪽 빈 바닥
+    var W = 1.02, H = 0.5, D = 0.58;
+
+    // 모노그램 캔버스 텍스처(브라운 + 탄 모티프 — 제너릭)
+    var mono = this._canvas(512, function (ctx, S) {
+      ctx.fillStyle = '#46331E'; ctx.fillRect(0, 0, S, S);
+      var step = S / 5;
+      function floret(cx, cy, r) {
+        ctx.fillStyle = '#B89A62';
+        for (var a = 0; a < 4; a++) {
+          ctx.beginPath();
+          ctx.ellipse(cx + Math.cos(a * Math.PI / 2) * r * 0.9, cy + Math.sin(a * Math.PI / 2) * r * 0.9, r * 0.5, r * 0.32, a * Math.PI / 2, 0, 6.28);
+          ctx.fill();
+        }
+        ctx.beginPath(); ctx.arc(cx, cy, r * 0.32, 0, 6.28); ctx.fill();
+      }
+      for (var gy = -1; gy * step < S + step; gy++)
+        for (var gx = -1; gx * step < S + step; gx++) {
+          var cx = gx * step + ((gy % 2) ? step / 2 : 0), cy = gy * step;
+          floret(cx, cy, step * 0.17);
+          // 사이 다이아몬드
+          ctx.fillStyle = '#A98B55'; ctx.save(); ctx.translate(cx + step / 2, cy + step / 2); ctx.rotate(Math.PI / 4);
+          ctx.fillRect(-step * 0.08, -step * 0.08, step * 0.16, step * 0.16); ctx.restore();
+        }
+    });
+    mono.wrapS = mono.wrapT = T.RepeatWrapping; mono.repeat.set(3, 1.6);
+    var bodyMat = new T.MeshStandardMaterial({ map: mono, color: 0xffffff, roughness: 0.62, metalness: 0.05 });
+    var leather = new T.MeshStandardMaterial({ color: 0xC6A86A, roughness: 0.5, metalness: 0.0 });
+    var brass = new T.MeshStandardMaterial({ color: 0xC9A24B, roughness: 0.32, metalness: 0.95 });
+
+    // 본체
+    var body = new T.Mesh(new T.BoxGeometry(W, H, D), bodyMat);
+    body.position.y = H / 2; body.castShadow = true; body.receiveShadow = true; g.add(body);
+
+    // 베이지 라스 — 가로 밴드(상단/뚜껑선/하단) : 본체보다 살짝 크게 감싸기
+    [0.05, H * 0.72, H - 0.04].forEach(function (by) {
+      var band = new T.Mesh(new T.BoxGeometry(W + 0.012, 0.045, D + 0.012), leather);
+      band.position.y = by; g.add(band);
+    });
+    // 세로 라스 스트립(앞뒤 관통)
+    for (var k = -2; k <= 2; k++) {
+      var strip = new T.Mesh(new T.BoxGeometry(0.035, H + 0.004, D + 0.014), leather);
+      strip.position.set(k * (W / 5.2), H / 2, 0); g.add(strip);
+    }
+    // 뚜껑선(살짝 진한 음영 띠)
+    var seam = new T.Mesh(new T.BoxGeometry(W + 0.014, 0.012, D + 0.014), new T.MeshStandardMaterial({ color: 0x3A2A18, roughness: 0.7 }));
+    seam.position.y = H * 0.72; g.add(seam);
+
+    // 브라스 코너 캡(8)
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+      [0.04, H - 0.04].forEach(function (cy) {
+        var cap = new T.Mesh(new T.BoxGeometry(0.07, 0.07, 0.07), brass);
+        cap.position.set(c[0] * (W / 2 - 0.005), cy, c[1] * (D / 2 - 0.005)); g.add(cap);
+      });
+    });
+    // 중앙 브라스 락 + 클래스프(앞면 +z)
+    var lock = new T.Mesh(new T.BoxGeometry(0.11, 0.13, 0.02), brass);
+    lock.position.set(0, H * 0.72, D / 2 + 0.006); g.add(lock);
+    [-0.26, 0.26].forEach(function (lx) {
+      var clasp = new T.Mesh(new T.BoxGeometry(0.06, 0.08, 0.018), brass);
+      clasp.position.set(lx, H * 0.72, D / 2 + 0.006); g.add(clasp);
+    });
+    // 양옆 가죽+브라스 손잡이
+    [-1, 1].forEach(function (s) {
+      var handle = new T.Mesh(new T.TorusGeometry(0.05, 0.012, 8, 18, Math.PI), leather);
+      handle.rotation.y = Math.PI / 2; handle.rotation.z = Math.PI; handle.position.set(s * (W / 2 + 0.006), H * 0.5, 0); g.add(handle);
+      [-1, 1].forEach(function (m) {
+        var mnt = new T.Mesh(new T.BoxGeometry(0.02, 0.03, 0.025), brass);
+        mnt.position.set(s * (W / 2 + 0.006), H * 0.5 + m * 0.05, 0); g.add(mnt);
+      });
+    });
+    // 스터드(밴드 위 브라스 점) — 앞면 일부
+    for (var sx = -2; sx <= 2; sx++) {
+      [0.05, H - 0.04].forEach(function (sy) {
+        var stud = new T.Mesh(new T.SphereGeometry(0.011, 8, 6), brass);
+        stud.position.set(sx * (W / 5.0), sy, D / 2 + 0.006); g.add(stud);
+      });
     }
   };
 
