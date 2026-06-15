@@ -70,7 +70,9 @@
       import('three/addons/postprocessing/BokehPass.js'),
       import('three/addons/postprocessing/SMAAPass.js'),
       import('three/addons/postprocessing/OutputPass.js'),
-      import('three/addons/loaders/RGBELoader.js')
+      import('three/addons/loaders/RGBELoader.js'),
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/loaders/DRACOLoader.js')
     ]).then(function (mods) {
       var T = mods[0];
       var addons = {
@@ -85,7 +87,9 @@
         BokehPass: mods[9].BokehPass,
         SMAAPass: mods[10].SMAAPass,
         OutputPass: mods[11].OutputPass,
-        RGBELoader: mods[12].RGBELoader
+        RGBELoader: mods[12].RGBELoader,
+        GLTFLoader: mods[13].GLTFLoader,
+        DRACOLoader: mods[14].DRACOLoader
       };
       try {
         new WardrobeScene(T, addons, container);
@@ -142,6 +146,14 @@
     if (typeof cfg.resolveImage === 'function') return cfg.resolveImage(path);
     if (cfg.imageBase) return cfg.imageBase + path;
     return '//merryon.co.kr/web/product/medium/' + path;
+  }
+  /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
+   * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
+  function asset(path) {
+    var cfg = window.MERRYON_WARDROBE_CONFIG || {};
+    if (typeof cfg.resolveAsset === 'function') return cfg.resolveAsset(path);
+    if (cfg.assetBase) return cfg.assetBase.replace(/\/?$/, '/') + path;
+    return 'assets/garments/' + path;
   }
   var PRODUCTS = [
     { name:'제니 트위드 자켓',        src:img('202504/254093e6035f531fff8b6dae127a180d.jpg'), tint:PALETTE.cream,    rough:0.9,  sheen:0.7 },
@@ -852,27 +864,81 @@
     this.garmentGroup = group;
 
     var rodY = AH * 0.78, rodZ = AD_ * 0.55;
-    // 디자인 다양화: 자켓/롱코트/플레어 원피스/A라인/블라우스/시스/스커트 (밝은 베이지 트위드 위주)
-    var GARMENTS = [
-      { type: 'jacket', fabric: 'tweed',   color: 0xEADFC8 },
-      { type: 'coat',   fabric: 'wool',    color: 0xE3D6BC },
-      { type: 'dress',  fabric: 'chiffon', color: 0xF3D2D0 },
-      { type: 'aline',  fabric: 'tweed',   color: 0xE6DAC2 },
-      { type: 'top',    fabric: 'chiffon', color: 0xFBF8F1 },
-      { type: 'dress',  fabric: 'satin',   color: 0x2A3247 },
-      { type: 'skirt',  fabric: 'tweed',   color: 0xDFD0B2 }
-    ];
-    var nG = GARMENTS.length, spanW = AW - 0.7;
-    for (var i = 0; i < nG; i++) {
-      var g = GARMENTS[i];
-      var fx = -spanW / 2 + spanW * (i / (nG - 1));
-      var slot = new T.Group();
-      slot.position.set(fx, rodY, rodZ);
-      slot.rotation.y = 0.55 + (i % 3) * 0.12;   // ≈45° 각도로 걸어 옆선이 보이게
-      group.add(slot);
-      this._buildHangerOnRod(slot, g.type);
-      slot.add(this._buildGarment(g.type, g.fabric, g.color));
+    // Blender 천 시뮬레이션으로 제작한 실제 3D 의류(긴팔/반팔/민소매 + 옷걸이 + 마감)
+    // 를 GLB 로 불러와 봉에 분배해 건다. 로드 실패(오프라인/CDN차단) 시 조용히 비움.
+    this._loadGarmentGLBs(group, rodY, rodZ, AW - 0.8);
+  };
+
+  /* GLB 의류 로딩 — 그룹별 GLB 를 불러와 오브젝트를 x 좌표로 옷별 클러스터링하고,
+   * 내장된 넓은 봉(rod)은 제외, 각 옷을 후크가 원점에 오도록 정규화한 뒤 봉에 균등 분배. */
+  P._loadGarmentGLBs = function (group, rodY, rodZ, spanW) {
+    var T = this.T, AD = this.AD, self = this;
+    if (!AD.GLTFLoader) return;
+    var loader = new AD.GLTFLoader();
+    if (AD.DRACOLoader) {
+      var draco = new AD.DRACOLoader();
+      draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/libs/draco/');
+      loader.setDRACOLoader(draco);
     }
+    // 그룹별 GLB 와 옷 개수(Blender 배치와 동일: x = k*0.6 - 0.3*(n-1)).
+    // 전역 인덱스를 미리 배정해, 파일이 도착하는 즉시 봉의 제 위치에 건다(다른 파일을 기다리지 않음).
+    var files = [['hq_0.glb', 4], ['hq_1.glb', 4], ['hq_2.glb', 4], ['hq_3.glb', 1]];
+    var total = 0, start = []; files.forEach(function (e) { start.push(total); total += e[1]; });
+
+    // 각 메시를 가장 가까운 옷 슬롯에 배정(소매가 이웃 칸까지 퍼져도 중심 기준으로 정확히 분리).
+    function assignToSlots(scene, n) {
+      scene.updateMatrixWorld(true);
+      var slots = [];
+      for (var k = 0; k < n; k++) slots.push({ x: k * 0.6 - 0.3 * (n - 1), items: [] });
+      scene.traverse(function (o) {
+        if (!o.isMesh) return;
+        o.castShadow = true; o.receiveShadow = true;
+        var wb = new T.Box3().setFromObject(o), sz = new T.Vector3(); wb.getSize(sz);
+        if (sz.x > 1.6) return;                 // 봉(rod): 매우 긴 실린더 → 제외
+        var cx = (wb.min.x + wb.max.x) / 2, bi = 0, bd = Infinity;
+        for (var i = 0; i < slots.length; i++) {
+          var d = Math.abs(cx - slots[i].x); if (d < bd) { bd = d; bi = i; }
+        }
+        slots[bi].items.push({ mesh: o });
+      });
+      return slots;
+    }
+
+    function makeGarment(cluster) {
+      var g = new T.Group();
+      var box = new T.Box3();
+      cluster.items.forEach(function (it) { g.attach(it.mesh); box.expandByObject(it.mesh); });
+      // 후크 상단이 원점에 오도록, x 중심 정렬
+      var cx = (box.min.x + box.max.x) / 2, topY = box.max.y;
+      g.children.forEach(function (m) { m.position.x -= cx; m.position.y -= topY; });
+      return g;
+    }
+
+    var placed = 0;
+    files.forEach(function (entry, fi) {
+      var fn = entry[0], n = entry[1], base = start[fi];
+      loader.load(asset(fn),
+        function (gltf) {
+          assignToSlots(gltf.scene, n).forEach(function (cl, k) {
+            if (!cl.items.length) return;
+            self._placeGarment(group, makeGarment(cl), base + k, total, rodY, rodZ, spanW);
+            placed++; self.garmentCount = placed;
+            try { window.__MERRYON_GARMENTS__ = placed; } catch (e) {}
+          });
+        },
+        undefined,
+        function (err) { console.warn('[merryon] GLB 로드 실패', fn, err && (err.message || err)); }
+      );
+    });
+  };
+
+  /* 한 벌을 전역 인덱스(idx/total)에 맞춰 봉에 건다. */
+  P._placeGarment = function (group, g, idx, total, rodY, rodZ, spanW) {
+    var fx = total > 1 ? (-spanW / 2 + spanW * (idx / (total - 1))) : 0;
+    g.position.set(fx, rodY + 0.02, rodZ);
+    g.rotation.y = 0.5 + (idx % 3) * 0.13;   // ≈45° 각도로 옆선이 보이게
+    g.scale.setScalar(0.92);
+    group.add(g);
   };
 
   /* 옷걸이 — hook 이 봉(parent 원점) 위를 감싸고, 어깨/클립 바가 아래에 */
