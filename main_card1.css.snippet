@@ -1,0 +1,51 @@
+/* ===========================================================================
+   MERRYON 가상 파우더룸 3D 씬 — main_card1.css 에 추가할 스니펫
+   ---------------------------------------------------------------------------
+   기존 Cafe24 HTML 구조(수정 불필요):
+     <div class="main_image_1_wrapper">
+       <a class="main_image_1_background_link">
+         <div class="main_image_1_background">   <-- 여기에 3D 캔버스가 자동 삽입됨
+           <div class="main_image_1_overlay"> ... </div>
+=========================================================================== */
+
+/* 3D 캔버스의 기준 컨테이너 — 절대배치 캔버스를 담고 넘침을 숨긴다. */
+.main_image_1_background {
+  position: relative;
+  overflow: hidden;
+  min-height: 560px;            /* 데스크탑 풀스크린 히어로 높이 */
+  background: #F6F0E4;          /* 캔버스 로드 전 아이보리 폴백 */
+}
+
+/* 3D 캔버스(스크립트가 삽입) — 배경 레이어 */
+.main_image_1_background > canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  z-index: 0;
+}
+
+/* 텍스트/버튼 오버레이는 캔버스 위로 */
+.main_image_1_background .main_image_1_overlay {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;         /* 오빗 드래그가 캔버스로 전달되도록 */
+}
+.main_image_1_background .main_image_1_overlay a,
+.main_image_1_background .main_image_1_overlay button {
+  pointer-events: auto;         /* 단, 링크/버튼은 클릭 가능하게 */
+}
+
+/* 링크 래퍼가 캔버스 위 클릭을 모두 가로채지 않도록 */
+.main_image_1_background_link {
+  position: relative;
+  z-index: 1;
+}
+
+/* 모바일 높이 보정 */
+@media (max-width: 768px) {
+  .main_image_1_background {
+    min-height: 70vh;
+  }
+}
