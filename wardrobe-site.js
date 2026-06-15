@@ -2246,34 +2246,40 @@
     var smaa = new AD.SMAAPass(w, h);
     composer.addPass(smaa);
 
-    // 핀터레스트 컬러그레이드 — 웜 화이트밸런스 + 부드러운 S커브 대비 + 채도↓ + 비네팅 + 미세 그레인
+    // 핀터레스트 컬러그레이드 — 핑크베이지 화밸 + 스플릿톤(핑크 쉐도우/크림 하이라이트) + 필름 페이드/그레인
     var GradeShader = {
       uniforms: {
         tDiffuse: { value: null },
         uTime: { value: 0 },
         uRes: { value: new T.Vector2(w, h) },
-        uWarm: { value: new T.Vector3(1.05, 1.004, 0.935) },
-        uSat: { value: 0.90 },
-        uContrast: { value: 0.12 },
-        uVig: { value: 0.86 },
-        uGrain: { value: 0.016 }
+        uWarm: { value: new T.Vector3(1.065, 1.0, 0.965) },   // 핑크베이지 화이트밸런스
+        uSat: { value: 0.84 },                                // 필름 느낌 채도↓
+        uContrast: { value: 0.09 },                           // 페이드 필름(대비 약)
+        uVig: { value: 0.83 },
+        uGrain: { value: 0.032 },                             // 그레인↑(필름)
+        uSplitS: { value: new T.Vector3(0.050, 0.018, 0.030) },  // 쉐도우 핑크
+        uSplitH: { value: new T.Vector3(0.038, 0.024, 0.004) },  // 하이라이트 크림
+        uLift: { value: 0.05 }                                // 블랙 페이드(웜)
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: [
         'uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uRes;',
         'uniform vec3 uWarm; uniform float uSat; uniform float uContrast; uniform float uVig; uniform float uGrain;',
+        'uniform vec3 uSplitS; uniform vec3 uSplitH; uniform float uLift;',
         'varying vec2 vUv;',
         'void main(){',
         '  vec3 c = texture2D(tDiffuse, vUv).rgb;',
-        '  c *= uWarm;',                                              // 웜 화이트밸런스
+        '  c *= uWarm;',                                              // 핑크베이지 화이트밸런스
         '  float l = dot(c, vec3(0.299,0.587,0.114));',
-        '  c = mix(vec3(l), c, uSat);',                              // 채도 살짝↓(에디토리얼)
-        '  c = mix(c, c*c*(3.0-2.0*c), uContrast);',                // 부드러운 S커브 대비
+        '  c = mix(vec3(l), c, uSat);',                              // 채도↓
+        '  c = mix(c, c*c*(3.0-2.0*c), uContrast);',                // 부드러운 대비
+        '  c += uSplitS*(1.0-l) + uSplitH*l;',                      // 스플릿톤(핑크 쉐도우+크림 하이라이트)
+        '  c = mix(c, vec3(1.0,0.93,0.88), uLift*(1.0-smoothstep(0.0,0.38,l)));',  // 블랙 페이드(필름)
         '  vec2 q = vUv - 0.5;',
         '  float vig = smoothstep(0.95, 0.32, length(q)*1.28);',
-        '  c *= mix(uVig, 1.0, vig);',                              // 비네팅(가장자리 웜다크)
+        '  c *= mix(uVig, 1.0, vig);',                              // 비네팅
         '  float g = fract(sin(dot(vUv*uRes + uTime, vec2(12.9898,78.233))) * 43758.5453);',
-        '  c += (g - 0.5) * uGrain;',                               // 미세 필름 그레인
+        '  c += (g - 0.5) * uGrain;',                               // 필름 그레인
         '  gl_FragColor = vec4(max(c, 0.0), 1.0);',
         '}'
       ].join('\n')
