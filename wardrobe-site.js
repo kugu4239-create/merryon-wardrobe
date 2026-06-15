@@ -1686,9 +1686,21 @@
       [-W / 2 + 0.9, -D / 2 + 0.8, 1.2],   // 백-좌 코너
       [W / 2 - 1.0, D / 2 - 1.0, 1.05]     // 앞-우 코너
     ];
+    // 화분(세라믹) → 바닥과 동일한 대리석 재질
+    var potMat = self._potMarbleMat || (self._potMarbleMat = (function () {
+      var mt = self._marbleTex(); mt.wrapS = mt.wrapT = T.RepeatWrapping; mt.repeat.set(2, 2);
+      var mb = self._marbleBump(); mb.wrapS = mb.wrapT = T.RepeatWrapping; mb.repeat.set(2, 2);
+      return new T.MeshPhysicalMaterial({ map: mt, bumpMap: mb, bumpScale: 0.02, color: 0xFFFFFF, roughness: 0.3, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.8 });
+    })());
     if (self.AD.GLTFLoader) {
       new self.AD.GLTFLoader().load(asset('topiary.glb'), function (gltf) {
-        var src = gltf.scene; src.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        var src = gltf.scene; src.traverse(function (o) {
+          if (o.isMesh) {
+            o.castShadow = true; o.receiveShadow = true;
+            var nm = (o.material && o.material.name) || '';
+            if (/ceramic/i.test(nm)) o.material = potMat;   // 화분 → 대리석
+          }
+        });
         plantSpots.forEach(function (p) {
           var c = src.clone(true);
           c.position.set(p[0], 0, p[1]); c.scale.setScalar(p[2]); c.rotation.y = Math.random() * 6.28;
