@@ -2289,7 +2289,7 @@
   P._buildDisplayCase = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat, D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(1.7, 0, D / 2 - 0.3); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 문 우측(트렁크 왼편), 벽에 flush
+    g.position.set(2.05, 0, -D / 2 + 0.32); g.rotation.y = 0; scene.add(g);   // 뒷벽, 2단 수납장 왼쪽(실내 +z 향함)
     var CW = 1.7, CD = 0.52, CH = 0.82, plinth = 0.12;
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
