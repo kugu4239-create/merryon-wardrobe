@@ -149,7 +149,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v8-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v9-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -286,6 +286,7 @@
     this._buildJewelryCabinet();
     this._buildStorageAndSpeaker();
     this._buildBookshelfVase();
+    this._buildGoldRack();
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
@@ -2136,6 +2137,69 @@
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
         s.position.set(vx, 0.31, vz); s.scale.setScalar(1.0);   // 하단 꽃이 화병 림에 걸치게(떠보임 방지)
         scene.add(s);
+      }, undefined, function () { });
+    }
+  };
+
+  /* 앤틱 골드 행거 랙 + 드레이프 천(아이보리/핑크) — 레퍼런스 빈티지 가먼트 랙
+   * 오너먼트 포스트(피니얼/컬러) + 가로 레일 + 훅 + Blender 천 GLB 여러 장 드레이프. */
+  P._buildGoldRack = function () {
+    var T = this.T, scene = this.scene, gold = this.goldMat;
+    var g = new T.Group();
+    g.position.set(1.55, 0, -3.7); g.rotation.y = 0; scene.add(g);   // 뒷벽 앞 빈 바닥(센터-우)
+    var goldS = new T.MeshStandardMaterial({ color: PALETTE.gold, metalness: 1.0, roughness: 0.26, envMapIntensity: 1.3 });
+
+    var HW = 0.72, PH = 1.62, railY = 1.5;   // 포스트 반폭 / 높이 / 레일 높이
+    [-1, 1].forEach(function (s) {
+      var px = s * HW;
+      var post = new T.Mesh(new T.CylinderGeometry(0.026, 0.03, PH, 16), goldS);
+      post.position.set(px, PH / 2, 0); post.castShadow = true; g.add(post);
+      // 장식 컬러(링) 2단
+      [0.5, 1.15].forEach(function (cy) {
+        var ring = new T.Mesh(new T.TorusGeometry(0.034, 0.012, 10, 20), goldS);
+        ring.rotation.x = Math.PI / 2; ring.position.set(px, cy, 0); g.add(ring);
+      });
+      // 상단 피니얼(어반/볼)
+      var collar = new T.Mesh(new T.CylinderGeometry(0.04, 0.03, 0.03, 16), goldS); collar.position.set(px, PH + 0.015, 0); g.add(collar);
+      var ball = new T.Mesh(new T.SphereGeometry(0.052, 16, 12), goldS); ball.position.set(px, PH + 0.075, 0); g.add(ball);
+      var tip = new T.Mesh(new T.SphereGeometry(0.022, 12, 8), goldS); tip.position.set(px, PH + 0.13, 0); g.add(tip);
+      // 받침(턴드 베이스 + 발)
+      var base = new T.Mesh(new T.CylinderGeometry(0.04, 0.075, 0.04, 16), goldS); base.position.set(px, 0.02, 0); g.add(base);
+      var foot = new T.Mesh(new T.SphereGeometry(0.06, 14, 10), goldS); foot.scale.set(1.5, 0.45, 1.5); foot.position.set(px, 0.012, 0); g.add(foot);
+    });
+    // 가로 레일 + 훅
+    var rail = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, HW * 2 + 0.06, 16), goldS);
+    rail.rotation.z = Math.PI / 2; rail.position.set(0, railY, 0); g.add(rail);
+    for (var h = -5; h <= 5; h++) {
+      var hook = new T.Mesh(new T.TorusGeometry(0.018, 0.005, 8, 16, Math.PI * 1.3), goldS);
+      hook.position.set(h * 0.12, railY - 0.018, 0.0); hook.rotation.y = Math.PI / 2; g.add(hook);
+    }
+
+    // 드레이프 천(아이보리/핑크) — Blender GLB 여러 장
+    if (this.AD.GLTFLoader) {
+      var cloths = [
+        [-0.52, 0xF2EBDD, 1.0, 0.02],   // [x, color, 높이scale, z]
+        [-0.30, 0xEAC9D2, 0.92, -0.01],
+        [-0.08, 0xF0E6D4, 1.05, 0.015],
+        [0.16, 0xE7BFCB, 0.95, -0.005],
+        [0.40, 0xEFE7D7, 1.0, 0.02],
+        [0.58, 0xE3B7C4, 0.88, -0.01]
+      ];
+      var loader = new this.AD.GLTFLoader();
+      loader.load(asset('cloth.glb'), function (gltf) {
+        cloths.forEach(function (c) {
+          var s = gltf.scene.clone(true);
+          s.traverse(function (o) {
+            if (o.isMesh) {
+              o.castShadow = true; o.receiveShadow = true;
+              o.material = o.material.clone(); o.material.color = new T.Color(c[1]); o.material.side = T.DoubleSide;
+            }
+          });
+          s.position.set(c[0], railY + 0.02, c[3]);          // 상단을 레일에 걸침
+          s.scale.set(0.95 + Math.random() * 0.1, c[2], 1.0);
+          s.rotation.y = (Math.random() - 0.5) * 0.12;
+          g.add(s);
+        });
       }, undefined, function () { });
     }
   };
