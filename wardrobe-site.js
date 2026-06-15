@@ -170,7 +170,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 0.62;   // 과노출 방지(낮춤)
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = isMobile ? T.PCFShadowMap : T.PCFSoftShadowMap;
     this.renderer = renderer;
@@ -191,9 +191,10 @@
     this.scene = scene;
 
     var camera = new T.PerspectiveCamera(42, 1, 0.1, 100);
-    camera.position.set(0, 8, 0.001);
+    camera.position.set(0, 5.4, 6.6);
     this.camera = camera;
-    this.target = new T.Vector3(0, 2.4, -1.5);
+    // 옷장(의류)을 화면 주인공으로 — 시선 중심을 옷장 쪽으로
+    this.target = new T.Vector3(0, 3.9, -4.0);
 
     AD.RectAreaLightUniformsLib.init();
 
@@ -201,6 +202,7 @@
     var pmrem = new T.PMREMGenerator(renderer);
     var envTex = pmrem.fromScene(new AD.RoomEnvironment(), 0.04).texture;
     scene.environment = envTex;
+    scene.environmentIntensity = 0.45;   // RoomEnvironment 의 과한 채움광 완화
     this.envTex = envTex;
 
     /* --- 구성 ----------------------------------------------------------- */
@@ -453,7 +455,7 @@
   P._buildLights = function () {
     var T = this.T, scene = this.scene;
 
-    var amb = new T.AmbientLight(0xFFF5E8, 0.5);
+    var amb = new T.AmbientLight(0xFFF5E8, 0.3);
     scene.add(amb);
 
     // 샹들리에 포인트 라이트 × 2 (인트로에서 0 → 2.5 페이드인)
@@ -471,12 +473,12 @@
     this.chandLights.push(p1, p2);
 
     // 창문 자연광 (오른쪽 벽)
-    var win = new T.RectAreaLight(0xE8F4FF, 3.0, 3.2, 4.2);
+    var win = new T.RectAreaLight(0xE8F4FF, 1.5, 3.2, 4.2);
     win.position.set(6.7, 4.2, 1.5);
     win.lookAt(0, 3, 0);
     scene.add(win);
 
-    var dir = new T.DirectionalLight(0xFFF0DC, 1.1);
+    var dir = new T.DirectionalLight(0xFFF0DC, 0.7);
     dir.position.set(9, 7, 4);
     dir.target.position.set(-1, 2, -2);
     if (!this.isMobile) {
@@ -493,21 +495,27 @@
 
     // LightProbe (부드러운 환경 채움)
     var probe = new T.LightProbe();
-    probe.sh.coefficients[0].setScalar(0.6);
+    probe.sh.coefficients[0].setScalar(0.3);
     scene.add(probe);
 
     // 바니티 미러 위
-    var vm = new T.RectAreaLight(0xFFD4CC, 1.5, 1.6, 1.2);
+    var vm = new T.RectAreaLight(0xFFD4CC, 0.7, 1.6, 1.2);
     vm.position.set(-5.0, 3.6, -2.2);
     vm.lookAt(-5.0, 1.5, 0);
     scene.add(vm);
 
-    // 옷장 내부 스포트
-    var sp = new T.SpotLight(0xFFF5E8, 0.8, 16, Math.PI / 4.5, 0.5, 1.4);
-    sp.position.set(0, 6.2, -2.0);
-    sp.target.position.set(0, 2.2, -5.2);
+    // 옷장 내부 스포트 — 의류(주인공)를 또렷이 비춘다.
+    var sp = new T.SpotLight(0xFFF6EC, 2.4, 18, Math.PI / 3.8, 0.45, 1.2);
+    sp.position.set(0, 6.4, -3.2);
+    sp.target.position.set(0, 4.0, -5.6);
     scene.add(sp, sp.target);
     this.armoireSpot = sp;
+
+    // 의류 정면 소프트 필 — 옷 사진이 어둡게 묻히지 않도록 앞에서 부드럽게 채움
+    var fill = new T.RectAreaLight(0xFFF3E6, 1.6, 5.6, 3.4);
+    fill.position.set(0, 4.2, -2.4);
+    fill.lookAt(0, 4.2, -6.0);
+    scene.add(fill);
   };
 
   /* ----------------------------------------------------------------------- *
@@ -645,14 +653,14 @@
     var crystalMat = new T.MeshPhysicalMaterial({
       color: 0xffffff, metalness: 0.0, roughness: 0.02,
       transmission: 1.0, thickness: 0.4, ior: 1.6,
-      transparent: true, opacity: 0.9,
-      emissive: 0xFFE8CC, emissiveIntensity: 0.35,
-      envMapIntensity: 1.6
+      transparent: true, opacity: 0.85,
+      emissive: 0xFFE8CC, emissiveIntensity: 0.12,
+      envMapIntensity: 1.3
     });
     this.crystalMat = crystalMat;
 
-    var crystalGeo = new T.OctahedronGeometry(0.11, 0);
-    var dropGeo = new T.ConeGeometry(0.05, 0.18, 6);
+    var crystalGeo = new T.OctahedronGeometry(0.085, 0);
+    var dropGeo = new T.ConeGeometry(0.038, 0.14, 6);
 
     // 2단 골드 암 + 크리스탈 32개
     var tiers = [{ r: 0.95, n: 12, y: -1.1 }, { r: 0.62, n: 9, y: -0.75 }, { r: 1.15, n: 11, y: -1.35 }];
@@ -679,8 +687,8 @@
       }
     }
     // 중앙 빛 코어 (Bloom 강조)
-    var core = new T.Mesh(new T.SphereGeometry(0.16, 16, 12),
-      new T.MeshBasicMaterial({ color: 0xFFF1D8 }));
+    var core = new T.Mesh(new T.SphereGeometry(0.12, 16, 12),
+      new T.MeshBasicMaterial({ color: 0xF6E4C4 }));
     core.position.y = -1.2; chand.add(core);
     this.chandCore = core;
   };
@@ -734,7 +742,7 @@
   P._buildArmoire = function () {
     var T = this.T, scene = this.scene;
     var D = this.ROOM.D;
-    var AW = 5.0, AH = 7.0, AD_ = 0.9;
+    var AW = 6.4, AH = 7.0, AD_ = 0.9;
     var zBack = -D / 2 + 0.1;
 
     var lacquer = new T.MeshPhysicalMaterial({ color: PALETTE.cream, roughness: 0.35, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.3, envMapIntensity: 0.9 });
@@ -784,8 +792,8 @@
     var loader = new T.TextureLoader();
     loader.crossOrigin = 'anonymous';
     var n = PRODUCTS.length;
-    var spanW = AW - 0.7;
-    var cardW = 0.62, cardH = 1.55;
+    var spanW = AW - 0.9;
+    var cardW = 0.74, cardH = 1.95;
     var topY = AH * 0.78 - 0.12;
 
     for (var i = 0; i < n; i++) {
@@ -1119,8 +1127,8 @@
       this.ssao = ssao;
     }
 
-    var bloom = new AD.UnrealBloomPass(new T.Vector2(w, h), 0.7, 0.6, 0.85);
-    bloom.threshold = 0.85; bloom.strength = this.isMobile ? 0.5 : 0.75; bloom.radius = 0.6;
+    var bloom = new AD.UnrealBloomPass(new T.Vector2(w, h), 0.7, 0.6, 0.9);
+    bloom.threshold = 0.9; bloom.strength = this.isMobile ? 0.22 : 0.3; bloom.radius = 0.5;
     composer.addPass(bloom);
     this.bloom = bloom;
 
@@ -1145,7 +1153,7 @@
     var self = this, el = this.container;
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.12, radius: 5.8, targetTheta: 0, targetPhi: 1.12 };
+    this.cam = { theta: 0, phi: 1.18, radius: 5.6, targetTheta: 0, targetPhi: 1.18 };
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
@@ -1245,25 +1253,19 @@
 
     /* ---- 인트로 시네마틱 (0 ~ 2.5s) ---- */
     if (!this.introDone) {
-      var p = t / 2.5;
+      var p = t / 2.4;
       if (p >= 1) { p = 1; this.introDone = true; }
-      // 키프레임: (0,8,0) → (2,4,3)@1.2s → 메인뷰
-      var camPos = new T.Vector3();
+      // 천장 다이브 없이, 방을 넓게 잡았다가 옷장 정면으로 부드럽게 다가가는 establishing 샷
       var settle = this._spherical(this.cam.theta, this.cam.phi, this.cam.radius);
-      if (p < 0.48) {
-        var k = this._ease(p / 0.48);
-        camPos.lerpVectors(new T.Vector3(0, 8, 0.001), new T.Vector3(2, 4, 3), k);
-      } else {
-        var k2 = this._ease((p - 0.48) / 0.52);
-        camPos.lerpVectors(new T.Vector3(2, 4, 3), settle, k2);
-      }
+      var start = new T.Vector3(0, 5.4, 6.6);
+      var camPos = new T.Vector3().lerpVectors(start, settle, this._ease(p));
       this.camera.position.copy(camPos);
       this.camera.lookAt(this.target);
 
-      // fog density 0.12 → 0.026
-      this.scene.fog.density = 0.12 + (0.026 - 0.12) * this._ease(p);
-      // 샹들리에 0 → 2.5
-      var inten = 2.5 * this._ease(p);
+      // fog density (옅게 시작 → 거의 걷힘)
+      this.scene.fog.density = 0.09 + (0.022 - 0.09) * this._ease(p);
+      // 샹들리에 0 → 1.2 (은은하게)
+      var inten = 1.2 * this._ease(p);
       this.chandLights[0].intensity = inten;
       this.chandLights[1].intensity = inten;
     } else {
@@ -1307,7 +1309,7 @@
       // ease-in-out 형태로 정점 부드럽게
       osc = osc * (0.5 + 0.5 * Math.abs(osc)) / 1.0;
       this.cam.targetTheta = osc * 35 * DEG;
-      this.cam.targetPhi += (1.12 - this.cam.targetPhi) * 0.02;
+      this.cam.targetPhi += (1.18 - this.cam.targetPhi) * 0.02;
     } else {
       // 사용자 입력 기반
       var base = this.drag.theta;
@@ -1319,7 +1321,7 @@
     }
 
     // radius 살짝 호흡
-    this.cam.radius = 5.8 + Math.sin(t * 0.3) * 0.12;
+    this.cam.radius = 5.6 + Math.sin(t * 0.3) * 0.1;
 
     // 스무딩
     this.cam.theta += (this.cam.targetTheta - this.cam.theta) * 0.06;
