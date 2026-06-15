@@ -199,7 +199,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.5;   // 과노출 방지(추가 하향)
+    renderer.toneMappingExposure = 0.43;   // 섬광 저감
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = isMobile ? T.PCFShadowMap : T.PCFSoftShadowMap;
     this.renderer = renderer;
@@ -239,7 +239,7 @@
     this.pmrem = pmrem;
     var envTex = pmrem.fromScene(new AD.RoomEnvironment(), 0.04).texture;
     scene.environment = envTex;
-    scene.environmentIntensity = 0.9;
+    scene.environmentIntensity = 0.72;
     this.envTex = envTex;
 
     (function (self) {
@@ -280,7 +280,7 @@
     this._buildBotanic();
     this._buildGalleryWall();
     this._buildVanityChair();
-    this._buildScarves();
+    // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
     this._setupComposer();
@@ -402,11 +402,11 @@
         vein(nx, ny, ang + (Math.random() - 0.5) * 0.7, width * 0.74, depth - 1, col);
         if (Math.random() < 0.45) vein(nx, ny, ang + (Math.random() - 0.5) * 1.5, width * 0.5, depth - 1, col);
       }
-      for (var i = 0; i < 5; i++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 4.5 + Math.random() * 2, 5, 'rgba(120,112,104,0.5)');
-      for (var j = 0; j < 9; j++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 1.6, 3, 'rgba(160,150,135,0.4)');
-      for (var k = 0; k < 7; k++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 1.0, 2, 'rgba(150,135,100,0.3)');  // 골드빛 잔맥
+      for (var i = 0; i < 5; i++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 4.5 + Math.random() * 2, 5, 'rgba(58,60,66,0.55)');   // 차콜 메인
+      for (var j = 0; j < 9; j++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 1.6, 3, 'rgba(92,96,104,0.42)');                    // 미드 그레이
+      for (var k = 0; k < 7; k++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 1.0, 2, 'rgba(74,78,86,0.32)');                     // 차콜 잔맥
       // 미세 결정 얼룩
-      for (var g = 0; g < 1400; g++) { ctx.fillStyle = 'rgba(120,114,108,' + (Math.random() * 0.05) + ')'; ctx.fillRect(Math.random() * S, Math.random() * S, 2, 2); }
+      for (var g = 0; g < 1400; g++) { ctx.fillStyle = 'rgba(80,84,90,' + (Math.random() * 0.05) + ')'; ctx.fillRect(Math.random() * S, Math.random() * S, 2, 2); }
     });
   };
 
@@ -534,8 +534,12 @@
   P._buildLights = function () {
     var T = this.T, scene = this.scene, R = this.ROOM;
 
-    var amb = new T.AmbientLight(0xFFF5E8, 0.34);
+    var amb = new T.AmbientLight(0xFFEFD8, 0.28);   // 웜·약간 낮춰 평면적 밝음↓(코지 무드)
     scene.add(amb);
+
+    // 웜 코브 글로우 — 천장 둘레의 은은한 골든 간접광(레퍼런스 코브 조명 무드)
+    var cove = new T.RectAreaLight(0xFFE6BE, 1.4, R.W * 0.8, R.D * 0.8);
+    cove.position.set(0, R.H - 0.12, 0); cove.lookAt(0, 0, 0); scene.add(cove);
 
     // 샹들리에 포인트 라이트 × 2 (인트로에서 0 → 페이드인)
     this.chandLights = [];
@@ -549,9 +553,9 @@
     scene.add(p1, p2);
     this.chandLights.push(p1, p2);
 
-    // 창문 자연광 (오른쪽 벽, 천장까지 통창)
-    var win = new T.RectAreaLight(0xE8F4FF, 2.2, 1.8, 3.0);
-    win.position.set(R.W / 2 - 0.15, 1.7, 0.8);
+    // 창문 자연광 — 차가운 푸른빛 완화(웜 데이라이트), 워시 줄임
+    var win = new T.RectAreaLight(0xF0EEE4, 1.7, 1.8, 3.0);
+    win.position.set(R.W / 2 - 0.15, 1.7, 0.0);
     win.lookAt(0, 1.5, 0);
     scene.add(win);
 
@@ -645,13 +649,22 @@
     wall(W, H, 0, H / 2, -D / 2, 0);                 // 뒷벽(옷장)
     wall(W, H, 0, H / 2, D / 2, Math.PI);            // 앞벽
     wall(D, H, -W / 2, H / 2, 0, Math.PI / 2);       // 좌벽
-    // 우벽 — 창 개구부(z ±1.3, y 0.45~천장)를 비워 정원이 보이게 세그먼트 분할
-    var woZ = 1.3, woY = 0.45;
+    // 우벽 — 아치창 개구부(사각 z±1.2 + 아치)만 비우고 나머지는 벽. 스팬드럴(아치 양옆 윗부분)도 벽.
+    var woZ = 1.2, woY = 0.45, springY = 1.8, archR = 1.2;
     wall(D, woY, W / 2, woY / 2, 0, -Math.PI / 2);                                   // 창 아래
     [-1, 1].forEach(function (s) {
       var segW = D / 2 - woZ;
       wall(segW, H - woY, W / 2, woY + (H - woY) / 2, s * (woZ + D / 2) / 2, -Math.PI / 2);  // 창 좌우
     });
+    // 스팬드럴(아치 위 코너) 벽 채움 — z[-1.2,1.2], y[springY..springY+R] 에서 아치(반원)를 뺀 영역
+    (function () {
+      var sp = new T.Shape();
+      var yTop = springY + archR;
+      sp.moveTo(-woZ, springY); sp.lineTo(-woZ, yTop); sp.lineTo(woZ, yTop); sp.lineTo(woZ, springY);
+      sp.lineTo(archR, springY); sp.absarc(0, springY, archR, 0, Math.PI, false); sp.lineTo(-woZ, springY);
+      var sm = new T.Mesh(new T.ShapeGeometry(sp), wallMat);
+      sm.position.set(W / 2 - 0.001, 0, 0); sm.rotation.y = -Math.PI / 2; sm.receiveShadow = true; scene.add(sm);
+    })();
 
     /* 몰딩 전부 삭제(베이스/체어레일/크라운·웨인스코팅 패널·문 케이싱) — 벽/천장 아이보리 통일 */
 
@@ -960,11 +973,11 @@
     // 사이즈 규칙: 원피스(dress)=H0, 상의(top)=H0/2, 스커트(skirt)=H0/2, 하의(pants)=H0*2/3
     // [폴더, 파일, 종류, 개별스케일]
     var CUTS = [
-      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 1.0],  // 블루 셔츠 원피스
-      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', 1.0],    // 크림 타이 블라우스
-      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28],   // 블랙 카라 가디건(3번째 키움)
+      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 1.0, null, 0.045],  // 블루 셔츠 원피스(#1 더 올림)
+      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', 0.9, 0.15],   // 크림 블라우스(#2: 10%↓ + 옷걸이 좁게)
+      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28, 0.17],  // 블랙 카라 가디건(#3: 옷걸이 좁게)
       ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt', 1.0],  // 민트 트위드 스커트
-      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', 0.85], // 블랙 플리츠 원피스(5번째 15%↓)
+      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', 0.85, null, 0.045], // 블랙 플리츠 원피스(#5 15%↓ + 더 올림)
       ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', 1.0],  // 핑크 러플 스커트
       ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants', 1.2],  // 네이비 와이드 팬츠(7번째 20%↑)
       ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.85, 0.30]  // 블랙 오프숄더 롬퍼(마지막) — 옷걸이 폭 지정(넓게)
@@ -1046,10 +1059,10 @@
                  : (band != null ? band * w * (clipType ? 0.82 : 0.92) : swDefault);
           sw = Math.max(clipType ? 0.12 : 0.07, Math.min(0.42, sw));
           var topY = clipType ? clipHanger(pivot, sw, dz) : shoulderHanger(pivot, sw, dz);
-          // 상의는 옷걸이에 더 바짝(위로 더)
           if (type === 'top') topY += 0.045;
+          topY += 0.022 + (entry[5] || 0);   // 전체 살짝 위로 + 개별 추가 올림
           var mat = new T.MeshStandardMaterial({
-            map: tex, transparent: true, alphaTest: 0.45, side: T.DoubleSide,
+            map: tex, transparent: true, alphaTest: 0.6, side: T.DoubleSide,   // 테두리(프린지) 제거 강화
             roughness: 0.82, metalness: 0.0, color: 0xffffff
           });
           var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
@@ -1394,20 +1407,20 @@
     var crest2 = new T.Mesh(new T.TorusGeometry(0.035, 0.01, 8, 18, Math.PI), gold);
     crest2.position.set(0, cy + ory + 0.06, 0.02); g.add(crest2);
 
-    // 셰발 스탠드 — 양옆 기둥 + 바깥으로 휜 다리 + 베이스 크로스바
+    // 셰발 스탠드 — 한 쌍의 매끈한 기둥(위는 피벗, 아래는 바깥으로 벌어져 발) + 크로스바
     [-1, 1].forEach(function (s) {
-      var post = new T.Mesh(new T.CylinderGeometry(0.016, 0.02, cy + ory * 0.2, 10), gold);
-      post.position.set(s * (orx + 0.05), (cy + ory * 0.2) / 2, 0); g.add(post);
-      var pivot = new T.Mesh(new T.SphereGeometry(0.025, 10, 8), gold);
-      pivot.position.set(s * (orx + 0.05), cy, 0.02); g.add(pivot);
-      // 휜 다리(아래 바깥으로)
-      var leg = new T.Mesh(new T.CylinderGeometry(0.02, 0.014, 0.34, 10), gold);
-      leg.position.set(s * (orx + 0.11), 0.16, 0); leg.rotation.z = -s * 0.32; g.add(leg);
-      var foot = new T.Mesh(new T.SphereGeometry(0.022, 10, 8), gold);
-      foot.position.set(s * (orx + 0.16), 0.02, 0); g.add(foot);
+      var topX = s * (orx + 0.05), botX = s * (orx + 0.2), topY = cy, botY = 0.03;
+      var len = Math.hypot(botX - topX, botY - topY);
+      var post = new T.Mesh(new T.CylinderGeometry(0.013, 0.017, len, 10), gold);
+      post.position.set((topX + botX) / 2, (topY + botY) / 2, 0);
+      post.rotation.z = Math.atan2(topX - botX, topY - botY); g.add(post);
+      var pivot = new T.Mesh(new T.SphereGeometry(0.024, 10, 8), gold);
+      pivot.position.set(topX, cy, 0.02); g.add(pivot);
+      var foot = new T.Mesh(new T.SphereGeometry(0.02, 10, 8), gold);
+      foot.scale.set(1.6, 0.7, 1); foot.position.set(botX, 0.02, 0); g.add(foot);
     });
-    var crossbar = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, (orx + 0.05) * 2, 10), gold);
-    crossbar.rotation.z = Math.PI / 2; crossbar.position.set(0, 0.12, 0); g.add(crossbar);
+    var crossbar = new T.Mesh(new T.CylinderGeometry(0.011, 0.011, (orx + 0.14) * 2, 10), gold);
+    crossbar.rotation.z = Math.PI / 2; crossbar.position.set(0, 0.16, 0); g.add(crossbar);
 
     // 오벌 반사면(프레임 안)
     var ng = new T.CircleGeometry(orx - 0.06, 40); ng.scale(1, (ory - 0.06) / (orx - 0.06), 1);
@@ -1604,8 +1617,8 @@
     }
     // 고품질 토피어리 — Blender 제작 GLB(잎 디테일+세라믹 화분+장미)를 클론 배치
     var plantSpots = [
-      [-W / 2 + 0.9, -D / 2 + 0.8, 1.2], [W / 2 - 1.0, D / 2 - 1.0, 1.05],
-      [-2.0, 1.9, 0.9], [W / 2 - 1.2, -1.6, 1.15]
+      [-W / 2 + 0.9, -D / 2 + 0.8, 1.2],   // 백-좌 코너
+      [W / 2 - 1.0, D / 2 - 1.0, 1.05]     // 앞-우 코너
     ];
     if (self.AD.GLTFLoader) {
       new self.AD.GLTFLoader().load(asset('topiary.glb'), function (gltf) {
@@ -1658,31 +1671,7 @@
       var bulb = new T.PointLight(0xFFE9C2, 6, 4, 2); bulb.position.set(lx + 0.4, ly + 0.28, lz); scene.add(bulb);
     })();
 
-    // 플로어 화병 + 팜파스/가지 (코너)
-    (function () {
-      var vx = -W / 2 + 1.7, vz = D / 2 - 1.2;
-      var vase = new T.Mesh(new T.CylinderGeometry(0.13, 0.09, 0.5, 20), new T.MeshStandardMaterial({ color: 0xEFE9DB, roughness: 0.5, metalness: 0.05 }));
-      vase.position.set(vx, 0.25, vz); vase.castShadow = true; scene.add(vase);
-      var stemMat = new T.MeshStandardMaterial({ color: 0xC9B896, roughness: 1.0 });
-      var plumeMat = new T.MeshStandardMaterial({ color: 0xEADCC2, roughness: 1.0 });
-      var frond = new T.CylinderGeometry(0.002, 0.006, 0.26, 4);
-      for (var b = 0; b < 12; b++) {
-        var ang = (b / 12) * Math.PI * 2 + Math.random() * 0.3, lean = 0.16 + Math.random() * 0.16;
-        var sx = vx + Math.cos(ang) * 0.16, sz = vz + Math.sin(ang) * 0.16, sl = 0.6 + Math.random() * 0.25;
-        var stem = new T.Mesh(new T.CylinderGeometry(0.005, 0.009, sl, 5), stemMat);
-        var sy = 0.5 + sl / 2;
-        stem.position.set(sx, sy, sz); stem.rotation.set(Math.sin(ang) * lean, 0, -Math.cos(ang) * lean); scene.add(stem);
-        // 깃털 플룸(끝에 프론드 다발)
-        var tx = sx + Math.sin(Math.sin(ang) * lean) * sl, ty = 0.5 + sl, tz = sz - Math.sin(-Math.cos(ang) * lean) * sl;
-        var pl = new T.Group(); pl.position.set(tx, ty, tz); scene.add(pl);
-        for (var f = 0; f < 7; f++) {
-          var fr = new T.Mesh(frond, plumeMat);
-          fr.position.y = 0.1; fr.rotation.set((Math.random() - 0.5) * 0.9, Math.random() * 6.28, (Math.random() - 0.5) * 0.9); pl.add(fr);
-        }
-      }
-    })();
-    // 화병 꽃다발(콘솔/소파 옆 바닥 액센트)
-    this._addFlowerCluster(-W / 2 + 1.7, 0.5, D / 2 - 1.2, 0.5, PALETTE.dustyrose);
+    // (제거) 팜파스 플로어 화병 — 사용자 요청
   };
 
   /* 빌트인 커튼 — Blender 천시뮬 드레이프 GLB를 빈 벽에 천장부터 내려오게.
@@ -1695,9 +1684,9 @@
     var loader = new AD.GLTFLoader();
     // [파일, x, z, ry(실내향), 가로스케일] — 우측벽 커튼 제거(책장 자리), 로고는 옷장-책장 사이로
     var panels = [
-      ['curtain_logo.glb', 2.7, -D / 2 + 0.12, 0, 1.0],                            // 옷장 우측(책장 사이) — 로고
-      ['curtain_plain.glb', -(AW / 2 + W / 2) / 2 - 0.3, -D / 2 + 0.12, 0, 1.55],  // 옷장 좌측(백벽)
-      ['curtain_plain.glb', -W / 2 + 0.12, 2.0, Math.PI / 2, 1.4]                  // 좌벽 뒤쪽
+      ['curtain_logo.glb', 2.65, -D / 2 + 0.12, 0, 1.05],                          // 옷장 우측(책장 사이) — 로고
+      ['curtain_plain.glb', -3.6, -D / 2 + 0.12, 0, 2.0],                          // 옷장 좌측(백벽) — 풀 스프레드(11자)
+      ['curtain_plain.glb', -W / 2 + 0.12, 2.1, Math.PI / 2, 1.5]                  // 좌벽 앞쪽
     ];
     panels.forEach(function (p) {
       loader.load(asset(p[0]), function (gltf) {
@@ -1782,12 +1771,12 @@
     var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t;
   };
 
-  /* 갤러리 월 — 좌측 벽에 골드 액자(오벌/사각) 클러스터 + 보타닉 아트 */
+  /* 갤러리 월 — 앞벽(문 좌측)에 골드 액자(오벌/사각) 클러스터 + 보타닉 아트 */
   P._buildGalleryWall = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat, self = this;
-    var W = this.ROOM.W;
-    var wx = -W / 2 + 0.06;   // 좌측 벽
-    // [벽z(가로), y, w, h, oval]
+    var W = this.ROOM.W, D = this.ROOM.D;
+    var fz = D / 2 - 0.06, cx = -2.7;   // 앞벽, 문 좌측 중심
+    // [상대x, y, w, h, oval]
     var frames = [
       [0.0, 1.85, 0.5, 0.62, false],
       [-0.66, 1.62, 0.42, 0.5, true],
@@ -1797,7 +1786,7 @@
       [0.02, 1.14, 0.28, 0.36, true]
     ];
     frames.forEach(function (f, i) {
-      var g = new T.Group(); g.position.set(wx, f[1], f[0]); g.rotation.y = Math.PI / 2; scene.add(g);
+      var g = new T.Group(); g.position.set(cx + f[0], f[1], fz); g.rotation.y = Math.PI; scene.add(g);
       var w = f[2], h = f[3], oval = f[4];
       var artMat = new T.MeshStandardMaterial({ map: self._artTex(i), roughness: 0.9 });
       var canvas = new T.Mesh(oval ? (function () { var c = new T.CircleGeometry(w / 2, 32); c.scale(1, h / w, 1); return c; })() : new T.PlaneGeometry(w, h), artMat);
@@ -1819,7 +1808,7 @@
     var T = this.T, AD = this.AD, scene = this.scene;
     // 화장대 앞 대각 — Blender 프렌치 의자(카브리올 다리+카브드 오벌 등받이) GLB
     var W = this.ROOM.W;
-    var g = new T.Group(); g.position.set(-W / 2 + 1.15, 0, 0.05); g.rotation.y = -Math.PI / 2; scene.add(g);   // 화장대(좌벽) 앞
+    var g = new T.Group(); g.position.set(-W / 2 + 1.05, 0, 0.05); g.rotation.y = Math.PI / 2; scene.add(g);   // 화장대(좌벽) 앞, 화장대 향함
     if (AD.GLTFLoader) {
       new AD.GLTFLoader().load(asset('chair.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -1909,7 +1898,7 @@
     }
 
     var bloom = new AD.UnrealBloomPass(new T.Vector2(w, h), 0.7, 0.6, 0.9);
-    bloom.threshold = 0.9; bloom.strength = this.isMobile ? 0.22 : 0.3; bloom.radius = 0.5;
+    bloom.threshold = 0.92; bloom.strength = this.isMobile ? 0.15 : 0.2; bloom.radius = 0.5;
     composer.addPass(bloom);
     this.bloom = bloom;
 
@@ -2063,7 +2052,7 @@
       // fog density (옅게 시작 → 거의 걷힘)
       this.scene.fog.density = 0.09 + (0.022 - 0.09) * this._ease(p);
       // 샹들리에 0 → 1.2 (은은하게)
-      var inten = 1.2 * this._ease(p);
+      var inten = 2.1 * this._ease(p);
       this.chandLights[0].intensity = inten;
       this.chandLights[1].intensity = inten;
     } else {
