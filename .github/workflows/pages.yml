@@ -12,6 +12,11 @@ permissions:
   pages: write
   id-token: write
 
+# 2026-06-16 부터 GitHub 러너가 JS 액션을 Node.js 24 로 강제 전환한다.
+# 공식 액션들이 Node 24 에서도 정상 동작하도록 미리 옵트인(경고 제거 + 사전 검증).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 # 동시 배포 1개로 제한 (중간 실행은 취소)
 concurrency:
   group: pages
