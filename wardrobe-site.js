@@ -389,21 +389,24 @@
   /* 대리석 텍스처 */
   P._marbleTex = function () {
     return this._canvas(512, function (ctx, S) {
-      ctx.fillStyle = '#f4f1ec'; ctx.fillRect(0, 0, S, S);
-      ctx.lineWidth = 1.2;
-      for (var i = 0; i < 22; i++) {
-        ctx.strokeStyle = 'rgba(150,140,150,' + (0.06 + Math.random() * 0.12) + ')';
-        ctx.beginPath();
-        var x = Math.random() * S, y = Math.random() * S;
-        ctx.moveTo(x, y);
-        for (var s = 0; s < 6; s++) { x += (Math.random() - 0.5) * 120; y += (Math.random() - 0.5) * 120; ctx.lineTo(x, y); }
-        ctx.stroke();
+      ctx.fillStyle = '#F1EDE4'; ctx.fillRect(0, 0, S, S);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      // 곁가지 달린 굵은 메인 베인(칼라카타풍) — 회갈/골드빛
+      function vein(x, y, ang, width, depth, col) {
+        if (depth <= 0 || width < 0.4) return;
+        var len = 26 + Math.random() * 46;
+        var nx = x + Math.cos(ang) * len, ny = y + Math.sin(ang) * len;
+        ctx.strokeStyle = col; ctx.lineWidth = width;
+        ctx.beginPath(); ctx.moveTo(x, y);
+        ctx.quadraticCurveTo((x + nx) / 2 + (Math.random() - 0.5) * 22, (y + ny) / 2 + (Math.random() - 0.5) * 22, nx, ny); ctx.stroke();
+        vein(nx, ny, ang + (Math.random() - 0.5) * 0.7, width * 0.74, depth - 1, col);
+        if (Math.random() < 0.45) vein(nx, ny, ang + (Math.random() - 0.5) * 1.5, width * 0.5, depth - 1, col);
       }
-      // 미세 결정 얼룩으로 깊이감
-      for (var g = 0; g < 1600; g++) {
-        ctx.fillStyle = 'rgba(120,115,125,' + (Math.random() * 0.04) + ')';
-        ctx.fillRect(Math.random() * S, Math.random() * S, 2, 2);
-      }
+      for (var i = 0; i < 5; i++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 4.5 + Math.random() * 2, 5, 'rgba(120,112,104,0.5)');
+      for (var j = 0; j < 9; j++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 1.6, 3, 'rgba(160,150,135,0.4)');
+      for (var k = 0; k < 7; k++) vein(Math.random() * S, Math.random() * S, Math.random() * 6.28, 1.0, 2, 'rgba(150,135,100,0.3)');  // 골드빛 잔맥
+      // 미세 결정 얼룩
+      for (var g = 0; g < 1400; g++) { ctx.fillStyle = 'rgba(120,114,108,' + (Math.random() * 0.05) + ')'; ctx.fillRect(Math.random() * S, Math.random() * S, 2, 2); }
     });
   };
 
@@ -609,8 +612,8 @@
 
     /* 바닥: 밝은 대리석 + 데스크탑 Reflector 광택 */
     var marbleTex = this._marbleTex();
-    marbleTex.wrapS = marbleTex.wrapT = T.RepeatWrapping; marbleTex.repeat.set(3, 3);
-    var marbleBmp = this._marbleBump(); marbleBmp.repeat.set(3, 3);
+    marbleTex.wrapS = marbleTex.wrapT = T.RepeatWrapping; marbleTex.repeat.set(4, 4);
+    var marbleBmp = this._marbleBump(); marbleBmp.repeat.set(4, 4);
     if (!this.isMobile && !this._lite) {
       var reflector = new AD.Reflector(new T.PlaneGeometry(W, D), {
         textureWidth: 1024, textureHeight: 1024, color: 0x9b968c, clipBias: 0.003
@@ -618,7 +621,7 @@
       reflector.rotation.x = -Math.PI / 2; reflector.position.y = 0.0;
       scene.add(reflector); this.reflector = reflector;
       var overlay = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
-        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.022, color: 0xF1EEE4,
+        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.03, color: 0xFFFFFF,
         roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.18,
         transparent: true, opacity: 0.82, envMapIntensity: 0.9
       }));
@@ -626,7 +629,7 @@
       scene.add(overlay);
     } else {
       var floor = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
-        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.022, color: 0xF1EEE4,
+        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.03, color: 0xFFFFFF,
         roughness: 0.3, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.8
       }));
       floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
@@ -1599,40 +1602,21 @@
         leaf.castShadow = true; grp.add(leaf);
       }
     }
-    function potPlant(x, z, s, kind) {
-      var grp = new T.Group(); grp.position.set(x, 0, z); scene.add(grp);
-      var pot = new T.Mesh(new T.CylinderGeometry(0.2 * s, 0.15 * s, 0.34 * s, 24),
-        new T.MeshStandardMaterial({ color: 0xEDE6D6, roughness: 0.8 }));
-      pot.position.y = 0.17 * s; pot.castShadow = true; grp.add(pot);
-      var rim = new T.Mesh(new T.TorusGeometry(0.2 * s, 0.02 * s, 8, 24), new T.MeshStandardMaterial({ color: 0xE3DAC6, roughness: 0.8 }));
-      rim.rotation.x = Math.PI / 2; rim.position.y = 0.34 * s; grp.add(rim);
-      var trunk = new T.Mesh(new T.CylinderGeometry(0.022 * s, 0.03 * s, 0.5 * s, 8), new T.MeshStandardMaterial({ color: 0x7A6248, roughness: 0.9 }));
-      trunk.position.y = 0.5 * s; grp.add(trunk);
-      var tint = greens[(x | 0) % greens.length];
-      // 토피어리 구(가벼움) + 잎 텍스처(실사감) + 붉은 핑크 장미 액센트
-      var fmat = new T.MeshStandardMaterial({ map: foliageTex(), bumpMap: foliageTex(), bumpScale: 0.02, color: tint, roughness: 0.95 });
-      var balls = (kind === 'topiary') ? [[0.95, 0.27], [1.32, 0.2]] : [[1.0, 0.34]];
-      balls.forEach(function (b, bi) {
-        var ball = new T.Mesh(new T.SphereGeometry(b[1] * s, 22, 16), fmat);
-        ball.position.y = b[0] * s; if (kind !== 'topiary') ball.scale.y = 1.15; ball.castShadow = true; grp.add(ball);
-        // 붉은 핑크 장미 액센트(구 표면에 몇 송이)
-        var roses = ['#D85C77', '#E58AA0', '#C7456A', '#EBA9B8'];
-        var rn = bi === 0 ? 7 : 4;
-        for (var r = 0; r < rn; r++) {
-          var rmat = new T.MeshStandardMaterial({ color: roses[r % 4], roughness: 0.7 });
-          var rose = new T.Mesh(new T.SphereGeometry(0.035 * s, 8, 6), rmat);
-          var u = Math.random() * Math.PI * 2, v = Math.acos(Math.random() * 0.6 + 0.2), rr = b[1] * s * 0.95;
-          rose.position.set(rr * Math.sin(v) * Math.cos(u), b[0] * s + rr * Math.cos(v), rr * Math.sin(v) * Math.sin(u));
-          grp.add(rose);
-        }
-      });
-      return grp;
+    // 고품질 토피어리 — Blender 제작 GLB(잎 디테일+세라믹 화분+장미)를 클론 배치
+    var plantSpots = [
+      [-W / 2 + 0.9, -D / 2 + 0.8, 1.2], [W / 2 - 1.0, D / 2 - 1.0, 1.05],
+      [-2.0, 1.9, 0.9], [W / 2 - 1.2, -1.6, 1.15]
+    ];
+    if (self.AD.GLTFLoader) {
+      new self.AD.GLTFLoader().load(asset('topiary.glb'), function (gltf) {
+        var src = gltf.scene; src.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        plantSpots.forEach(function (p) {
+          var c = src.clone(true);
+          c.position.set(p[0], 0, p[1]); c.scale.setScalar(p[2]); c.rotation.y = Math.random() * 6.28;
+          scene.add(c);
+        });
+      }, undefined, function () { });
     }
-    // 화분 배치(넓은 방 코너/창가/소파 옆)
-    potPlant(-W / 2 + 0.9, -D / 2 + 0.8, 1.15, 'tree');
-    potPlant(W / 2 - 1.0, D / 2 - 1.0, 1.0, 'topiary');
-    potPlant(-2.0, 1.9, 0.85, 'topiary');
-    potPlant(W / 2 - 1.2, -1.6, 1.1, 'tree');
 
     // 책장 + 책 (백벽 우측, 옷장 옆)
     (function () {
