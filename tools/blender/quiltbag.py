@@ -47,17 +47,18 @@ c1.rotation_euler=(math.radians(90),0,0); c1.data.materials.append(GOLD); allobj
 bpy.ops.mesh.primitive_torus_add(major_radius=0.016, minor_radius=0.004, location=(0,D/2+0.01,0.0), major_segments=20, minor_segments=8); c2=bpy.context.active_object
 c2.rotation_euler=(math.radians(90),0,0); c2.data.materials.append(GOLD); allobj.append(c2)
 
-# ---- 골드 체인 손잡이 (깔끔한 튜브 아치) ----
+# ---- 골드 체인 손잡이 (깔끔한 튜브 아치) — 끝을 본체 안으로 박아 연결 ----
 cur=bpy.data.curves.new("handle","CURVE"); cur.dimensions='3D'; sp=cur.splines.new('NURBS'); sp.points.add(4)
-hx=W/2-0.04
-pts=[(-hx,0,Hh/2-0.01),(-hx*0.6,0,Hh/2+0.07),(0,0,Hh/2+0.10),(hx*0.6,0,Hh/2+0.07),(hx,0,Hh/2-0.01)]
+hx=W/2-0.07
+zlow=Hh/2-0.05   # 본체 윗부분 안으로 들어가는 부착점
+pts=[(-hx,0,zlow),(-hx*0.65,0,Hh/2+0.05),(0,0,Hh/2+0.075),(hx*0.65,0,Hh/2+0.05),(hx,0,zlow)]
 for i,p in enumerate(pts): sp.points[i].co=(p[0],p[1],p[2],1)
 sp.use_endpoint_u=True; sp.order_u=3; cur.bevel_depth=0.006; cur.bevel_resolution=3
 ho=bpy.data.objects.new("handle",cur); sc.collection.objects.link(ho); ho.data.materials.append(GOLD); allobj.append(ho)
-# 체인 질감(작은 링 몇 개만 손잡이 양 끝 고리에)
+# 부착 고리(D링) — 본체 윗면에서 손잡이가 걸리는 연결부
 for sgn in (-1,1):
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.012, minor_radius=0.004, location=(sgn*hx,0,Hh/2-0.01), major_segments=12, minor_segments=6)
-    o=bpy.context.active_object; o.data.materials.append(GOLD); allobj.append(o)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.013, minor_radius=0.0045, location=(sgn*hx,0,Hh/2-0.02), major_segments=14, minor_segments=7)
+    o=bpy.context.active_object; o.rotation_euler=(math.radians(90),0,0); o.data.materials.append(GOLD); allobj.append(o)
 
 sc.render.engine='CYCLES'; sc.cycles.samples=8; sc.cycles.device='CPU'
 bpy.ops.object.select_all(action='DESELECT')
