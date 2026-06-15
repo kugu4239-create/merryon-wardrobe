@@ -2624,7 +2624,7 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.46, radius: 3.4, targetTheta: 0, targetPhi: 1.46 };   // 초기 상하각: 살짝 내려다보는 establishing 구도
+    this.cam = { theta: 0, phi: 1.373, radius: 3.4, targetTheta: 0, targetPhi: 1.373 };   // 초기 상하각: 약 5° 더 내려다봄(하향 틸트 ~11°)
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
