@@ -2624,15 +2624,15 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.373, radius: 3.4, targetTheta: 0, targetPhi: 1.373 };   // 초기 상하각: 약 5° 더 내려다봄(하향 틸트 ~11°)
-    this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
+    this.cam = { theta: 0, phi: 1.373, phiInit: 1.373, radius: 3.4, targetTheta: 0, targetPhi: 1.373 };   // 초기 상하각(하향 틸트 ~11°)
+    this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스, 좌우만)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
-    this.gyro = { active: false, gamma: 0 };
+    this.gyro = { active: false, tilt: 0, betaNeutral: null };   // 상하(phi)는 기기 틸트로만
 
     var DEG = Math.PI / 180;
-    // 360° 무제한 회전 + 천장(위)↔바닥(아래)까지 둘러보기. 방이 4면으로 닫혀 어느 각도든 벽.
-    this.LIMIT = { theta: Infinity, hover: 6 * DEG, phiMin: 1.28, phiMax: 1.62 };   // 빌트인으로 옆면 가려져 360° 허용
+    // 좌우(theta) 360° 무제한 = 드래그/스크롤만. 상하(phi) = 기기 틸트만(데스크탑은 초기각 고정).
+    this.LIMIT = { theta: Infinity, hover: 6 * DEG, phiMin: 1.15, phiMax: 1.66 };
 
     function rect() { return el.getBoundingClientRect(); }
 
@@ -2644,9 +2644,8 @@
         var dx = e.clientX - self.drag.lastX;
         var dy = e.clientY - self.drag.lastY;
         self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
-        self.drag.theta += dx * 0.005;
+        self.drag.theta += dx * 0.005;   // 좌우(theta)만 — 세로 드래그는 상하에 영향 없음
         self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, self.drag.theta));
-        self.cam.targetPhi = Math.max(self.LIMIT.phiMin, Math.min(self.LIMIT.phiMax, self.cam.targetPhi - dy * 0.003));
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 5) dragMoved = true;
         self.lastInteract = self.elapsed;
       } else {
@@ -2679,11 +2678,13 @@
       self.lastInteract = self.elapsed;
     }, { passive: true });
 
-    /* DeviceOrientation gamma → theta (기기 틸트) */
+    /* DeviceOrientation beta(앞뒤 틸트) → 상하(phi). 처음 값을 중립으로 잡고 델타만 사용. */
     function onOrient(e) {
-      if (e.gamma == null) return;
+      if (e.beta == null) return;
       self.gyro.active = true;
-      self.gyro.gamma = Math.max(-45, Math.min(45, e.gamma));
+      if (self.gyro.betaNeutral == null) self.gyro.betaNeutral = e.beta;
+      var d = Math.max(-40, Math.min(40, e.beta - self.gyro.betaNeutral));
+      self.gyro.tilt = (d / 40) * 0.28;   // 뒤로 기울이면 위로, 앞으로 기울이면 아래로(±~16°)
       self.lastInteract = self.elapsed;
     }
     this._enableGyro = function () {
@@ -2792,13 +2793,13 @@
   P._updateCamera = function (t, dt) {
     var DEG = Math.PI / 180;
 
-    // 자동 좌우 흔들림(오실레이션) 제거 — 사용자 입력에만 반응(가만히 두면 멈춰 있음).
+    // 좌우(theta): 드래그/스크롤 + 마우스 호버 패럴랙스만(자이로는 좌우에 영향 없음)
     var base = this.drag.theta;
-    if (this.gyro.active) base += (this.gyro.gamma / 45) * 60 * DEG;
-    var hover = this.pointer.x * this.LIMIT.hover;   // 마우스 호버 패럴랙스(소폭)
+    var hover = this.pointer.x * this.LIMIT.hover;
     this.cam.targetTheta = Math.max(-this.LIMIT.theta, Math.min(this.LIMIT.theta, base + hover));
-    this.cam.targetPhi += (-this.pointer.y * 0.12) * 0.06;
-    this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, this.cam.targetPhi));
+    // 상하(phi): 기기 틸트(자이로)로만 — 자이로 없으면 초기각 고정
+    var phi = this.cam.phiInit + (this.gyro.active ? this.gyro.tilt : 0);
+    this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, phi));
 
     // radius 살짝 호흡
     this.cam.radius = 3.4 + Math.sin(t * 0.3) * 0.05;
