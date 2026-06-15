@@ -1043,8 +1043,8 @@
                  : (band != null ? band * w * (clipType ? 0.82 : 0.92) : swDefault);
           sw = Math.max(clipType ? 0.12 : 0.07, Math.min(0.42, sw));
           var topY = clipType ? clipHanger(pivot, sw, dz) : shoulderHanger(pivot, sw, dz);
-          // 상의는 옷걸이에 더 바짝(살짝 위로)
-          if (type === 'top') topY += 0.02;
+          // 상의는 옷걸이에 더 바짝(위로 더)
+          if (type === 'top') topY += 0.045;
           var mat = new T.MeshStandardMaterial({
             map: tex, transparent: true, alphaTest: 0.45, side: T.DoubleSide,
             roughness: 0.82, metalness: 0.0, color: 0xffffff
@@ -1262,7 +1262,11 @@
    * ----------------------------------------------------------------------- */
   P._buildVanity = function () {
     var T = this.T, scene = this.scene;
-    var bx = -3.7, bz = -3.0;   // 좌측(벽과 간격)
+    // 좌측 벽(갤러리 벽)에 등을 대고 붙임 — 그룹으로 묶어 회전 배치
+    var W = this.ROOM.W;
+    var vg = new T.Group(); vg.position.set(-W / 2 + 0.5, 0, 0); vg.rotation.y = Math.PI / 2; scene.add(vg);
+    this.vanityGroup = vg;
+    var bx = 0, bz = 0;   // 그룹 로컬
 
     var gold = this.goldMat;
     // 화이트 프렌치 프로방살 — 카브드 우드 톤(레퍼런스 img2)
@@ -1271,43 +1275,42 @@
 
     // 상판(≈0.78m) — 화이트, 살짝 오버행
     var top = new T.Mesh(new T.BoxGeometry(1.3, 0.05, 0.55), white);
-    top.position.set(bx, 0.78, bz); top.castShadow = true; top.receiveShadow = true; scene.add(top);
+    top.position.set(bx, 0.78, bz); top.castShadow = true; top.receiveShadow = true; vg.add(top);
     // 몸통(서랍 캐비닛)
     var body = new T.Mesh(new T.BoxGeometry(1.16, 0.24, 0.46), white);
-    body.position.set(bx, 0.64, bz); body.castShadow = true; scene.add(body);
+    body.position.set(bx, 0.64, bz); body.castShadow = true; vg.add(body);
     // 서랍 3 + 골드 손잡이
     for (var dI = -1; dI <= 1; dI++) {
       var df = new T.Mesh(new T.BoxGeometry(0.34, 0.18, 0.02), whiteP);
-      df.position.set(bx + dI * 0.38, 0.64, bz + 0.24); scene.add(df);
+      df.position.set(bx + dI * 0.38, 0.64, bz + 0.24); vg.add(df);
       var knob = new T.Mesh(new T.SphereGeometry(0.018, 12, 10), gold);
-      knob.position.set(bx + dI * 0.38, 0.64, bz + 0.27); scene.add(knob);
+      knob.position.set(bx + dI * 0.38, 0.64, bz + 0.27); vg.add(knob);
     }
     // 카브리올(살짝 휜) 화이트 다리 ×4 — 위 굵고 아래 가늘게 + 바깥 스플레이
     [[-0.55, -0.18, -1], [0.55, -0.18, 1], [-0.55, 0.18, -1], [0.55, 0.18, 1]].forEach(function (lp) {
       var leg = new T.Mesh(new T.CylinderGeometry(0.035, 0.018, 0.52, 12), white);
-      leg.position.set(bx + lp[0], 0.26, bz + lp[1]); leg.rotation.z = lp[2] * 0.07; leg.castShadow = true; scene.add(leg);
+      leg.position.set(bx + lp[0], 0.26, bz + lp[1]); leg.rotation.z = lp[2] * 0.07; leg.castShadow = true; vg.add(leg);
       var foot = new T.Mesh(new T.SphereGeometry(0.022, 10, 8), gold);
-      foot.position.set(bx + lp[0] + lp[2] * 0.035, 0.01, bz + lp[1]); scene.add(foot);
+      foot.position.set(bx + lp[0] + lp[2] * 0.035, 0.01, bz + lp[1]); vg.add(foot);
     });
 
-    // 골드 오벌 거울(테이블 위 스탠딩) — 타원 링 + 반사면
+    // 골드 오벌 거울(테이블 위 스탠딩) — 타원 링 + 반사면(벽쪽, bz-0.18)
     var ring = new T.Mesh(new T.TorusGeometry(0.3, 0.022, 12, 40), gold);
-    ring.scale.set(1.0, 1.35, 1.0); ring.position.set(bx, 1.22, bz - 0.18); scene.add(ring);
+    ring.scale.set(1.0, 1.35, 1.0); ring.position.set(bx, 1.22, bz - 0.18); vg.add(ring);
     var ovGeo = new T.CircleGeometry(0.28, 40); ovGeo.scale(1.0, 1.32, 1.0);
-    this._addCubeMirror(bx, 1.22, bz - 0.16, 0, 0, 0, 1, ovGeo);
-    // 오벌 받침대
+    var ovm = this._addCubeMirror(bx, 1.22, bz - 0.16, 0, 0, 0, 1, ovGeo);
+    if (ovm) { scene.remove(ovm); vg.add(ovm); }
     var mstand = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.42, 8), gold);
-    mstand.position.set(bx, 0.92, bz - 0.18); scene.add(mstand);
+    mstand.position.set(bx, 0.92, bz - 0.18); vg.add(mstand);
 
-    // 향수 — 실제 브랜드 실루엣(샤넬 No.5 사각 / 디올 J'adore 앰포라 / 라운드 / 큐브)
-    this._buildPerfumes(bx, bz, gold);
-    // 바니티 위 작은 꽃
-    this._addFlowerCluster(bx + 0.46, 0.81, bz + 0.02, 0.22, PALETTE.blush);
+    // 향수 + 꽃 (그룹에 부착)
+    this._buildPerfumes(vg, bx, bz, gold);
+    this._addFlowerCluster(bx + 0.46, 0.81, bz + 0.02, 0.22, PALETTE.blush, vg);
   };
 
-  /* 실제 향수 브랜드 실루엣 4종 */
-  P._buildPerfumes = function (bx, bz, gold) {
-    var T = this.T, scene = this.scene, y0 = 0.805;
+  /* 실제 향수 브랜드 실루엣 4종 (parent 그룹에 부착) */
+  P._buildPerfumes = function (scene, bx, bz, gold) {
+    var T = this.T, y0 = 0.805;
     function glass(tint, rough) {
       return new T.MeshPhysicalMaterial({ color: tint, metalness: 0, roughness: rough || 0.06, transmission: 0.92, thickness: 0.25, ior: 1.5, transparent: true, envMapIntensity: 1.4 });
     }
@@ -1371,23 +1374,42 @@
    * 풀렝스 플로어 미러 (우측, 아치 골드 프레임)
    * ----------------------------------------------------------------------- */
   P._buildFloorMirror = function () {
-    var T = this.T, scene = this.scene;
-    var mx = 3.3, mz = 1.9, ry = -0.95;    // 우-앞측(소파 옆), 방 안으로 기울여 세움(≈1.5m)
-    var gold = this.goldMat;
+    var T = this.T, scene = this.scene, gold = this.goldMat;
+    var mx = 3.3, mz = 1.9, ry = -0.95;    // 우-앞측(소파 옆)
+    var orx = 0.40, ory = 0.62, cy = 0.98; // 오벌 반경, 중심 높이 → 셰발(전신) 미러
+    var g = new T.Group(); g.position.set(mx, 0, mz); g.rotation.y = ry; scene.add(g);
 
-    var arch = new T.Shape();
-    arch.moveTo(-0.42, 0); arch.lineTo(-0.42, 1.1);
-    arch.absarc(0, 1.1, 0.42, Math.PI, 0, true);
-    arch.lineTo(0.42, 0); arch.lineTo(-0.42, 0);
-    var frame = new T.Mesh(new T.ExtrudeGeometry(arch, { depth: 0.06, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.025, bevelSegments: 3 }), gold);
-    frame.position.set(mx, 0.05, mz);
-    frame.rotation.y = ry;
-    frame.castShadow = true;
-    scene.add(frame);
+    // 오벌 골드 프레임(이중 링) + 상단 크레스트(오너먼트)
+    function ovalRing(tube, scaleY, rad) {
+      var r = new T.Mesh(new T.TorusGeometry(rad, tube, 12, 48), gold);
+      r.scale.set(1, scaleY, 1); r.position.set(0, cy, 0.02); g.add(r); return r;
+    }
+    ovalRing(0.028, ory / orx, orx);
+    ovalRing(0.012, (ory - 0.05) / (orx - 0.05), orx - 0.05);
+    var crest = new T.Mesh(new T.SphereGeometry(0.05, 12, 10), gold);
+    crest.scale.set(1.7, 0.8, 0.6); crest.position.set(0, cy + ory + 0.03, 0.02); g.add(crest);
+    var crest2 = new T.Mesh(new T.TorusGeometry(0.035, 0.01, 8, 18, Math.PI), gold);
+    crest2.position.set(0, cy + ory + 0.06, 0.02); g.add(crest2);
 
-    // 아치형 반사면 — 프레임 앞면 법선을 따라 살짝 앞에 부착
-    var nx = Math.sin(ry) * 0.07, nz = Math.cos(ry) * 0.07;
-    this._addCubeMirror(mx + nx, 0.05, mz + nz, 0, 0, ry, 1, this._archMirrorGeo(0.37, 1.05));
+    // 셰발 스탠드 — 양옆 기둥 + 바깥으로 휜 다리 + 베이스 크로스바
+    [-1, 1].forEach(function (s) {
+      var post = new T.Mesh(new T.CylinderGeometry(0.016, 0.02, cy + ory * 0.2, 10), gold);
+      post.position.set(s * (orx + 0.05), (cy + ory * 0.2) / 2, 0); g.add(post);
+      var pivot = new T.Mesh(new T.SphereGeometry(0.025, 10, 8), gold);
+      pivot.position.set(s * (orx + 0.05), cy, 0.02); g.add(pivot);
+      // 휜 다리(아래 바깥으로)
+      var leg = new T.Mesh(new T.CylinderGeometry(0.02, 0.014, 0.34, 10), gold);
+      leg.position.set(s * (orx + 0.11), 0.16, 0); leg.rotation.z = -s * 0.32; g.add(leg);
+      var foot = new T.Mesh(new T.SphereGeometry(0.022, 10, 8), gold);
+      foot.position.set(s * (orx + 0.16), 0.02, 0); g.add(foot);
+    });
+    var crossbar = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, (orx + 0.05) * 2, 10), gold);
+    crossbar.rotation.z = Math.PI / 2; crossbar.position.set(0, 0.12, 0); g.add(crossbar);
+
+    // 오벌 반사면(프레임 안)
+    var ng = new T.CircleGeometry(orx - 0.06, 40); ng.scale(1, (ory - 0.06) / (orx - 0.06), 1);
+    var nx = Math.sin(ry) * 0.04, nz = Math.cos(ry) * 0.04;
+    this._addCubeMirror(mx + nx, cy, mz + nz, 0, 0, ry, 1, ng);
   };
 
   /* ----------------------------------------------------------------------- *
@@ -1463,8 +1485,8 @@
   };
 
   /* 꽃 클러스터 (피오니/라넌큘러스 풍 다층 구) */
-  P._addFlowerCluster = function (x, y, z, scale, accent) {
-    var T = this.T, scene = this.scene;
+  P._addFlowerCluster = function (x, y, z, scale, accent, parent) {
+    var T = this.T, scene = parent || this.scene;
     var colors = [accent, PALETTE.blush, PALETTE.offwhite, PALETTE.dustyrose, PALETTE.lavender];
     var stemMat = new T.MeshStandardMaterial({ color: PALETTE.sage, roughness: 0.8 });
     var n = 9;
@@ -1812,7 +1834,8 @@
   P._buildVanityChair = function () {
     var T = this.T, AD = this.AD, scene = this.scene;
     // 화장대 앞 대각 — Blender 프렌치 의자(카브리올 다리+카브드 오벌 등받이) GLB
-    var g = new T.Group(); g.position.set(-3.05, 0, -2.35); g.rotation.y = Math.PI * 0.72; scene.add(g);
+    var W = this.ROOM.W;
+    var g = new T.Group(); g.position.set(-W / 2 + 1.15, 0, 0.05); g.rotation.y = -Math.PI / 2; scene.add(g);   // 화장대(좌벽) 앞
     if (AD.GLTFLoader) {
       new AD.GLTFLoader().load(asset('chair.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
