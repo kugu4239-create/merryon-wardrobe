@@ -149,7 +149,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v4-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v5-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -2021,7 +2021,7 @@
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(3.45, 0, -D / 2 + 0.36); g.rotation.y = 0; scene.add(g);   // 뒷벽 우측
+    g.position.set(2.3, 0, D / 2 - 0.36); g.rotation.y = Math.PI; scene.add(g);   // 앞벽(문 옆) — 책장 겹침 해소
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var panel = new T.MeshPhysicalMaterial({ color: 0xE7DDC8, roughness: 0.5, clearcoat: 0.3 });
@@ -2222,6 +2222,42 @@
     var smaa = new AD.SMAAPass(w, h);
     composer.addPass(smaa);
 
+    // 핀터레스트 컬러그레이드 — 웜 화이트밸런스 + 부드러운 S커브 대비 + 채도↓ + 비네팅 + 미세 그레인
+    var GradeShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        uTime: { value: 0 },
+        uRes: { value: new T.Vector2(w, h) },
+        uWarm: { value: new T.Vector3(1.05, 1.004, 0.935) },
+        uSat: { value: 0.90 },
+        uContrast: { value: 0.12 },
+        uVig: { value: 0.86 },
+        uGrain: { value: 0.016 }
+      },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: [
+        'uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uRes;',
+        'uniform vec3 uWarm; uniform float uSat; uniform float uContrast; uniform float uVig; uniform float uGrain;',
+        'varying vec2 vUv;',
+        'void main(){',
+        '  vec3 c = texture2D(tDiffuse, vUv).rgb;',
+        '  c *= uWarm;',                                              // 웜 화이트밸런스
+        '  float l = dot(c, vec3(0.299,0.587,0.114));',
+        '  c = mix(vec3(l), c, uSat);',                              // 채도 살짝↓(에디토리얼)
+        '  c = mix(c, c*c*(3.0-2.0*c), uContrast);',                // 부드러운 S커브 대비
+        '  vec2 q = vUv - 0.5;',
+        '  float vig = smoothstep(0.95, 0.32, length(q)*1.28);',
+        '  c *= mix(uVig, 1.0, vig);',                              // 비네팅(가장자리 웜다크)
+        '  float g = fract(sin(dot(vUv*uRes + uTime, vec2(12.9898,78.233))) * 43758.5453);',
+        '  c += (g - 0.5) * uGrain;',                               // 미세 필름 그레인
+        '  gl_FragColor = vec4(max(c, 0.0), 1.0);',
+        '}'
+      ].join('\n')
+    };
+    var grade = new AD.ShaderPass(GradeShader);
+    composer.addPass(grade);
+    this.gradePass = grade;
+
     composer.addPass(new AD.OutputPass());
 
     this.composer = composer;
@@ -2337,6 +2373,7 @@
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (this.composer) this.composer.setSize(w, h);
+    if (this.gradePass) this.gradePass.uniforms.uRes.value.set(w, h);
   };
 
   /* ----------------------------------------------------------------------- *
@@ -2397,6 +2434,7 @@
       }
     }
 
+    if (this.gradePass) this.gradePass.uniforms.uTime.value = this.elapsed;
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
   };
