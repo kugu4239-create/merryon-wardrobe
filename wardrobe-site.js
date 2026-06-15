@@ -191,6 +191,8 @@
     var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
                    (window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
     this.isMobile = isMobile;
+    // 라이트 모드(헤드리스 검증용): 포스트프로세싱/실시간 반사 비활성 → 가벼운 렌더로 레이아웃 확인
+    this._lite = !!window.__MERRYON_LITE__;
 
     /* --- 렌더러 --------------------------------------------------------- */
     var renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
@@ -609,7 +611,7 @@
     var marbleTex = this._marbleTex();
     marbleTex.wrapS = marbleTex.wrapT = T.RepeatWrapping; marbleTex.repeat.set(3, 3);
     var marbleBmp = this._marbleBump(); marbleBmp.repeat.set(3, 3);
-    if (!this.isMobile) {
+    if (!this.isMobile && !this._lite) {
       var reflector = new AD.Reflector(new T.PlaneGeometry(W, D), {
         textureWidth: 1024, textureHeight: 1024, color: 0x9b968c, clipBias: 0.003
       });
@@ -845,9 +847,7 @@
       bar.rotation.x = -Math.atan2(ex - cz, ey - archY); scene.add(bar);
     });
 
-    // 천장 커튼 봉 — 두께 1/3 로 슬림하게(골드)
-    var rod = new T.Mesh(new T.CylinderGeometry(0.0167, 0.0167, winW + 1.6, 12), this.goldMat);
-    rod.rotation.x = Math.PI / 2; rod.position.set(wx - 0.34, H - 0.4, cz); scene.add(rod);
+    // 창 커튼봉 제거(요청) — 커튼은 빌트인 드레이프로 대체
 
     // 천장→바닥 쉬폰 커튼 (wave morph)
     var curtH = H - 0.6;
@@ -958,7 +958,7 @@
       ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', 0.85], // 블랙 플리츠 원피스(5번째 15%↓)
       ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', 1.0],  // 핑크 러플 스커트
       ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants', 1.2],  // 네이비 와이드 팬츠(7번째 20%↑)
-      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.85]  // 블랙 오프숄더 롬퍼(마지막 15%↓)
+      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.85, 0.30]  // 블랙 오프숄더 롬퍼(마지막) — 옷걸이 폭 지정(넓게)
     ];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
@@ -1033,9 +1033,12 @@
           // 옷걸이 폭 = (상의/원피스) 최상단 카라(목) 개구부 폭 / (스커트·팬츠) 허리 폭
           var band = clipType ? topOpaqueFrac(tex.image, 0.0, 0.06) : topOpaqueFrac(tex.image, 0.0, 0.04);
           var swDefault = clipType ? w * 0.6 : w * 0.28;
-          var sw = (band != null ? band * w * (clipType ? 0.82 : 0.92) : swDefault);
+          var sw = (entry[4] != null) ? entry[4]      // 개별 옷걸이폭 지정(예: 오프숄더)
+                 : (band != null ? band * w * (clipType ? 0.82 : 0.92) : swDefault);
           sw = Math.max(clipType ? 0.12 : 0.07, Math.min(0.42, sw));
           var topY = clipType ? clipHanger(pivot, sw, dz) : shoulderHanger(pivot, sw, dz);
+          // 상의는 옷걸이에 더 바짝(살짝 위로)
+          if (type === 'top') topY += 0.02;
           var mat = new T.MeshStandardMaterial({
             map: tex, transparent: true, alphaTest: 0.45, side: T.DoubleSide,
             roughness: 0.82, metalness: 0.0, color: 0xffffff
@@ -1337,8 +1340,8 @@
   P._addCubeMirror = function (x, y, z, w, h, ry, scale, geo) {
     var T = this.T, AD = this.AD, scene = this.scene;
     var g = geo || new T.PlaneGeometry(w, h);
-    if (this.isMobile) {
-      // 모바일: 정적 env 반사(성능)
+    if (this.isMobile || this._lite) {
+      // 모바일/라이트: 정적 env 반사(성능)
       var m = new T.Mesh(g, new T.MeshStandardMaterial({ color: 0xeef0f2, metalness: 1.0, roughness: 0.06, envMapIntensity: 1.7 }));
       m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m;
     }
@@ -1544,18 +1547,21 @@
     var T = this.T, scene = this.scene, self = this;
     var W = this.ROOM.W, D = this.ROOM.D;
     var greens = [0x7E9B68, 0x88A472, 0x6F8C5C, 0x9DB87E];
-    // 잎 텍스처(투명 PNG 대용 캔버스) — 실사 부피감용
-    function leafTex() {
-      if (self._leafTexC) return self._leafTexC;
-      var c = document.createElement('canvas'); c.width = 64; c.height = 64; var g = c.getContext('2d');
-      var grd = g.createLinearGradient(0, 4, 0, 60); grd.addColorStop(0, '#A6C48C'); grd.addColorStop(0.6, '#7B9B63'); grd.addColorStop(1, '#52703F');
-      g.fillStyle = grd; g.beginPath(); g.moveTo(32, 3); g.quadraticCurveTo(61, 30, 32, 61); g.quadraticCurveTo(3, 30, 32, 3); g.fill();
-      g.strokeStyle = 'rgba(40,60,35,0.45)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(32, 8); g.lineTo(32, 56); g.stroke();
-      for (var k = 0; k < 5; k++) { var yy = 14 + k * 8; g.beginPath(); g.moveTo(32, yy); g.lineTo(32 + (k % 2 ? 9 : -9), yy + 6); g.stroke(); }
-      var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; self._leafTexC = t; return t;
+    // 잎 패턴 텍스처(타일) — 토피어리 구에 매핑해 실사 잎 질감(가벼움)
+    function foliageTex() {
+      if (self._foliageTexC) return self._foliageTexC;
+      var c = document.createElement('canvas'); c.width = 128; c.height = 128; var g = c.getContext('2d');
+      g.fillStyle = '#5E7B47'; g.fillRect(0, 0, 128, 128);
+      for (var k = 0; k < 140; k++) {
+        var lx = Math.random() * 128, ly = Math.random() * 128, ang = Math.random() * 6.28, len = 7 + Math.random() * 8;
+        var shade = ['#6F8C54', '#7F9D63', '#536F40', '#8BAA6E'][k % 4];
+        g.save(); g.translate(lx, ly); g.rotate(ang); g.fillStyle = shade;
+        g.beginPath(); g.ellipse(0, 0, len * 0.45, len, 0, 0, 6.28); g.fill(); g.restore();
+      }
+      var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(3, 3); self._foliageTexC = t; return t;
     }
-    function foliage(grp, cy, R, count, tint, leafLen) {
-      var mat = new T.MeshStandardMaterial({ map: leafTex(), transparent: true, alphaTest: 0.4, side: T.DoubleSide, roughness: 0.85, color: tint });
+    function foliage_UNUSED(grp, cy, R, count, tint, leafLen) {
+      var mat = new T.MeshStandardMaterial({ transparent: true, alphaTest: 0.4, side: T.DoubleSide, roughness: 0.85, color: tint });
       var lg = new T.PlaneGeometry(leafLen * 0.62, leafLen);
       for (var i = 0; i < count; i++) {
         var leaf = new T.Mesh(lg, mat);
@@ -1575,13 +1581,23 @@
       var trunk = new T.Mesh(new T.CylinderGeometry(0.022 * s, 0.03 * s, 0.5 * s, 8), new T.MeshStandardMaterial({ color: 0x7A6248, roughness: 0.9 }));
       trunk.position.y = 0.5 * s; grp.add(trunk);
       var tint = greens[(x | 0) % greens.length];
-      var dense = self.isMobile ? 0.5 : 1.0;
-      if (kind === 'topiary') {
-        foliage(grp, 0.95 * s, 0.27 * s, Math.round(42 * dense), tint, 0.17 * s);
-        foliage(grp, 1.3 * s, 0.21 * s, Math.round(30 * dense), tint, 0.16 * s);
-      } else { // 풍성한 관엽
-        foliage(grp, 1.0 * s, 0.34 * s, Math.round(52 * dense), tint, 0.21 * s);
-      }
+      // 토피어리 구(가벼움) + 잎 텍스처(실사감) + 붉은 핑크 장미 액센트
+      var fmat = new T.MeshStandardMaterial({ map: foliageTex(), bumpMap: foliageTex(), bumpScale: 0.02, color: tint, roughness: 0.95 });
+      var balls = (kind === 'topiary') ? [[0.95, 0.27], [1.32, 0.2]] : [[1.0, 0.34]];
+      balls.forEach(function (b, bi) {
+        var ball = new T.Mesh(new T.SphereGeometry(b[1] * s, 22, 16), fmat);
+        ball.position.y = b[0] * s; if (kind !== 'topiary') ball.scale.y = 1.15; ball.castShadow = true; grp.add(ball);
+        // 붉은 핑크 장미 액센트(구 표면에 몇 송이)
+        var roses = ['#D85C77', '#E58AA0', '#C7456A', '#EBA9B8'];
+        var rn = bi === 0 ? 7 : 4;
+        for (var r = 0; r < rn; r++) {
+          var rmat = new T.MeshStandardMaterial({ color: roses[r % 4], roughness: 0.7 });
+          var rose = new T.Mesh(new T.SphereGeometry(0.035 * s, 8, 6), rmat);
+          var u = Math.random() * Math.PI * 2, v = Math.acos(Math.random() * 0.6 + 0.2), rr = b[1] * s * 0.95;
+          rose.position.set(rr * Math.sin(v) * Math.cos(u), b[0] * s + rr * Math.cos(v), rr * Math.sin(v) * Math.sin(u));
+          grp.add(rose);
+        }
+      });
       return grp;
     }
     // 화분 배치(넓은 방 코너/창가/소파 옆)
@@ -1592,7 +1608,7 @@
 
     // 책장 + 책 (백벽 우측, 옷장 옆)
     (function () {
-      var bx = W / 2 - 1.4, bz = -D / 2 + 0.28, bw = 1.4, bh = 1.9, dep = 0.32;
+      var bx = W / 2 - 0.95, bz = -D / 2 + 0.28, bw = 1.4, bh = 1.9, dep = 0.32;
       var woodM = new T.MeshStandardMaterial({ color: 0xEDE7D8, roughness: 0.7 });
       var frameG = new T.Group(); frameG.position.set(bx, 0, bz); scene.add(frameG);
       // 좌우 측판 + 상하 + 후면
@@ -1621,7 +1637,7 @@
 
     // 책장 위 골드 테이블 램프(따뜻한 빛)
     (function () {
-      var lx = W / 2 - 1.4, lz = -D / 2 + 0.28, ly = 1.9;
+      var lx = W / 2 - 0.95, lz = -D / 2 + 0.28, ly = 1.9;
       var base = new T.Mesh(new T.BoxGeometry(0.13, 0.16, 0.13), new T.MeshStandardMaterial({ color: 0xCBA24A, metalness: 1.0, roughness: 0.3 }));
       base.position.set(lx + 0.4, ly + 0.08, lz); scene.add(base);
       var shade = new T.Mesh(new T.CylinderGeometry(0.15, 0.18, 0.18, 4),
@@ -1665,12 +1681,11 @@
     var W = this.ROOM.W, H = this.ROOM.H, D = this.ROOM.D;
     var AW = 3.84;
     var loader = new AD.GLTFLoader();
-    // [파일, x, z, ry(실내향), 가로스케일]
+    // [파일, x, z, ry(실내향), 가로스케일] — 우측벽 커튼 제거(책장 자리), 로고는 옷장-책장 사이로
     var panels = [
-      ['curtain_logo.glb', (AW / 2 + W / 2) / 2 + 0.3, -D / 2 + 0.12, 0, 1.55],   // 옷장 우측(백벽) — 로고
+      ['curtain_logo.glb', 2.7, -D / 2 + 0.12, 0, 1.0],                            // 옷장 우측(책장 사이) — 로고
       ['curtain_plain.glb', -(AW / 2 + W / 2) / 2 - 0.3, -D / 2 + 0.12, 0, 1.55],  // 옷장 좌측(백벽)
-      ['curtain_plain.glb', -W / 2 + 0.12, 2.0, Math.PI / 2, 1.4],                 // 좌벽 뒤쪽
-      ['curtain_plain.glb', W / 2 - 0.12, -1.0, -Math.PI / 2, 1.4]                 // 우벽(창 옆)
+      ['curtain_plain.glb', -W / 2 + 0.12, 2.0, Math.PI / 2, 1.4]                  // 좌벽 뒤쪽
     ];
     panels.forEach(function (p) {
       loader.load(asset(p[0]), function (gltf) {
@@ -1840,6 +1855,7 @@
    * ----------------------------------------------------------------------- */
   P._setupComposer = function () {
     var T = this.T, AD = this.AD;
+    if (this._lite) { this.composer = null; return; }   // 라이트: 포스트프로세싱 생략(plain render)
     var w = Math.max(1, this.container.clientWidth || window.innerWidth);
     var h = Math.max(1, this.container.clientHeight || window.innerHeight);
 
@@ -2042,7 +2058,7 @@
     this._updateAmbient(t);
 
     /* ---- CubeCamera 반사 (프레임 분산) ---- */
-    if (!this.isMobile && this.cubeMirrors.length) {
+    if (!this.isMobile && !this._lite && this.cubeMirrors.length) {
       var idx = this._frame % (this.cubeMirrors.length * 3);
       if (idx < this.cubeMirrors.length) {
         var cm = this.cubeMirrors[idx];
