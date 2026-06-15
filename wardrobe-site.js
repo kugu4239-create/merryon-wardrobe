@@ -2121,7 +2121,7 @@
    * ----------------------------------------------------------------------- */
   P._buildRug = function () {
     var T = this.T, scene = this.scene;
-    var RX = 0.0, RZ = 0.35;   // 소파 정면 앞(소파 중앙 정렬)
+    var RX = 0.0, RZ = -1.3;   // 소파 앞(소파~옷장 사이 빈 바닥)
     var rugTex = this._herringboneFab('#D7CDBC', '96,84,68');
     rugTex.wrapS = rugTex.wrapT = T.RepeatWrapping; rugTex.repeat.set(8, 8);
     var rugBump = this._rugBump(); rugBump.repeat.set(8, 8);
