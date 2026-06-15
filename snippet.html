@@ -1,10 +1,15 @@
 <!-- ===========================================================================
-     MERRYON 가상 파우더룸 3D 씬 — Cafe24 HTML 템플릿에 추가할 스크립트 2줄
+     MERRYON 가상 파우더룸 3D 씬 — Cafe24 HTML 템플릿에 추가할 스크립트
      ---------------------------------------------------------------------------
      위치: 메인 페이지 템플릿(예: index.html / main.html)의 </body> 직전.
-     기존 .main_image_1_background 구조는 그대로 두고 아래 2줄만 추가하면 됩니다.
+     기존 .main_image_1_background 구조는 그대로 두고 아래 한 줄만 추가하면 됩니다.
      wardrobe-site.js 는 Cafe24 [디자인 > 파일 업로더]로 업로드 후 경로만 맞추세요.
      (예: 스킨 루트에 올렸다면 /wardrobe-site.js)
+
+     ※ three.js 는 wardrobe-site.js 가 실행 시 CDN(jsDelivr)에서 자동으로 불러옵니다.
+        호스트 HTML 에 importmap 을 넣을 필요가 없습니다.
+        (구버전 안내에 있던 build/three.min.js 는 three r160 부터 CDN 에서 삭제되어
+         404 가 나므로 사용하지 않습니다. wardrobe-site.js 가 three.module.js 를
+         직접 동적 import 하므로 별도 three <script> 줄이 필요 없습니다.)
 =========================================================================== -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.min.js"></script>
 <script src="/wardrobe-site.js"></script>
