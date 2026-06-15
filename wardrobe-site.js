@@ -2134,9 +2134,11 @@
     var T = this.T, scene = this.scene;
     var vx = 4.15, vz = -4.15;   // 책장(우측 백벽) 앞 바닥
     // 클리어 글라스 화병(테이퍼)
+    // 프로스트 글라스 — 반투명이지만 또렷하게 보이게(꽃 떠보임 방지)
     var glass = new T.MeshPhysicalMaterial({
-      color: 0xF2F8FF, roughness: 0.04, metalness: 0.0, transmission: 0.95,
-      transparent: true, opacity: 0.32, thickness: 0.12, ior: 1.45, side: T.DoubleSide, envMapIntensity: 1.0
+      color: 0xEAF1F4, roughness: 0.22, metalness: 0.0, transmission: 0.45,
+      transparent: true, opacity: 0.72, thickness: 0.2, ior: 1.45, side: T.DoubleSide,
+      clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 1.1, reflectivity: 0.6
     });
     var vase = new T.Mesh(new T.CylinderGeometry(0.16, 0.10, 0.36, 28), glass);
     vase.position.set(vx, 0.18, vz); scene.add(vase);
