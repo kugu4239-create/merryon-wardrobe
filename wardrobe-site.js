@@ -194,7 +194,7 @@
     camera.position.set(0, 5.4, 6.6);
     this.camera = camera;
     // 옷장(의류)을 화면 주인공으로 — 시선 중심을 옷장 쪽으로
-    this.target = new T.Vector3(0, 3.9, -4.0);
+    this.target = new T.Vector3(0, 3.8, -0.8);
 
     AD.RectAreaLightUniformsLib.init();
 
