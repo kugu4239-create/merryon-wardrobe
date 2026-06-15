@@ -2205,7 +2205,7 @@
   P._buildTrunk = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(3.6, 0, 4.95); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 우측, 벽에 flush(정렬)
+    g.position.set(-2.7, 0, 4.95); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 갤러리 액자 밑, 벽에 flush
     var W = 1.02, H = 0.5, D = 0.58;
 
     // 모노그램 캔버스 텍스처(브라운 + 탄 모티프 — 제너릭)
