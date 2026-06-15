@@ -1158,6 +1158,19 @@
   P._setupInteraction = function () {
     var self = this, el = this.container;
 
+    // 배경이 <a href> 링크 안에 있으면 캔버스 드래그가 '링크/이미지 드래그'로 인식돼
+    // pointercancel 이 발생→오빗이 끊긴다. 네이티브 드래그를 막아 오빗을 보장한다.
+    var canvas = el.querySelector('canvas');
+    el.style.touchAction = 'none';
+    if (canvas) { canvas.style.touchAction = 'none'; canvas.setAttribute('draggable', 'false'); }
+    el.addEventListener('dragstart', function (e) { e.preventDefault(); });
+    var dragMoved = false, downX = 0, downY = 0;
+    // 드래그 후 발생하는 링크 클릭(href 이동) 차단
+    var link = el.closest ? el.closest('a') : null;
+    if (link) link.addEventListener('click', function (e) {
+      if (dragMoved) { e.preventDefault(); e.stopPropagation(); }
+    });
+
     // 카메라 구면 파라미터
     this.cam = { theta: 0, phi: 1.18, radius: 5.6, targetTheta: 0, targetPhi: 1.18 };
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
@@ -1166,7 +1179,7 @@
     this.gyro = { active: false, gamma: 0 };
 
     var DEG = Math.PI / 180;
-    this.LIMIT = { theta: 130 * DEG, hover: 25 * DEG, phiMin: 0.9, phiMax: 1.3 };
+    this.LIMIT = { theta: 130 * DEG, hover: 12 * DEG, phiMin: 0.9, phiMax: 1.3 };
 
     function rect() { return el.getBoundingClientRect(); }
 
@@ -1181,13 +1194,16 @@
         self.drag.theta += dx * 0.005;
         self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, self.drag.theta));
         self.cam.targetPhi = Math.max(self.LIMIT.phiMin, Math.min(self.LIMIT.phiMax, self.cam.targetPhi - dy * 0.003));
+        if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 5) dragMoved = true;
         self.lastInteract = self.elapsed;
       } else {
         self.lastInteract = self.elapsed;
       }
     });
     el.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
       self.drag.active = true; self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
+      dragMoved = false; downX = e.clientX; downY = e.clientY;
       self.lastInteract = self.elapsed;
       if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {}
     });
@@ -1306,25 +1322,15 @@
   };
 
   P._updateCamera = function (t, dt) {
-    var idle = t - this.lastInteract;
     var DEG = Math.PI / 180;
 
-    // 4.5초 무조작 → 자동 오실레이션 (±35°, 8초 주기 ease-in-out)
-    if (idle > 4.5) {
-      var osc = Math.sin((t * Math.PI * 2) / 8);
-      // ease-in-out 형태로 정점 부드럽게
-      osc = osc * (0.5 + 0.5 * Math.abs(osc)) / 1.0;
-      this.cam.targetTheta = osc * 35 * DEG;
-      this.cam.targetPhi += (1.18 - this.cam.targetPhi) * 0.02;
-    } else {
-      // 사용자 입력 기반
-      var base = this.drag.theta;
-      if (this.gyro.active) base += (this.gyro.gamma / 45) * 60 * DEG;
-      var hover = this.pointer.x * this.LIMIT.hover;   // ±25° 호버 패럴랙스
-      this.cam.targetTheta = Math.max(-this.LIMIT.theta, Math.min(this.LIMIT.theta, base + hover));
-      this.cam.targetPhi += (-this.pointer.y * 0.12) * 0.06;
-      this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, this.cam.targetPhi));
-    }
+    // 자동 좌우 흔들림(오실레이션) 제거 — 사용자 입력에만 반응(가만히 두면 멈춰 있음).
+    var base = this.drag.theta;
+    if (this.gyro.active) base += (this.gyro.gamma / 45) * 60 * DEG;
+    var hover = this.pointer.x * this.LIMIT.hover;   // 마우스 호버 패럴랙스(소폭)
+    this.cam.targetTheta = Math.max(-this.LIMIT.theta, Math.min(this.LIMIT.theta, base + hover));
+    this.cam.targetPhi += (-this.pointer.y * 0.12) * 0.06;
+    this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, this.cam.targetPhi));
 
     // radius 살짝 호흡
     this.cam.radius = 5.6 + Math.sin(t * 0.3) * 0.1;
