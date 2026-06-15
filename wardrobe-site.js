@@ -149,7 +149,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v5-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v6-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -972,7 +972,7 @@
     // 사이즈 규칙: 원피스(dress)=H0, 상의(top)=H0/2, 스커트(skirt)=H0/2, 하의(pants)=H0*2/3
     // [폴더, 파일, 종류, 개별스케일]
     var CUTS = [
-      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 0.9, 0.11, 0.045],  // 블루 셔츠 원피스(#1 옷걸이 좌우 더 좁게)
+      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 1.035, 0.11, 0.045],  // 블루 셔츠 원피스(#1 스케일+15%, 옷걸이는 0.11 고정)
       ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', 0.82, 0.15],   // 크림 블라우스(#2 높이 살짝↓ + 옷걸이 좁게)
       ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28, 0.12],  // 블랙 카라 가디건(#3: 옷걸이 더 좁게)
       ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt', 0.8],  // 민트 트위드 스커트(20%↓)
@@ -2121,7 +2121,7 @@
    * ----------------------------------------------------------------------- */
   P._buildRug = function () {
     var T = this.T, scene = this.scene;
-    var RX = -1.55, RZ = 1.2;   // 화장대(좌측) 쪽으로 이동
+    var RX = 0.0, RZ = 0.35;   // 소파 정면 앞(소파 중앙 정렬)
     var rugTex = this._herringboneFab('#D7CDBC', '96,84,68');
     rugTex.wrapS = rugTex.wrapT = T.RepeatWrapping; rugTex.repeat.set(8, 8);
     var rugBump = this._rugBump(); rugBump.repeat.set(8, 8);
@@ -2149,7 +2149,7 @@
       var lw = 0.95, lh = lw / asp;
       var lp = new T.Mesh(new T.PlaneGeometry(lw, lh),
         new T.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.35, roughness: 0.9, metalness: 0.0, depthWrite: false }));
-      lp.rotation.x = -Math.PI / 2; lp.rotation.z = Math.PI;   // 바닥에 눕히고 180° 뒤집기
+      lp.rotation.x = -Math.PI / 2; lp.rotation.z = 0;   // 바닥에 눕히기(추가 180° 회전 → 정방향)
       lp.position.set(RX, 0.028, RZ); lp.renderOrder = 3;
       scene.add(lp);
     }, undefined, function () { });
@@ -2283,7 +2283,7 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.45, radius: 3.4, targetTheta: 0, targetPhi: 1.45 };
+    this.cam = { theta: 0, phi: 1.505, radius: 3.4, targetTheta: 0, targetPhi: 1.505 };   // 높이 10%↓(phi↑)
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
@@ -2392,7 +2392,7 @@
       if (p >= 1) { p = 1; this.introDone = true; }
       // 천장 다이브 없이, 방을 넓게 잡았다가 옷장 정면으로 부드럽게 다가가는 establishing 샷
       var settle = this._spherical(this.cam.theta, this.cam.phi, this.cam.radius);
-      var start = new T.Vector3(0, 1.75, 3.3);
+      var start = new T.Vector3(0, 1.58, 3.3);   // 인트로 시작 높이도 10%↓
       var camPos = new T.Vector3().lerpVectors(start, settle, this._ease(p));
       this.camera.position.copy(camPos);
       this.camera.lookAt(this.target);
