@@ -5,16 +5,15 @@ bpy.ops.wm.read_factory_settings(use_empty=True); sc=bpy.context.scene
 texdir="/tmp/tex/fabric256/"; NRM=glob.glob(texdir+"*_NormalGL.jpg")[0]; RGH=glob.glob(texdir+"*_Roughness.jpg")[0]; COL=glob.glob(texdir+"*_Color.jpg")[0]
 
 def fabric(name,rgb,fac=0.16):
+    # glTF 호환: 베이스컬러는 단색(baseColorFactor), 패브릭 텍스처는 노멀(직조감)+러프니스에만.
     mat=bpy.data.materials.new(name); mat.use_nodes=True; nt=mat.node_tree; b=nt.nodes.get("Principled BSDF")
+    b.inputs['Base Color'].default_value=(rgb[0],rgb[1],rgb[2],1); b.inputs['Roughness'].default_value=0.78
     tc=nt.nodes.new("ShaderNodeTexCoord"); mp=nt.nodes.new("ShaderNodeMapping"); mp.inputs['Scale'].default_value=(7,7,7); nt.links.new(tc.outputs['Generated'],mp.inputs['Vector'])
-    def t(p,nc=False):
-        n=nt.nodes.new("ShaderNodeTexImage"); n.image=bpy.data.images.load(p)
-        if nc:n.image.colorspace_settings.name='Non-Color'
+    def t(p):
+        n=nt.nodes.new("ShaderNodeTexImage"); n.image=bpy.data.images.load(p); n.image.colorspace_settings.name='Non-Color'
         nt.links.new(mp.outputs['Vector'],n.inputs['Vector']); return n
-    ci=t(COL); mix=nt.nodes.new("ShaderNodeMixRGB"); mix.blend_type='MULTIPLY'; mix.inputs['Fac'].default_value=fac; mix.inputs['Color1'].default_value=(rgb[0],rgb[1],rgb[2],1)
-    nt.links.new(ci.outputs['Color'],mix.inputs['Color2']); nt.links.new(mix.outputs['Color'],b.inputs['Base Color'])
-    ri=t(RGH,True); nt.links.new(ri.outputs['Color'],b.inputs['Roughness'])
-    ni=t(NRM,True); nm=nt.nodes.new("ShaderNodeNormalMap"); nm.inputs['Strength'].default_value=0.4; nt.links.new(ni.outputs['Color'],nm.inputs['Color']); nt.links.new(nm.outputs['Normal'],b.inputs['Normal'])
+    ri=t(RGH); nt.links.new(ri.outputs['Color'],b.inputs['Roughness'])
+    ni=t(NRM); nm=nt.nodes.new("ShaderNodeNormalMap"); nm.inputs['Strength'].default_value=0.4; nt.links.new(ni.outputs['Color'],nm.inputs['Color']); nt.links.new(nm.outputs['Normal'],b.inputs['Normal'])
     return mat
 THREAD=bpy.data.materials.new("thr"); THREAD.use_nodes=True
 tb=THREAD.node_tree.nodes.get("Principled BSDF"); tb.inputs["Base Color"].default_value=(0.3,0.26,0.2,1); tb.inputs["Roughness"].default_value=0.7
