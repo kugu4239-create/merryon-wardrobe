@@ -149,11 +149,14 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
+  var ASSET_VER = 'v4-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
-    if (typeof cfg.resolveAsset === 'function') return cfg.resolveAsset(path);
-    if (cfg.assetBase) return cfg.assetBase.replace(/\/?$/, '/') + path;
-    return 'assets/garments/' + path;
+    var base;
+    if (typeof cfg.resolveAsset === 'function') base = cfg.resolveAsset(path);
+    else if (cfg.assetBase) base = cfg.assetBase.replace(/\/?$/, '/') + path;
+    else base = 'assets/garments/' + path;
+    return base + (base.indexOf('?') < 0 ? '?' : '&') + 'av=' + ASSET_VER;
   }
   /* 옷장에 거는 실제 의류 컷아웃(투명 PNG) — 기본은 merryon.cafe24.com 업로드 폴더(운영 same-origin).
    * 데모/GitHub Pages 는 MERRYON_WARDROBE_CONFIG.resolveImage('cut/<file>') → 로컬 assets/products 로 치환. */
@@ -968,14 +971,14 @@
     // 사이즈 규칙: 원피스(dress)=H0, 상의(top)=H0/2, 스커트(skirt)=H0/2, 하의(pants)=H0*2/3
     // [폴더, 파일, 종류, 개별스케일]
     var CUTS = [
-      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 0.9, null, 0.045],  // 블루 셔츠 원피스(#1 높이 살짝↓)
+      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 0.9, 0.11, 0.045],  // 블루 셔츠 원피스(#1 옷걸이 좌우 더 좁게)
       ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', 0.82, 0.15],   // 크림 블라우스(#2 높이 살짝↓ + 옷걸이 좁게)
       ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28, 0.12],  // 블랙 카라 가디건(#3: 옷걸이 더 좁게)
-      ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt', 1.0],  // 민트 트위드 스커트
+      ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt', 0.8],  // 민트 트위드 스커트(20%↓)
       ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', 0.85, null, 0.045], // 블랙 플리츠 원피스(#5 15%↓ + 더 올림)
-      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', 1.0],  // 핑크 러플 스커트
+      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', 0.8],  // 핑크 러플 스커트(20%↓)
       ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants', 1.2],  // 네이비 와이드 팬츠(7번째 20%↑)
-      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.86, 0.30]  // 블랙 오프숄더 롬퍼(마지막) — 20% 축소(1.08→0.86)
+      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.86, 0.30, 0, 0.08]  // 블랙 오프숄더 롬퍼(마지막) — 옷걸이 왼쪽만 연장(옷에 닿게)
     ];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
@@ -1057,18 +1060,20 @@
       var hook = new T.Mesh(new T.TorusGeometry(0.022, 0.0045, 8, 18, Math.PI * 1.15), gold);
       hook.rotation.z = Math.PI; hook.rotation.y = Math.PI / 2; hook.position.set(0, -0.006, 0); parent.add(hook);
     }
-    function shoulderHanger(parent, sw, dz) {
+    function shoulderHanger(parent, sw, dz, lext) {
+      lext = lext || 0;   // 왼쪽 팔만 추가 연장(비대칭 옷걸이)
       rodHook(parent);   // 봉에 걸리는 후크
       var neck = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.05, 8), gold);
       neck.position.set(0, -0.04, dz * 0.5); neck.rotation.x = Math.atan2(dz, 0.05); parent.add(neck);
       var by = -0.065;   // 어깨 와이어 높이(봉 아래)
+      var lx = -(sw / 2 + lext), rx = sw / 2;
       var bar = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([
-        new T.Vector3(-sw / 2, by - 0.038, dz), new T.Vector3(0, by, dz), new T.Vector3(sw / 2, by - 0.038, dz)
+        new T.Vector3(lx, by - 0.038, dz), new T.Vector3(0, by, dz), new T.Vector3(rx, by - 0.038, dz)
       ]), 16, 0.005, 6, false), gold);
       parent.add(bar);
-      [-1, 1].forEach(function (s) {
+      [lx, rx].forEach(function (tx) {
         var tip = new T.Mesh(new T.SphereGeometry(0.0075, 8, 6), gold);
-        tip.position.set(s * sw / 2, by - 0.038, dz); parent.add(tip);
+        tip.position.set(tx, by - 0.038, dz); parent.add(tip);
       });
       return by - 0.028;   // 평면 상단(어깨)
     }
@@ -1116,7 +1121,7 @@
           var sw = (entry[4] != null) ? entry[4]      // 개별 옷걸이폭 지정(예: 오프숄더)
                  : (band != null ? band * w * (clipType ? 0.82 : 0.74) : swDefault);
           sw = Math.max(clipType ? 0.12 : 0.07, Math.min(0.42, sw));
-          var topY = clipType ? clipHanger(pivot, sw, dz) : shoulderHanger(pivot, sw, dz);
+          var topY = clipType ? clipHanger(pivot, sw, dz) : shoulderHanger(pivot, sw, dz, entry[6] || 0);
           if (type === 'top') topY += 0.045;
           topY += 0.022 + (entry[5] || 0);   // 전체 살짝 위로 + 개별 추가 올림
           var mat = new T.MeshStandardMaterial({
@@ -1765,12 +1770,21 @@
       ['curtain_plain.glb', 2.65, -D / 2 + 0.12, 0, 1.3],                          // 옷장 우측(책장 사이) — 플레인
       ['curtain_logo.glb', -3.9, -D / 2 + 0.12, 0, 1.25],                          // 옷장 좌측(백벽) — 메리온 로고(요청: 좌측 이동)
       ['curtain_plain.glb', -W / 2 + 0.12, 2.1, Math.PI / 2, 1.5],                 // 좌벽 앞쪽
-      ['curtain_plain.glb', W / 2 - 0.12, -2.55, -Math.PI / 2, 1.05],              // 창 좌측(우벽) — 창 밖으로 벌림
-      ['curtain_plain.glb', W / 2 - 0.12, 2.55, -Math.PI / 2, 1.05]                // 창 우측(우벽) — 창 밖으로 벌림
+      ['curtain_plain.glb', W / 2 - 0.12, -2.55, -Math.PI / 2, 1.05],              // 창 좌측(우벽) — 크림(베이스)
+      ['curtain_plain.glb', W / 2 - 0.12, 2.55, -Math.PI / 2, 1.05],               // 창 우측(우벽) — 크림(베이스)
+      // 짙은 베이지 레이어링 — 크림 위에 한 겹 더(방 안쪽으로 살짝 앞, 창쪽으로 당겨 겹침)
+      ['curtain_plain.glb', W / 2 - 0.30, -2.10, -Math.PI / 2, 0.85, 0xB3A488],    // 창 좌측 짙은베이지
+      ['curtain_plain.glb', W / 2 - 0.30, 2.10, -Math.PI / 2, 0.85, 0xB3A488]      // 창 우측 짙은베이지
     ];
     panels.forEach(function (p) {
       loader.load(asset(p[0]), function (gltf) {
-        var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.material.side = T.DoubleSide; } });
+        var s = gltf.scene; s.traverse(function (o) {
+          if (o.isMesh) {
+            o.castShadow = true; o.receiveShadow = true;
+            o.material = o.material.clone(); o.material.side = T.DoubleSide;
+            if (p[5] != null) o.material.color = new T.Color(p[5]);   // 짙은 베이지 오버라이드
+          }
+        });
         s.position.set(p[1], 0, p[2]); s.rotation.y = p[3];
         s.scale.set(p[4], H / 2.75 + 0.02, 1.0);   // 천장까지
         scene.add(s);
@@ -2025,10 +2039,10 @@
     border.position.set(RX, 0.02, RZ);
     scene.add(border);
 
-    // 러그 중앙 merryon 블랙 심볼 로고
-    var cfg = window.MERRYON_WARDROBE_CONFIG || {};
-    var logoUrl = cfg.rugLogo || 'https://merryon.cafe24.com/%EC%97%85%EB%A1%9C%EB%93%9C%20%EC%9D%B4%EB%AF%B8%EC%A7%80/%EB%B8%94%EB%9E%99%20%EC%8B%AC%EB%B3%BC.png';
-    var ldr = new T.TextureLoader(); ldr.setCrossOrigin('anonymous');
+    // 러그 중앙 merryon 블랙 심볼 로고 — cut() 으로 동일출처(GitHub Pages=로컬, 운영=cafe24).
+    // crossOrigin 미설정(표시만 필요, 픽셀 read 안 함) → CORS 헤더 없어도 로드 성공.
+    var logoUrl = cut('up', '블랙 심볼.png');
+    var ldr = new T.TextureLoader();
     ldr.load(logoUrl, function (tex) {
       tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
       var asp = (tex.image && tex.image.width / tex.image.height) || 1;
