@@ -124,7 +124,21 @@
    *   tint: 텍스처 로드 실패 시 폴백 색
    *   fabric: sheen / roughness 프로파일
    * ----------------------------------------------------------------------- */
-  function img(path) { return '//merryon.co.kr/web/product/medium/' + path; }
+  /* 상품 이미지 경로 해석.
+   *  · 운영(merryon.co.kr): same-origin 절대경로를 그대로 사용 → CORS 무관.
+   *  · 데모/프리뷰(GitHub Pages·localhost·타 도메인): merryon 과 다른 출처라
+   *    핫링크/CORS 로 텍스처가 실패할 수 있으므로, 호스트 페이지에서
+   *    window.MERRYON_WARDROBE_CONFIG 로 경로를 치환할 수 있게 한다.
+   *      - resolveImage(path) : 함수로 임의 매핑 (예: 로컬 assets)
+   *      - imageBase          : 접두 베이스 (예: '/assets/products/')
+   *    아무 것도 없으면 원래(운영) 경로를 유지한다. → 운영 경로 불변.
+   */
+  function img(path) {
+    var cfg = window.MERRYON_WARDROBE_CONFIG || {};
+    if (typeof cfg.resolveImage === 'function') return cfg.resolveImage(path);
+    if (cfg.imageBase) return cfg.imageBase + path;
+    return '//merryon.co.kr/web/product/medium/' + path;
+  }
   var PRODUCTS = [
     { name:'제니 트위드 자켓',        src:img('202504/254093e6035f531fff8b6dae127a180d.jpg'), tint:PALETTE.cream,    rough:0.9,  sheen:0.7 },
     { name:'바인 플리츠 원피스',      src:img('202504/695f4bbaa31ec541c33ddd8d242bcaf5.jpg'), tint:PALETTE.navy,     rough:0.85, sheen:0.3 },
@@ -1049,7 +1063,7 @@
       var hgt = 0.5 - i * 0.05;
       var linen = this._linenTex(this._hex(cols[i]));
       linen.wrapS = linen.wrapT = T.RepeatWrapping; linen.repeat.set(4, 1);
-      var mat = new T.MeshStandardMaterial({ map: linen, color: 0xffffff, roughness: 0.6, metalness: 0.0, sheen: 0.4 });
+      var mat = new T.MeshStandardMaterial({ map: linen, color: 0xffffff, roughness: 0.6, metalness: 0.0 });
       var box = new T.Mesh(new T.CylinderGeometry(radii[i], radii[i], hgt, 32), mat);
       box.position.set(hx + (i % 2) * 0.05, y + hgt / 2, hz); box.castShadow = true; box.receiveShadow = true;
       scene.add(box);
@@ -1069,7 +1083,7 @@
     rugTex.wrapS = rugTex.wrapT = T.RepeatWrapping; rugTex.repeat.set(8, 8);
     var rugBump = this._rugBump(); rugBump.repeat.set(8, 8);
     var rug = new T.Mesh(new T.CircleGeometry(3.2, 64),
-      new T.MeshStandardMaterial({ map: rugTex, bumpMap: rugBump, bumpScale: 0.015, color: 0xffffff, roughness: 1.0, metalness: 0.0, sheen: 0.3 }));
+      new T.MeshStandardMaterial({ map: rugTex, bumpMap: rugBump, bumpScale: 0.015, color: 0xffffff, roughness: 1.0, metalness: 0.0 }));
     rug.rotation.x = -Math.PI / 2;
     rug.scale.set(1.0, 0.72, 1.0);
     rug.position.set(0, 0.02, 1.2);

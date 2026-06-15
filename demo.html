@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>MERRYON · Virtual Powder Room (Demo)</title>
+  <link rel="icon" href="data:,">   <!-- favicon 자동요청 404 방지 -->
   <style>
     /* --- Cafe24 메인 구조 재현(테스트용) --- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,8 +69,19 @@
     </a>
   </div>
 
-  <!-- === snippet.html 의 2줄 === -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.min.js"></script>
+  <!-- === 데모 전용 설정: 상품 이미지를 저장소 로컬(assets/products/)에서 로드 ===
+       운영(merryon.co.kr)에서는 이 블록이 없으므로 same-origin 원본 경로를 그대로 씀.
+       (wardrobe-site.js 가 실행되기 전에 먼저 정의돼야 함) -->
+  <script>
+    window.MERRYON_WARDROBE_CONFIG = {
+      // 원본 경로 '202504/xxxx.jpg' → 로컬 'assets/products/xxxx.jpg' 로 치환
+      resolveImage: function (path) {
+        return 'assets/products/' + path.split('/').pop();
+      }
+    };
+  </script>
+
+  <!-- === 메인 스크립트 (three 는 wardrobe-site.js 가 CDN 에서 자동 로드) === -->
   <script src="./wardrobe-site.js"></script>
 </body>
 </html>

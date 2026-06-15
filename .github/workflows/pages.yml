@@ -1,0 +1,40 @@
+name: Deploy preview to GitHub Pages
+
+# main 에 push 되면 저장소 전체를 정적 사이트로 Pages 에 배포한다.
+# (demo.html / index.html / wardrobe-site.js / assets/products/* 포함)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # Actions 탭에서 수동 실행도 가능
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시 배포 1개로 제한 (중간 실행은 취소)
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact (repo root)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
