@@ -2205,7 +2205,7 @@
   P._buildTrunk = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(-1.45, 0, 4.3); g.rotation.y = 0.35; scene.add(g);   // 앞벽(갤러리) 쪽으로 이동
+    g.position.set(3.6, 0, 4.95); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 우측, 벽에 flush(정렬)
     var W = 1.02, H = 0.5, D = 0.58;
 
     // 모노그램 캔버스 텍스처(브라운 + 탄 모티프 — 제너릭)
@@ -2289,7 +2289,7 @@
   P._buildDisplayCase = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat, D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(3.2, 0, D / 2 - 0.5); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 우측, 실내(-z) 향함(local +z=정면)
+    g.position.set(1.7, 0, D / 2 - 0.3); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 문 우측(트렁크 왼편), 벽에 flush
     var CW = 1.7, CD = 0.52, CH = 0.82, plinth = 0.12;
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
