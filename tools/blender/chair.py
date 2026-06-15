@@ -10,27 +10,29 @@ GOLD=mat("gold",(0.85,0.69,0.40),0.25,1.0)
 allobj=[]
 def add(o): allobj.append(o); return o
 
-SH=0.46; SW=0.44; SD=0.42
-# ---- 시트 프레임 + 쿠션 ----
+SH=0.45; SW=0.50; SD=0.46
+SEAT_T=0.05   # 좌석판 반두께(전체 0.10 — 두툼한 한 덩어리)
+# ---- 시트: 두툼한 단일 좌석판(라운드) + 위에 푹신한 쿠션 ----
 bpy.ops.mesh.primitive_cube_add(size=1); fr=bpy.context.active_object
-fr.scale=(SW/2, SD/2, 0.04); fr.location=(0,0,SH); bpy.ops.object.transform_apply(scale=True)
-fr.modifiers.new("b","BEVEL").width=0.012; bpy.ops.object.shade_smooth(); fr.data.materials.append(WOOD); add(fr)
+fr.scale=(SW/2, SD/2, SEAT_T); fr.location=(0,0,SH); bpy.ops.object.transform_apply(scale=True)
+_bv=fr.modifiers.new("b","BEVEL"); _bv.width=0.02; _bv.segments=2; fr.modifiers.new("s","SUBSURF").levels=1
+bpy.ops.object.shade_smooth(); fr.data.materials.append(WOOD); add(fr)
+# 쿠션(좌석 위 업홀스터리 — 푹신)
 bpy.ops.mesh.primitive_cube_add(size=1); cu=bpy.context.active_object
-cu.scale=(SW/2-0.03, SD/2-0.03, 0.035); cu.location=(0,0,SH+0.055); bpy.ops.object.transform_apply(scale=True)
-cu.modifiers.new("b","BEVEL").width=0.02; cu.modifiers.new("s","SUBSURF").levels=2; bpy.ops.object.shade_smooth(); cu.data.materials.append(VELV); add(cu)
+cu.scale=(SW/2-0.03, SD/2-0.03, 0.035); cu.location=(0,0,SH+SEAT_T+0.03); bpy.ops.object.transform_apply(scale=True)
+cu.modifiers.new("b","BEVEL").width=0.025; cu.modifiers.new("s","SUBSURF").levels=2; bpy.ops.object.shade_smooth(); cu.data.materials.append(VELV); add(cu)
 
-# ---- 카브리올(휜) 다리 ----
-def cabriole(x,y,mx,my):
-    # 단정한 테이퍼 다리(위 굵고 아래 가늘게) + 바깥 살짝 스플레이
-    bpy.ops.mesh.primitive_cone_add(vertices=16, radius1=0.028, radius2=0.016, depth=SH, location=(x,y,SH/2))
-    o=bpy.context.active_object; o.rotation_euler=(my*0.06, 0, -mx*0.06)
+# ---- 다리 4개: 수직 테이퍼 — 좌석판 코너 아래, 윗끝을 좌석판 속으로 확실히 박음 ----
+legTopZ=SH+SEAT_T-0.005   # 좌석판 윗면 근처까지(완전 관통 결합)
+def leg(x,y):
+    bpy.ops.mesh.primitive_cone_add(vertices=16, radius1=0.028, radius2=0.016, depth=legTopZ, location=(x,y,legTopZ/2))
+    o=bpy.context.active_object
     bpy.ops.object.shade_smooth(); o.data.materials.append(WOOD); add(o)
-    # 골드 페럴(발끝)
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.016, location=(x, y, 0.014)); f=bpy.context.active_object
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.017, location=(x, y, 0.013)); f=bpy.context.active_object
     f.data.materials.append(GOLD); add(f)
 for sx in (-1,1):
     for sy in (-1,1):
-        cabriole(sx*(SW/2-0.06), sy*(SD/2-0.06), sx, sy)
+        leg(sx*(SW/2-0.055), sy*(SD/2-0.055))
 
 # ---- 등받이: 카브드 오벌 프레임 + 업홀스터 패드 + 크레스트 ----
 bz=SH+0.34; bd=-SD/2+0.04
