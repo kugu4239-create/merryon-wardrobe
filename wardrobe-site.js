@@ -975,12 +975,12 @@
     var CUTS = [
       ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 1.0, null, 0.045],  // 블루 셔츠 원피스(#1 더 올림)
       ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', 0.9, 0.15],   // 크림 블라우스(#2: 10%↓ + 옷걸이 좁게)
-      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28, 0.17],  // 블랙 카라 가디건(#3: 옷걸이 좁게)
+      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28, 0.12],  // 블랙 카라 가디건(#3: 옷걸이 더 좁게)
       ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt', 1.0],  // 민트 트위드 스커트
       ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', 0.85, null, 0.045], // 블랙 플리츠 원피스(#5 15%↓ + 더 올림)
       ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', 1.0],  // 핑크 러플 스커트
       ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants', 1.2],  // 네이비 와이드 팬츠(7번째 20%↑)
-      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.85, 0.30]  // 블랙 오프숄더 롬퍼(마지막) — 옷걸이 폭 지정(넓게)
+      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 1.08, 0.30]  // 블랙 오프숄더 롬퍼(마지막) — 빨간선만큼 늘림(0.85→1.08)
     ];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
@@ -1102,7 +1102,7 @@
           var band = clipType ? topOpaqueFrac(tex.image, 0.0, 0.06) : topOpaqueFrac(tex.image, 0.0, 0.04);
           var swDefault = clipType ? w * 0.6 : w * 0.28;
           var sw = (entry[4] != null) ? entry[4]      // 개별 옷걸이폭 지정(예: 오프숄더)
-                 : (band != null ? band * w * (clipType ? 0.82 : 0.92) : swDefault);
+                 : (band != null ? band * w * (clipType ? 0.82 : 0.74) : swDefault);
           sw = Math.max(clipType ? 0.12 : 0.07, Math.min(0.42, sw));
           var topY = clipType ? clipHanger(pivot, sw, dz) : shoulderHanger(pivot, sw, dz);
           if (type === 'top') topY += 0.045;
