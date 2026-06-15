@@ -642,7 +642,13 @@
     wall(W, H, 0, H / 2, -D / 2, 0);                 // 뒷벽(옷장)
     wall(W, H, 0, H / 2, D / 2, Math.PI);            // 앞벽
     wall(D, H, -W / 2, H / 2, 0, Math.PI / 2);       // 좌벽
-    wall(D, H, W / 2, H / 2, 0, -Math.PI / 2);       // 우벽
+    // 우벽 — 창 개구부(z ±1.3, y 0.45~천장)를 비워 정원이 보이게 세그먼트 분할
+    var woZ = 1.3, woY = 0.45;
+    wall(D, woY, W / 2, woY / 2, 0, -Math.PI / 2);                                   // 창 아래
+    [-1, 1].forEach(function (s) {
+      var segW = D / 2 - woZ;
+      wall(segW, H - woY, W / 2, woY + (H - woY) / 2, s * (woZ + D / 2) / 2, -Math.PI / 2);  // 창 좌우
+    });
 
     /* 몰딩 전부 삭제(베이스/체어레일/크라운·웨인스코팅 패널·문 케이싱) — 벽/천장 아이보리 통일 */
 
@@ -659,8 +665,8 @@
         leaf.position.set(cxo, lh / 2, 0.025); leaf.castShadow = true; grp.add(leaf);
         [lh * 0.74, lh * 0.46, lh * 0.18].forEach(function (py, pi) {
           var ph = (pi === 0 ? 0.42 : 0.26) * lh;
-          var dp = new T.Mesh(new T.BoxGeometry(lw * 0.62, ph, 0.012), doorPanelMat); dp.position.set(cxo, py, 0.052); grp.add(dp);
-          var tr = new T.Mesh(new T.BoxGeometry(lw * 0.66, ph + 0.04, 0.006), gold); tr.position.set(cxo, py, 0.047); grp.add(tr);
+          var tr = new T.Mesh(new T.BoxGeometry(lw * 0.66, ph + 0.04, 0.005), gold); tr.position.set(cxo, py, 0.0545); grp.add(tr);
+          var dp = new T.Mesh(new T.BoxGeometry(lw * 0.62, ph, 0.006), doorPanelMat); dp.position.set(cxo, py, 0.060); grp.add(dp);
         });
         var hx = dbl ? (cxo - s * (lw / 2 - 0.08)) : (lw / 2 - 0.1);
         var handle = new T.Mesh(new T.CylinderGeometry(0.014, 0.014, 0.34, 12), gold); handle.position.set(hx, lh * 0.5, 0.075); grp.add(handle);
@@ -812,8 +818,8 @@
     // 화이트 프레임(아치형 팔라디안 — 레퍼런스 화이트 그리드)
     var frameMat = new T.MeshStandardMaterial({ color: 0xF4EEE1, roughness: 0.55, metalness: 0.0, envMapIntensity: 0.7 });
     var glassMat = new T.MeshPhysicalMaterial({
-      color: 0xEAF5FF, roughness: 0.05, metalness: 0.0, transmission: 0.6, transparent: true,
-      opacity: 0.5, emissive: 0xF3ECDD, emissiveIntensity: 0.28, side: T.DoubleSide
+      color: 0xF2FBFF, roughness: 0.04, metalness: 0.0, transmission: 0.9, transparent: true,
+      opacity: 0.18, emissive: 0xEAF2E0, emissiveIntensity: 0.05, side: T.DoubleSide
     });
     var xb = wx - 0.1;   // 멀리언이 놓이는 x(실내쪽)
 
@@ -1735,22 +1741,38 @@
   P._artTex = function (seed) {
     var T = this.T;
     var c = document.createElement('canvas'); c.width = 128; c.height = 160; var g = c.getContext('2d');
-    var bgs = ['#EFE6D2', '#E9DCE0', '#E4E7DC', '#F0E7D8']; g.fillStyle = bgs[seed % bgs.length]; g.fillRect(0, 0, 128, 160);
-    // 골드 보더 라인
-    g.strokeStyle = 'rgba(150,120,70,0.5)'; g.lineWidth = 3; g.strokeRect(8, 8, 112, 144);
-    // 보타닉 가지/꽃
-    var stem = '#7E8C5E', fl = ['#D6A7B4', '#E7CBA0', '#C9B79A', '#B98C9E'][seed % 4];
-    g.strokeStyle = stem; g.lineWidth = 2;
-    for (var b = 0; b < 3; b++) {
-      var bx = 40 + b * 26, by = 140;
-      g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + (b % 2 ? 16 : -16), 90, bx + (b % 2 ? -6 : 6), 40); g.stroke();
-      for (var l = 0; l < 5; l++) {
-        var ly = by - 16 - l * 20, lx = bx + (l % 2 ? 10 : -10);
-        g.fillStyle = stem; g.beginPath(); g.ellipse(lx, ly, 7, 3.4, l % 2 ? 0.6 : -0.6, 0, 6.28); g.fill();
+    var bgs = ['#EFE6D2', '#E9DCE0', '#E4E7DC', '#F0E7D8', '#EDE3DA', '#E6E9E2'];
+    g.fillStyle = bgs[seed % bgs.length]; g.fillRect(0, 0, 128, 160);
+    var kind = seed % 6;
+    if (kind === 0) { // 보타닉 가지
+      var stem = '#7E8C5E', fl = '#D6A7B4'; g.strokeStyle = stem; g.lineWidth = 2;
+      for (var b = 0; b < 3; b++) {
+        var bx = 40 + b * 26; g.beginPath(); g.moveTo(bx, 140); g.quadraticCurveTo(bx + (b % 2 ? 16 : -16), 90, bx + (b % 2 ? -6 : 6), 40); g.stroke();
+        for (var l = 0; l < 5; l++) { var ly = 124 - l * 20, lx = bx + (l % 2 ? 10 : -10); g.fillStyle = stem; g.beginPath(); g.ellipse(lx, ly, 7, 3.4, l % 2 ? 0.6 : -0.6, 0, 6.28); g.fill(); }
+        g.fillStyle = fl; g.beginPath(); g.arc(bx + (b % 2 ? -6 : 6), 40, 9, 0, 6.28); g.fill();
       }
-      g.fillStyle = fl; g.beginPath(); g.arc(bx + (b % 2 ? -6 : 6), 40, 9, 0, 6.28); g.fill();
-      g.fillStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.arc(bx + (b % 2 ? -6 : 6), 40, 4, 0, 6.28); g.fill();
+    } else if (kind === 1) { // 추상 수채 블롭
+      var cols = ['rgba(198,150,170,0.5)', 'rgba(150,170,140,0.5)', 'rgba(210,180,140,0.5)', 'rgba(160,170,200,0.45)'];
+      for (var i = 0; i < 7; i++) { g.fillStyle = cols[i % 4]; g.beginPath(); g.ellipse(30 + Math.random() * 70, 30 + Math.random() * 100, 14 + Math.random() * 22, 12 + Math.random() * 18, Math.random() * 3, 0, 6.28); g.fill(); }
+    } else if (kind === 2) { // 여성 측면 실루엣
+      g.fillStyle = '#5A4A52'; g.beginPath();
+      g.moveTo(48, 130); g.bezierCurveTo(40, 100, 44, 70, 60, 56); g.bezierCurveTo(66, 50, 64, 44, 70, 40);
+      g.bezierCurveTo(86, 32, 92, 52, 86, 64); g.bezierCurveTo(94, 70, 90, 84, 80, 88); g.lineTo(82, 130); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(150,120,70,0.5)'; g.lineWidth = 2; g.beginPath(); g.arc(64, 80, 44, 0, 6.28); g.stroke();
+    } else if (kind === 3) { // 다마스크(다이아 격자)
+      g.strokeStyle = 'rgba(150,120,80,0.4)'; g.lineWidth = 1.4;
+      for (var yy = 20; yy < 150; yy += 22) for (var xx = 18; xx < 116; xx += 22) { g.beginPath(); g.moveTo(xx, yy - 8); g.lineTo(xx + 8, yy); g.lineTo(xx, yy + 8); g.lineTo(xx - 8, yy); g.closePath(); g.stroke(); g.fillStyle = 'rgba(190,150,160,0.3)'; g.beginPath(); g.arc(xx, yy, 2.4, 0, 6.28); g.fill(); }
+    } else if (kind === 4) { // 풍경(수평선/언덕)
+      var sky = g.createLinearGradient(0, 12, 0, 150); sky.addColorStop(0, '#E8E2D0'); sky.addColorStop(0.6, '#DCD8C4'); sky.addColorStop(1, '#BFC6A8');
+      g.fillStyle = sky; g.fillRect(12, 12, 104, 136);
+      g.fillStyle = 'rgba(140,160,120,0.6)'; g.beginPath(); g.moveTo(12, 110); g.quadraticCurveTo(50, 92, 70, 106); g.quadraticCurveTo(95, 118, 116, 104); g.lineTo(116, 148); g.lineTo(12, 148); g.fill();
+      g.fillStyle = 'rgba(120,140,100,0.55)'; g.beginPath(); g.moveTo(12, 126); g.quadraticCurveTo(48, 112, 80, 124); g.quadraticCurveTo(104, 132, 116, 122); g.lineTo(116, 148); g.lineTo(12, 148); g.fill();
+    } else { // 꽃다발
+      var rc = ['#D98AA0', '#E7B7A0', '#C98CA8', '#EAC9A0'];
+      for (var f = 0; f < 9; f++) { g.fillStyle = rc[f % 4]; var fx = 44 + Math.random() * 40, fy = 50 + Math.random() * 50; g.beginPath(); g.arc(fx, fy, 7 + Math.random() * 5, 0, 6.28); g.fill(); }
+      g.strokeStyle = '#7E8C5E'; g.lineWidth = 2; for (var s = 0; s < 5; s++) { g.beginPath(); g.moveTo(60 + s * 3, 140); g.lineTo(56 + s * 6, 90); g.stroke(); }
     }
+    g.strokeStyle = 'rgba(150,120,70,0.5)'; g.lineWidth = 3; g.strokeRect(8, 8, 112, 144);
     var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t;
   };
 
