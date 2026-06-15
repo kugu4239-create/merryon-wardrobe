@@ -620,7 +620,7 @@
     var marbleBmp = this._marbleBump(); marbleBmp.repeat.set(4, 4);
     if (!this.isMobile && !this._lite) {
       var reflector = new AD.Reflector(new T.PlaneGeometry(W, D), {
-        textureWidth: 1024, textureHeight: 1024, color: 0x9b968c, clipBias: 0.003
+        textureWidth: 640, textureHeight: 640, color: 0x9b968c, clipBias: 0.003
       });
       reflector.rotation.x = -Math.PI / 2; reflector.position.y = 0.0;
       scene.add(reflector); this.reflector = reflector;
@@ -1067,7 +1067,7 @@
           });
           var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
           plane.position.set(0, topY - h / 2, dz);   // 깊이분리 dz, 행거 어깨바 바로 아래
-          plane.castShadow = true;
+          plane.castShadow = false;   // 투명 평면 그림자 비용 제거(성능)
           pivot.add(plane);
           self.billboards.push(pivot);
           try { window.__MERRYON_CUTS__ = self.billboards.length; } catch (e) {}
@@ -1363,17 +1363,11 @@
 
   /* 실제 반사 거울(Reflector). geo 를 주면 그 모양(아치 등)으로, 없으면 평면. */
   P._addCubeMirror = function (x, y, z, w, h, ry, scale, geo) {
-    var T = this.T, AD = this.AD, scene = this.scene;
+    var T = this.T, scene = this.scene;
     var g = geo || new T.PlaneGeometry(w, h);
-    if (this.isMobile || this._lite) {
-      // 모바일/라이트: 정적 env 반사(성능)
-      var m = new T.Mesh(g, new T.MeshStandardMaterial({ color: 0xeef0f2, metalness: 1.0, roughness: 0.06, envMapIntensity: 1.7 }));
-      m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m;
-    }
-    var mirror = new AD.Reflector(g, { textureWidth: 512, textureHeight: 512, color: 0xbfc3c9, clipBias: 0.003 });
-    mirror.position.set(x, y, z); mirror.rotation.y = ry;
-    scene.add(mirror);
-    return mirror;
+    // 작은 장식 거울(화장대/셰발)은 정적 env 반사로 통일 → 매 프레임 전체 씬 재렌더 제거(성능)
+    var m = new T.Mesh(g, new T.MeshStandardMaterial({ color: 0xEDF0F3, metalness: 1.0, roughness: 0.05, envMapIntensity: 1.6 }));
+    m.position.set(x, y, z); m.rotation.y = ry; scene.add(m); return m;
   };
 
   /* 아치형 거울 면 ShapeGeometry (프레임보다 살짝 작게) */
@@ -1686,7 +1680,9 @@
     var panels = [
       ['curtain_logo.glb', 2.65, -D / 2 + 0.12, 0, 1.05],                          // 옷장 우측(책장 사이) — 로고
       ['curtain_plain.glb', -3.6, -D / 2 + 0.12, 0, 2.0],                          // 옷장 좌측(백벽) — 풀 스프레드(11자)
-      ['curtain_plain.glb', -W / 2 + 0.12, 2.1, Math.PI / 2, 1.5]                  // 좌벽 앞쪽
+      ['curtain_plain.glb', -W / 2 + 0.12, 2.1, Math.PI / 2, 1.5],                 // 좌벽 앞쪽
+      ['curtain_plain.glb', W / 2 - 0.12, -2.0, -Math.PI / 2, 1.3],                // 창 좌측(우벽)
+      ['curtain_plain.glb', W / 2 - 0.12, 2.0, -Math.PI / 2, 1.3]                  // 창 우측(우벽)
     ];
     panels.forEach(function (p) {
       loader.load(asset(p[0]), function (gltf) {
@@ -1902,11 +1898,7 @@
     composer.addPass(bloom);
     this.bloom = bloom;
 
-    if (!this.isMobile) {
-      var bokeh = new AD.BokehPass(this.scene, this.camera, { focus: 5.0, aperture: 0.0006, maxblur: 0.004, width: w, height: h });
-      composer.addPass(bokeh);
-      this.bokeh = bokeh;
-    }
+    // Bokeh(DoF) 제거 — 전체화면 블러 패스 비용 대비 효과 미미(성능)
 
     var smaa = new AD.SMAAPass(w, h);
     composer.addPass(smaa);
