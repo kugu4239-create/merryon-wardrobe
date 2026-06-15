@@ -41,9 +41,6 @@ def rose(cx,cy,cz,R,m):
             o.location=(cx+math.cos(ang)*br*R, cy+math.sin(ang)*br*R, cz+zo*R)
             bpy.context.view_layer.objects.active=o; bpy.ops.object.shade_smooth()
             o.data.materials.append(m); allobj.append(o)
-    # 작은 그린 꽃받침(아래)
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=R*0.16, location=(cx,cy,cz-R*0.12))
-    s=bpy.context.active_object; s.scale=(1,1,0.5); s.data.materials.append(LEAF2); allobj.append(s)
 
 # ---- 부케: 돔 형태로 장미들 배치 ----
 R=0.34; spots=[]
@@ -53,16 +50,6 @@ heads=[(0,0,0.30,0.16),(0.13,0.05,0.24,0.13),(-0.12,0.07,0.25,0.13),(0.05,-0.13,
        (-0.19,0.10,0.11,0.09),(0.08,-0.20,0.10,0.09)]
 for (hx,hy,hz,hr) in heads:
     rose(hx,hy,hz,hr,random.choice(PINKS))
-# 잎 — 부케 둘레로 삐져나오게
-for l in range(16):
-    a=(l/16)*2*math.pi+random.uniform(-0.2,0.2); lr=R*random.uniform(0.95,1.18)
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=random.uniform(0.06,0.09), location=(math.cos(a)*lr, math.sin(a)*lr, random.uniform(-0.02,0.07)))
-    o=bpy.context.active_object; o.scale=(0.4,1.4,0.14); o.rotation_euler=(random.uniform(-0.3,0.3),0,a)
-    bpy.ops.object.shade_smooth(); o.data.materials.append(LEAF if random.random()<0.5 else LEAF2); allobj.append(o)
-# 줄기 다발(아래)
-bpy.ops.mesh.primitive_cone_add(vertices=12, radius1=0.05, radius2=0.08, depth=0.24, location=(0,0,-0.16))
-st=bpy.context.active_object; st.data.materials.append(LEAF2); allobj.append(st)
-
 bpy.ops.object.select_all(action='DESELECT')
 for o in allobj: o.select_set(True)
 bpy.context.view_layer.objects.active=allobj[0]

@@ -149,7 +149,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v7-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v8-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -2144,15 +2144,11 @@
     vase.position.set(vx, 0.18, vz); scene.add(vase);
     var rim = new T.Mesh(new T.TorusGeometry(0.155, 0.008, 8, 28), glass);
     rim.rotation.x = Math.PI / 2; rim.position.set(vx, 0.36, vz); scene.add(rim);
-    // 화병 안 줄기 다발(물에 잠긴 그린)
-    var bundle = new T.Mesh(new T.CylinderGeometry(0.085, 0.05, 0.3, 12),
-      new T.MeshStandardMaterial({ color: 0x4F6B3F, roughness: 0.85, transparent: true, opacity: 0.85 }));
-    bundle.position.set(vx, 0.17, vz); scene.add(bundle);
-    // 풍성한 핑크 피오니 부케 — Blender GLB(빽빽한 돔 + 잎, 병합)
+    // 핑크 장미 부케만(초록 요소 제거) — 화병 입구까지 내려 틈 없이 채움
     if (this.AD.GLTFLoader) {
       new this.AD.GLTFLoader().load(asset('bouquet.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-        s.position.set(vx, 0.40, vz); s.scale.setScalar(1.05);
+        s.position.set(vx, 0.31, vz); s.scale.setScalar(1.0);   // 하단 꽃이 화병 림에 걸치게(떠보임 방지)
         scene.add(s);
       }, undefined, function () { });
     }
