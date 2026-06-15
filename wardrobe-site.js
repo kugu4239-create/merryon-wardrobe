@@ -2046,10 +2046,7 @@
     var topEdge = new T.Mesh(new T.BoxGeometry(BW + 0.055, 0.006, BD + 0.055), gold);
     topEdge.position.set(0, y1 + 0.002, 0); g.add(topEdge);
 
-    // 2단 × 2도어 = 4도어(패널 + 골드 노브) + 중앙 디바이더 라인
-    var midY = (y0 + y1) / 2;
-    var divider = new T.Mesh(new T.BoxGeometry(BW - 0.02, 0.012, BD - 0.02), gold);
-    divider.position.set(0, midY, BD / 2 - 0.005); g.add(divider);
+    // 2단 × 2도어 = 4도어(패널 + 골드 노브) — 중앙 골드 디바이더(철판) 제거(요청)
     [0, 1].forEach(function (tier) {
       var cyc = y0 + BH * (tier === 0 ? 0.25 : 0.75);   // 하단/상단 중심
       [-1, 1].forEach(function (s) {
