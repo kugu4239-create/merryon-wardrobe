@@ -285,6 +285,7 @@
     this._buildVanityChair();
     this._buildJewelryCabinet();
     this._buildStorageAndSpeaker();
+    this._buildBookshelfVase();
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
@@ -1768,7 +1769,7 @@
     // [파일, x, z, ry(실내향), 가로스케일] — 우측벽 커튼 제거(책장 자리), 로고는 옷장-책장 사이로
     var panels = [
       ['curtain_plain.glb', 2.65, -D / 2 + 0.12, 0, 1.3],                          // 옷장 우측(책장 사이) — 플레인
-      ['curtain_logo.glb', -3.9, -D / 2 + 0.12, 0, 1.25],                          // 옷장 좌측(백벽) — 메리온 로고(요청: 좌측 이동)
+      ['curtain_logo.glb', -3.35, -D / 2 + 0.12, 0, 1.55],                         // 옷장 좌측(백벽) — 메리온 로고(오른쪽으로 더 펼침)
       ['curtain_plain.glb', -W / 2 + 0.12, 2.1, Math.PI / 2, 1.5],                 // 좌벽 앞쪽
       ['curtain_plain.glb', W / 2 - 0.12, -2.55, -Math.PI / 2, 1.05],              // 창 좌측(우벽) — 크림(베이스)
       ['curtain_plain.glb', W / 2 - 0.12, 2.55, -Math.PI / 2, 1.05],               // 창 우측(우벽) — 크림(베이스)
@@ -1918,7 +1919,8 @@
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(-2.75, 0, -D / 2 + 0.34); g.rotation.y = 0; scene.add(g);   // 뒷벽 좌측(커튼-옷장 사이)
+    var W = this.ROOM.W;
+    g.position.set(-W / 2 + 0.35, 0, -2.5); g.rotation.y = Math.PI / 2; scene.add(g);   // 좌벽 뒤쪽(화장대와 같은 벽, 옷장 옆에서 이동)
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xF1E9D8, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xF4FAFF, roughness: 0.05, metalness: 0.0, transmission: 0.92, transparent: true, opacity: 0.22, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
@@ -2111,6 +2113,29 @@
         cap.position.set(c[0] * (SW / 2 - 0.012), SH / 2 + c[1] * (SH / 2 - 0.012), SD / 2 - 0.01); sg.add(cap);
       });
     })();
+  };
+
+  /* 책장 앞 플로어 꽃병 — 클리어 글라스 화병 + 풍성한 핑크 피오니/로즈 부케 */
+  P._buildBookshelfVase = function () {
+    var T = this.T, scene = this.scene;
+    var vx = 4.15, vz = -4.15;   // 책장(우측 백벽) 앞 바닥
+    // 클리어 글라스 화병(테이퍼)
+    var glass = new T.MeshPhysicalMaterial({
+      color: 0xF2F8FF, roughness: 0.04, metalness: 0.0, transmission: 0.95,
+      transparent: true, opacity: 0.32, thickness: 0.12, ior: 1.45, side: T.DoubleSide, envMapIntensity: 1.0
+    });
+    var vase = new T.Mesh(new T.CylinderGeometry(0.16, 0.10, 0.36, 28), glass);
+    vase.position.set(vx, 0.18, vz); scene.add(vase);
+    var rim = new T.Mesh(new T.TorusGeometry(0.155, 0.008, 8, 28), glass);
+    rim.rotation.x = Math.PI / 2; rim.position.set(vx, 0.36, vz); scene.add(rim);
+    // 화병 안 줄기 다발(물에 잠긴 그린)
+    var bundle = new T.Mesh(new T.CylinderGeometry(0.085, 0.05, 0.3, 12),
+      new T.MeshStandardMaterial({ color: 0x4F6B3F, roughness: 0.85, transparent: true, opacity: 0.85 }));
+    bundle.position.set(vx, 0.17, vz); scene.add(bundle);
+    // 풍성한 핑크 부케 — 다층 클러스터(피오니/로즈)
+    this._addFlowerCluster(vx, 0.345, vz, 1.45, PALETTE.dustyrose);
+    this._addFlowerCluster(vx, 0.40, vz, 1.05, PALETTE.blush);
+    this._addFlowerCluster(vx, 0.45, vz, 0.7, PALETTE.offwhite);
   };
 
   /* ----------------------------------------------------------------------- *
