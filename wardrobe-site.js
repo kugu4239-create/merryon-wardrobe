@@ -1641,35 +1641,21 @@
     var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
     var back = new T.Mesh(new T.PlaneGeometry(9, 5), new T.MeshBasicMaterial({ map: tex }));
     back.rotation.y = -Math.PI / 2; back.position.set(wx + 3.0, 2.0, cz); scene.add(back);
-
-    // 창밖 정원 = 핑크잎 + 초록잎 foliage 마운드만(울퉁불퉁 스무스 캐노피)
-    var greens = [0x6F8C5C, 0x7E9B68, 0x8CAB74, 0x5E7B49];
-    var pinks = [0xE7A7C2, 0xF0C3D6, 0xDFAFCB, 0xF2D2E0];
-    // 작은 구를 뭉쳐 울퉁불퉁한 잎무리(캐노피) 생성
-    function mound(mx, my, mz, R, cols) {
-      var mat = new T.MeshStandardMaterial({ color: cols[(Math.random() * cols.length) | 0], roughness: 0.95, metalness: 0.0 });
-      var basebush = new T.Mesh(new T.SphereGeometry(R * 0.82, 12, 10), mat);
-      basebush.position.set(mx, my, mz); basebush.scale.y = 0.85 + Math.random() * 0.3; scene.add(basebush);
-      var nb = 7 + (Math.random() * 6) | 0;
-      for (var b = 0; b < nb; b++) {
-        var bm = new T.MeshStandardMaterial({ color: cols[(Math.random() * cols.length) | 0], roughness: 0.95 });
-        var u = Math.random() * Math.PI * 2, v = Math.acos(2 * Math.random() - 1);
-        var rr = R * (0.7 + Math.random() * 0.25);
-        var bump = new T.Mesh(new T.SphereGeometry(R * (0.28 + Math.random() * 0.3), 9, 7), bm);
-        bump.position.set(mx + Math.sin(v) * Math.cos(u) * rr, my + Math.cos(v) * rr * 0.85, mz + Math.sin(v) * Math.sin(u) * rr);
-        scene.add(bump);
-      }
+    // 정원 식재(그린 덤불 + 로즈) — 창과 백드롭 사이
+    var greens = [0x7E9B68, 0x8Cab74, 0x6F8C5C, 0xA3B98A];
+    // 덤불 높이를 낮춰 창 상단(아치)에는 울퉁불퉁한 잎이 안 비치게 — 사각 창부 위주로 채움
+    for (var i = 0; i < 14; i++) {
+      var bush = new T.Mesh(new T.IcosahedronGeometry(0.32 + Math.random() * 0.42, 1),
+        new T.MeshStandardMaterial({ color: greens[i % greens.length], roughness: 1.0, flatShading: true }));
+      bush.position.set(wx + 0.8 + Math.random() * 1.8, 0.25 + Math.random() * 1.1, cz - 2.6 + Math.random() * 5.2);
+      bush.scale.y = 0.8 + Math.random() * 0.4; scene.add(bush);
     }
-    // 핑크/초록 마운드를 사각 창부 위주로(낮게) 채워 정원 느낌 — 핑크(벚꽃)와 초록 교차
-    var spots = [
-      [1.0, -2.2, 0.62, pinks], [1.3, -1.0, 0.5, greens], [0.9, 0.0, 0.66, pinks],
-      [1.5, 0.9, 0.46, greens], [1.0, 1.9, 0.6, pinks], [1.6, -1.7, 0.42, greens],
-      [0.8, 2.6, 0.5, greens], [1.35, 2.0, 0.4, pinks], [1.2, -2.7, 0.44, greens],
-      [0.85, 0.9, 0.4, pinks]
-    ];
-    for (var i = 0; i < spots.length; i++) {
-      var s = spots[i];
-      mound(wx + 0.7 + s[0], 0.35 + s[2] * 0.7, cz + s[1], s[2], s[3]);
+    // 흰/핑크 장미 군집(창가 보타닉) — 낮게
+    var rose = [0xF3D9DE, 0xF7EFE6, 0xEBC3CE];
+    for (var r = 0; r < 18; r++) {
+      var fl = new T.Mesh(new T.SphereGeometry(0.06 + Math.random() * 0.05, 8, 6),
+        new T.MeshStandardMaterial({ color: rose[r % rose.length], roughness: 0.7 }));
+      fl.position.set(wx + 0.5 + Math.random() * 1.0, 0.25 + Math.random() * 1.2, cz - 1.5 + Math.random() * 3.0); scene.add(fl);
     }
   };
 
