@@ -2254,11 +2254,12 @@
         '}'
       ].join('\n')
     };
+    // OutputPass(톤매핑+sRGB) 먼저 → 그 다음 그레이드(디스플레이 공간 0..1에서 안전하게 적용)
+    composer.addPass(new AD.OutputPass());
+
     var grade = new AD.ShaderPass(GradeShader);
     composer.addPass(grade);
     this.gradePass = grade;
-
-    composer.addPass(new AD.OutputPass());
 
     this.composer = composer;
   };
