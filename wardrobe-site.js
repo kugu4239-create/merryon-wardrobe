@@ -279,6 +279,7 @@
     this._buildGalleryWall();
     this._buildVanityChair();
     this._buildScarves();
+    this._buildCurtains();
 
     this._setupComposer();
     this._setupInteraction();
@@ -1628,6 +1629,31 @@
     })();
     // 화병 꽃다발(콘솔/소파 옆 바닥 액센트)
     this._addFlowerCluster(-W / 2 + 1.7, 0.5, D / 2 - 1.2, 0.5, PALETTE.dustyrose);
+  };
+
+  /* 빌트인 커튼 — Blender 천시뮬 드레이프 GLB를 빈 벽에 천장부터 내려오게.
+   * 옷장 우측 벽 커튼에는 merryon 로고가 주름을 따라 들어간 logo 버전 사용. */
+  P._buildCurtains = function () {
+    var T = this.T, AD = this.AD, scene = this.scene;
+    if (!AD.GLTFLoader) return;
+    var W = this.ROOM.W, H = this.ROOM.H, D = this.ROOM.D;
+    var AW = 3.84;
+    var loader = new AD.GLTFLoader();
+    // [파일, x, z, ry(실내향), 가로스케일]
+    var panels = [
+      ['curtain_logo.glb', (AW / 2 + W / 2) / 2 + 0.3, -D / 2 + 0.12, 0, 1.55],   // 옷장 우측(백벽) — 로고
+      ['curtain_plain.glb', -(AW / 2 + W / 2) / 2 - 0.3, -D / 2 + 0.12, 0, 1.55],  // 옷장 좌측(백벽)
+      ['curtain_plain.glb', -W / 2 + 0.12, 2.0, Math.PI / 2, 1.4],                 // 좌벽 뒤쪽
+      ['curtain_plain.glb', W / 2 - 0.12, -1.0, -Math.PI / 2, 1.4]                 // 우벽(창 옆)
+    ];
+    panels.forEach(function (p) {
+      loader.load(asset(p[0]), function (gltf) {
+        var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.material.side = T.DoubleSide; } });
+        s.position.set(p[1], 0, p[2]); s.rotation.y = p[3];
+        s.scale.set(p[4], H / 2.75 + 0.02, 1.0);   // 천장까지
+        scene.add(s);
+      }, undefined, function () { });
+    });
   };
 
   /* 바닥 스카프 — Blender 천시뮬로 헝클어진 스카프 GLB(러그 위 자연스럽게) */
