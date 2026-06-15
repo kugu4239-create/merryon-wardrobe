@@ -288,6 +288,7 @@
     this._buildBookshelfVase();
     this._buildGoldRack();
     this._buildTrunk();
+    this._buildDisplayCase();
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
@@ -1691,9 +1692,7 @@
       }
     }
     // 고품질 토피어리 — Blender 제작 GLB(잎 디테일+세라믹 화분+장미)를 클론 배치
-    var plantSpots = [
-      [W / 2 - 1.0, D / 2 - 1.0, 1.05]     // 앞-우 코너 (옷장 왼쪽 백-좌 화분 삭제)
-    ];
+    var plantSpots = [];   // 화분(토피어리) 전부 삭제(요청) — 자리엔 아이보리 진열장 배치
     // 화분(세라믹) → 바닥과 동일한 대리석 재질
     var potMat = self._potMarbleMat || (self._potMarbleMat = (function () {
       var mt = self._marbleTex(); mt.wrapS = mt.wrapT = T.RepeatWrapping; mt.repeat.set(2, 2);
@@ -2287,6 +2286,78 @@
         stud.position.set(sx * (W / 5.0), sy, D / 2 + 0.006); g.add(stud);
       });
     }
+  };
+
+  /* 아이보리 잡화 진열장 — 빈티지 글라스 카운터(크림 우드 프레임 + 유리 + 계단식 선반 + 파스텔 잡화) */
+  P._buildDisplayCase = function () {
+    var T = this.T, scene = this.scene, gold = this.goldMat, D = this.ROOM.D;
+    var g = new T.Group();
+    g.position.set(3.2, 0, D / 2 - 0.5); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 우측, 실내(-z) 향함(local +z=정면)
+    var CW = 1.7, CD = 0.52, CH = 0.82, plinth = 0.12;
+    var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
+    var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
+    var glass = new T.MeshPhysicalMaterial({ color: 0xEAF1F4, roughness: 0.06, metalness: 0.0, transmission: 0.9, transparent: true, opacity: 0.2, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
+
+    // 플린스 베이스 + 발
+    var base = new T.Mesh(new T.BoxGeometry(CW, plinth, CD), cream); base.position.y = plinth / 2; base.castShadow = true; base.receiveShadow = true; g.add(base);
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+      var foot = new T.Mesh(new T.BoxGeometry(0.07, 0.04, 0.07), creamD);
+      foot.position.set(c[0] * (CW / 2 - 0.06), 0.0, c[1] * (CD / 2 - 0.06)); foot.position.y = -0.0; g.add(foot);
+    });
+    var y0 = plinth, y1 = CH, yc = (y0 + y1) / 2;
+    // 코너 포스트 + 상하 프레임 레일
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+      var post = new T.Mesh(new T.BoxGeometry(0.04, y1 - y0, 0.04), cream);
+      post.position.set(c[0] * (CW / 2 - 0.02), yc, c[1] * (CD / 2 - 0.02)); g.add(post);
+    });
+    [y0 + 0.02, y1].forEach(function (ry) {
+      [[CW, 0.03, 0.04, 0, (CD / 2 - 0.02)], [CW, 0.03, 0.04, 0, -(CD / 2 - 0.02)],
+       [0.04, 0.03, CD, (CW / 2 - 0.02), 0], [0.04, 0.03, CD, -(CW / 2 - 0.02), 0]].forEach(function (r) {
+        var bar = new T.Mesh(new T.BoxGeometry(r[0], r[1], r[2]), cream); bar.position.set(r[3], ry, r[4]); g.add(bar);
+      });
+    });
+    // 유리: 상판 + 정면(+z) + 양옆 + 후면
+    var topG = new T.Mesh(new T.BoxGeometry(CW - 0.05, 0.014, CD - 0.05), glass); topG.position.y = y1 - 0.005; g.add(topG);
+    var frontG = new T.Mesh(new T.PlaneGeometry(CW - 0.05, y1 - y0 - 0.04), glass); frontG.position.set(0, yc, CD / 2 - 0.006); g.add(frontG);
+    var backG = new T.Mesh(new T.PlaneGeometry(CW - 0.05, y1 - y0 - 0.04), glass); backG.position.set(0, yc, -CD / 2 + 0.006); backG.rotation.y = Math.PI; g.add(backG);
+    [-1, 1].forEach(function (s) {
+      var sg = new T.Mesh(new T.PlaneGeometry(CD - 0.05, y1 - y0 - 0.04), glass);
+      sg.rotation.y = s * Math.PI / 2; sg.position.set(s * (CW / 2 - 0.006), yc, 0); g.add(sg);
+    });
+
+    // 계단식 선반(3단) — 뒤가 높고 앞이 낮게(정면 +z로 갈수록 낮음) + 잡화
+    var pastels = [0xCBB7D6, 0xE7C3CE, 0xBFD2C0, 0xEDE3CC, 0xBcd0e0, 0xE8C9A8, 0xD9B6C4];
+    function good(parent, x, y, z, kind) {
+      var col = pastels[(Math.random() * pastels.length) | 0];
+      var m = new T.MeshStandardMaterial({ color: col, roughness: 0.55, metalness: 0.05 });
+      if (kind === 0) { // 슈즈 한 켤레(작은 둥근 박스 2)
+        [-1, 1].forEach(function (s) {
+          var sh = new T.Mesh(new T.BoxGeometry(0.05, 0.035, 0.1), m); sh.position.set(x + s * 0.035, y + 0.018, z); sh.rotation.y = s * 0.2;
+          var bev = sh; parent.add(sh);
+        });
+      } else if (kind === 1) { // 가방(박스 + 손잡이)
+        var bag = new T.Mesh(new T.BoxGeometry(0.09, 0.07, 0.04), m); bag.position.set(x, y + 0.035, z); parent.add(bag);
+        var hd = new T.Mesh(new T.TorusGeometry(0.022, 0.005, 8, 14, Math.PI), gold); hd.position.set(x, y + 0.07, z); parent.add(hd);
+      } else if (kind === 2) { // 책 스택(얇은 박스 2-3)
+        for (var b = 0; b < 3; b++) {
+          var bk = new T.Mesh(new T.BoxGeometry(0.13, 0.022, 0.09), new T.MeshStandardMaterial({ color: pastels[(Math.random() * pastels.length) | 0], roughness: 0.7 }));
+          bk.position.set(x, y + 0.012 + b * 0.024, z); bk.rotation.y = (Math.random() - 0.5) * 0.2; parent.add(bk);
+        }
+      } else { // 향수/소품(작은 박스+골드 캡)
+        var bo = new T.Mesh(new T.BoxGeometry(0.05, 0.08, 0.035), m); bo.position.set(x, y + 0.04, z); parent.add(bo);
+        var cap = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.02, 10), gold); cap.position.set(x, y + 0.09, z); parent.add(cap);
+      }
+    }
+    var steps = [[0.56, -0.12], [0.42, 0.04], [0.28, 0.2]];   // [선반 y, z(정면쪽)]
+    steps.forEach(function (st, si) {
+      var sy = st[0], sz = st[1];
+      var shelf = new T.Mesh(new T.BoxGeometry(CW - 0.08, 0.018, CD * 0.42), creamD);
+      shelf.position.set(0, sy, sz); shelf.receiveShadow = true; g.add(shelf);
+      var kinds = [0, 1, 2, 3, 1, 0];
+      for (var n = 0; n < 5; n++) {
+        good(g, -CW / 2 + 0.18 + n * ((CW - 0.36) / 4), sy + 0.009, sz, kinds[(n + si) % kinds.length]);
+      }
+    });
   };
 
   /* ----------------------------------------------------------------------- *
