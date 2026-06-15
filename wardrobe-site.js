@@ -616,7 +616,7 @@
       reflector.rotation.x = -Math.PI / 2; reflector.position.y = 0.0;
       scene.add(reflector); this.reflector = reflector;
       var overlay = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
-        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.012, color: 0xF3F0E8,
+        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.022, color: 0xF1EEE4,
         roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.18,
         transparent: true, opacity: 0.82, envMapIntensity: 0.9
       }));
@@ -624,7 +624,7 @@
       scene.add(overlay);
     } else {
       var floor = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
-        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.012, color: 0xF3F0E8,
+        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.022, color: 0xF1EEE4,
         roughness: 0.3, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.8
       }));
       floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
@@ -645,23 +645,39 @@
     /* 몰딩 전부 삭제(베이스/체어레일/크라운·웨인스코팅 패널·문 케이싱) — 벽/천장 아이보리 통일 */
 
     /* 문 — 앞벽 더블, 케이싱 없이 심플 패널 도어 */
+    // 아치형 팔라디안 더블 도어(상단 부채꼴 팬라이트 + 골드 아치 프레임)
     function buildDoor(cx, cz, ry, dbl) {
       var grp = new T.Group(); grp.position.set(cx, 0, cz); grp.rotation.y = ry; scene.add(grp);
-      var lh = 2.1, lw = dbl ? 0.85 : 0.92;
-      var leaves = dbl ? [-1, 1] : [0];
-      leaves.forEach(function (s) {
+      var lh = 1.95, lw = dbl ? 0.82 : 0.9, totW = dbl ? lw * 2 : lw, R = totW / 2;
+      var glassMat = new T.MeshPhysicalMaterial({ color: 0xEAF2FF, roughness: 0.06, transmission: 0.55, transparent: true, opacity: 0.5, emissive: 0xF2ECDD, emissiveIntensity: 0.22, side: T.DoubleSide });
+      // 도어 잎(패널 + 골드 트림)
+      (dbl ? [-1, 1] : [0]).forEach(function (s) {
         var cxo = dbl ? s * lw / 2 : 0;
-        var leaf = new T.Mesh(new T.BoxGeometry(lw - 0.008, lh, 0.05), doorMat);
+        var leaf = new T.Mesh(new T.BoxGeometry(lw - 0.01, lh, 0.05), doorMat);
         leaf.position.set(cxo, lh / 2, 0.025); leaf.castShadow = true; grp.add(leaf);
-        [lh * 0.72, lh * 0.30].forEach(function (py) {
-          var dp = new T.Mesh(new T.BoxGeometry(lw * 0.66, lh * 0.34, 0.01), doorPanelMat);
-          dp.position.set(cxo, py, 0.052); grp.add(dp);
+        [lh * 0.74, lh * 0.46, lh * 0.18].forEach(function (py, pi) {
+          var ph = (pi === 0 ? 0.42 : 0.26) * lh;
+          var dp = new T.Mesh(new T.BoxGeometry(lw * 0.62, ph, 0.012), doorPanelMat); dp.position.set(cxo, py, 0.052); grp.add(dp);
+          var tr = new T.Mesh(new T.BoxGeometry(lw * 0.66, ph + 0.04, 0.006), gold); tr.position.set(cxo, py, 0.047); grp.add(tr);
         });
-        // 슬림 골드 바 손잡이(세로) — 더블은 맞닿는 안쪽, 싱글은 한쪽
-        var hx = dbl ? (cxo - s * (lw / 2 - 0.09)) : (lw / 2 - 0.1);
-        var handle = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, 0.42, 12), gold);
-        handle.position.set(hx, lh * 0.5, 0.07); grp.add(handle);
+        var hx = dbl ? (cxo - s * (lw / 2 - 0.08)) : (lw / 2 - 0.1);
+        var handle = new T.Mesh(new T.CylinderGeometry(0.014, 0.014, 0.34, 12), gold); handle.position.set(hx, lh * 0.5, 0.075); grp.add(handle);
+        var knob = new T.Mesh(new T.SphereGeometry(0.026, 12, 10), gold); knob.position.set(hx, lh * 0.5, 0.085); grp.add(knob);
       });
+      // 부채꼴 팬라이트(아치 유리 + 방사형 골드 바)
+      var fan = new T.Mesh(new T.CircleGeometry(R, 28, 0, Math.PI), glassMat);
+      fan.position.set(0, lh + 0.03, 0.02); grp.add(fan);
+      var pts = [];
+      for (var a = 0; a <= Math.PI + 0.001; a += Math.PI / 20) pts.push(new T.Vector3(R * Math.cos(a), lh + 0.03 + R * Math.sin(a), 0.03));
+      var arch = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 28, 0.03, 8, false), gold); grp.add(arch);
+      [0.25, 0.5, 0.75].forEach(function (f) {
+        var a = Math.PI * f, ex = R * Math.cos(a) * 0.94, ey = R * Math.sin(a) * 0.94, len = Math.sqrt(ex * ex + ey * ey);
+        var bar = new T.Mesh(new T.BoxGeometry(0.028, len, 0.03), gold);
+        bar.position.set(ex / 2, lh + 0.03 + ey / 2, 0.03); bar.rotation.z = Math.atan2(ey, ex) - Math.PI / 2; grp.add(bar);
+      });
+      // 골드 세로 프레임 + 스프링라인
+      [-R, R].forEach(function (x) { var v = new T.Mesh(new T.BoxGeometry(0.05, lh + 0.06, 0.06), gold); v.position.set(x, lh / 2, 0.03); grp.add(v); });
+      var spring = new T.Mesh(new T.BoxGeometry(totW + 0.1, 0.05, 0.06), gold); spring.position.set(0, lh + 0.03, 0.03); grp.add(spring);
     }
     buildDoor(0, D / 2 - 0.04, Math.PI, true);            // 앞벽 중앙: 맞닿는 더블 도어(유지)
     // 좌·우벽 방문 삭제, 몰딩/패널 없음(아이보리 벽 통일)
@@ -1619,12 +1635,22 @@
       var vx = -W / 2 + 1.7, vz = D / 2 - 1.2;
       var vase = new T.Mesh(new T.CylinderGeometry(0.13, 0.09, 0.5, 20), new T.MeshStandardMaterial({ color: 0xEFE9DB, roughness: 0.5, metalness: 0.05 }));
       vase.position.set(vx, 0.25, vz); vase.castShadow = true; scene.add(vase);
-      var pampMat = new T.MeshStandardMaterial({ color: 0xE3D3B0, roughness: 1.0 });
-      for (var b = 0; b < 9; b++) {
-        var ang = (b / 9) * Math.PI * 2, lean = 0.18 + Math.random() * 0.12;
-        var stem = new T.Mesh(new T.CylinderGeometry(0.006, 0.01, 0.7, 5), pampMat);
-        stem.position.set(vx + Math.cos(ang) * 0.18, 0.5 + 0.34, vz + Math.sin(ang) * 0.18);
-        stem.rotation.set(Math.sin(ang) * lean, 0, -Math.cos(ang) * lean); scene.add(stem);
+      var stemMat = new T.MeshStandardMaterial({ color: 0xC9B896, roughness: 1.0 });
+      var plumeMat = new T.MeshStandardMaterial({ color: 0xEADCC2, roughness: 1.0 });
+      var frond = new T.CylinderGeometry(0.002, 0.006, 0.26, 4);
+      for (var b = 0; b < 12; b++) {
+        var ang = (b / 12) * Math.PI * 2 + Math.random() * 0.3, lean = 0.16 + Math.random() * 0.16;
+        var sx = vx + Math.cos(ang) * 0.16, sz = vz + Math.sin(ang) * 0.16, sl = 0.6 + Math.random() * 0.25;
+        var stem = new T.Mesh(new T.CylinderGeometry(0.005, 0.009, sl, 5), stemMat);
+        var sy = 0.5 + sl / 2;
+        stem.position.set(sx, sy, sz); stem.rotation.set(Math.sin(ang) * lean, 0, -Math.cos(ang) * lean); scene.add(stem);
+        // 깃털 플룸(끝에 프론드 다발)
+        var tx = sx + Math.sin(Math.sin(ang) * lean) * sl, ty = 0.5 + sl, tz = sz - Math.sin(-Math.cos(ang) * lean) * sl;
+        var pl = new T.Group(); pl.position.set(tx, ty, tz); scene.add(pl);
+        for (var f = 0; f < 7; f++) {
+          var fr = new T.Mesh(frond, plumeMat);
+          fr.position.y = 0.1; fr.rotation.set((Math.random() - 0.5) * 0.9, Math.random() * 6.28, (Math.random() - 0.5) * 0.9); pl.add(fr);
+        }
       }
     })();
     // 화병 꽃다발(콘솔/소파 옆 바닥 액센트)
