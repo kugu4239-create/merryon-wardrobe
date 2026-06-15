@@ -2146,7 +2146,7 @@
   P._buildGoldRack = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(1.55, 0, -3.7); g.rotation.y = 0; scene.add(g);   // 뒷벽 앞 빈 바닥(센터-우)
+    g.position.set(-2.5, 0, -3.55); g.rotation.y = 0; scene.add(g);   // 뒷벽 앞 빈 바닥(좌측, 옷장 왼편)
     var goldS = new T.MeshStandardMaterial({ color: PALETTE.gold, metalness: 1.0, roughness: 0.26, envMapIntensity: 1.3 });
 
     var HW = 0.72, PH = 1.62, railY = 1.5;   // 포스트 반폭 / 높이 / 레일 높이
@@ -2178,12 +2178,9 @@
     // 드레이프 천(아이보리/핑크) — Blender GLB 여러 장
     if (this.AD.GLTFLoader) {
       var cloths = [
-        [-0.52, 0xF2EBDD, 1.0, 0.02],   // [x, color, 높이scale, z]
-        [-0.30, 0xEAC9D2, 0.92, -0.01],
-        [-0.08, 0xF0E6D4, 1.05, 0.015],
-        [0.16, 0xE7BFCB, 0.95, -0.005],
-        [0.40, 0xEFE7D7, 1.0, 0.02],
-        [0.58, 0xE3B7C4, 0.88, -0.01]
+        [-0.42, 0xF2EBDD, 1.0, 0.02],   // [x, color, 높이scale, z] — 천 갯수 6→3(요청)
+        [-0.02, 0xE7BFCB, 1.05, -0.005],
+        [0.42, 0xEFE7D7, 0.92, 0.02]
       ];
       var loader = new this.AD.GLTFLoader();
       loader.load(asset('cloth.glb'), function (gltf) {
@@ -2208,7 +2205,7 @@
   P._buildTrunk = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(-1.45, 0, 2.55); g.rotation.y = 0.35; scene.add(g);   // 소파 앞쪽 빈 바닥
+    g.position.set(-1.45, 0, 4.3); g.rotation.y = 0.35; scene.add(g);   // 앞벽(갤러리) 쪽으로 이동
     var W = 1.02, H = 0.5, D = 0.58;
 
     // 모노그램 캔버스 텍스처(브라운 + 탄 모티프 — 제너릭)
