@@ -948,38 +948,49 @@
     var loader = new T.TextureLoader(); loader.setCrossOrigin('anonymous');
     var n = CUTS.length;
     // 종류별 옷걸이: 어깨걸이(원피스·상의) / 집게걸이(스커트·팬츠)
-    function shoulderHanger(parent, w) {
-      // 후크(목 위로) + 옷 어깨선에 걸쳐 보이는 가시적 와이어 행거 → '걸린' 느낌
+    // 컷아웃 상단 band 의 불투명 가로폭(=어깨/카라 폭) 비율 감지. CORS 차단 시 null.
+    function topOpaqueFrac(img, loF, hiF) {
+      try {
+        var cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+        var c2 = cv.getContext('2d'); c2.drawImage(img, 0, 0);
+        var W = img.width, H = img.height, y0 = Math.floor(H * loF), y1 = Math.floor(H * hiF);
+        var minX = W, maxX = -1;
+        for (var y = y0; y < y1; y += 2) {
+          var d = c2.getImageData(0, y, W, 1).data;
+          for (var x = 0; x < W; x++) { if (d[x * 4 + 3] > 50) { if (x < minX) minX = x; if (x > maxX) maxX = x; } }
+        }
+        if (maxX < minX) return null;
+        return (maxX - minX) / W;
+      } catch (e) { return null; }
+    }
+    function shoulderHanger(parent, sw) {
+      // 후크(목 위로) + 카라 사이에 끼워지는 가시 와이어 행거 → '걸린' 느낌
       var hook = new T.Mesh(new T.TorusGeometry(0.026, 0.005, 8, 16, Math.PI), gold);
       hook.rotation.y = Math.PI / 2; hook.position.y = 0.055; parent.add(hook);
       var neck = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.06, 8), gold);
       neck.position.y = 0.015; parent.add(neck);
-      var sw = 0.24;   // 모든 상의·원피스 통일된 목/어깨 폭(옷걸이 끝을 이 폭으로 맞춤)
-      // 어깨 와이어(앞쪽에 보이게): 중앙이 솟고 양끝이 어깨로 내려가는 삼각 행거
       var bar = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([
-        new T.Vector3(-sw / 2, -0.052, 0.02), new T.Vector3(0, -0.012, 0.02), new T.Vector3(sw / 2, -0.052, 0.02)
+        new T.Vector3(-sw / 2, -0.05, 0.02), new T.Vector3(0, -0.012, 0.02), new T.Vector3(sw / 2, -0.05, 0.02)
       ]), 16, 0.005, 6, false), gold);
       parent.add(bar);
       [-1, 1].forEach(function (s) {
-        var tip = new T.Mesh(new T.SphereGeometry(0.008, 8, 6), gold);
-        tip.position.set(s * sw / 2, -0.052, 0.02); parent.add(tip);
+        var tip = new T.Mesh(new T.SphereGeometry(0.0075, 8, 6), gold);
+        tip.position.set(s * sw / 2, -0.05, 0.02); parent.add(tip);
       });
-      return -0.045;   // 평면 상단(어깨)이 와이어 바로 아래에 걸침
+      return -0.04;   // 평면 상단(어깨)이 와이어 바로 아래
     }
-    function clipHanger(parent, w) {
+    function clipHanger(parent, sw) {
       var hook = new T.Mesh(new T.TorusGeometry(0.028, 0.005, 8, 16, Math.PI), gold);
       hook.rotation.y = Math.PI / 2; hook.position.y = 0.055; parent.add(hook);
       var neck = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.07, 8), gold);
       neck.position.y = 0.01; parent.add(neck);
-      var cw = Math.min(0.34, Math.max(0.16, w * 0.62));
-      // 집게 바(앞쪽에 보이게) + 양끝 집게 → 허리에서 집힌 느낌
-      var bar = new T.Mesh(new T.CylinderGeometry(0.005, 0.005, cw, 10), gold);
+      var bar = new T.Mesh(new T.CylinderGeometry(0.005, 0.005, sw, 10), gold);
       bar.rotation.z = Math.PI / 2; bar.position.set(0, -0.03, 0.02); parent.add(bar);
       [-1, 1].forEach(function (s) {
-        var clip = new T.Mesh(new T.BoxGeometry(0.022, 0.036, 0.018), gold);
-        clip.position.set(s * cw * 0.42, -0.04, 0.022); parent.add(clip);
+        var clip = new T.Mesh(new T.BoxGeometry(0.02, 0.034, 0.016), gold);
+        clip.position.set(s * sw * 0.46, -0.04, 0.022); parent.add(clip);
       });
-      return -0.045;    // 평면 상단(허리)이 집게 바로 아래에 집힘
+      return -0.045;
     }
     CUTS.forEach(function (entry, i) {
       var fx = n > 1 ? (-spanW / 2 + spanW * (i / (n - 1))) : 0;
@@ -997,7 +1008,12 @@
           // 종류별 실제 높이(인체 대비) × 개별 스케일 → 폭은 비율 유지
           var h = (HBY[type] || H0 / 2) * (entry[3] || 1), w = h * aspect;
           var clipType = (type === 'skirt' || type === 'pants');
-          var topY = clipType ? clipHanger(pivot, w) : shoulderHanger(pivot, w);
+          // 옷걸이 폭 = 상단(어깨/허리) 불투명폭을 감지해 카라 사이에 끼게(살짝 안쪽)
+          var band = clipType ? topOpaqueFrac(tex.image, 0.0, 0.06) : topOpaqueFrac(tex.image, 0.03, 0.13);
+          var swDefault = clipType ? w * 0.6 : w * 0.66;
+          var sw = (band != null ? band * w * (clipType ? 0.82 : 0.78) : swDefault);
+          sw = Math.max(0.1, Math.min(0.42, sw));
+          var topY = clipType ? clipHanger(pivot, sw) : shoulderHanger(pivot, sw);
           var mat = new T.MeshStandardMaterial({
             map: tex, transparent: true, alphaTest: 0.45, side: T.DoubleSide,
             roughness: 0.82, metalness: 0.0, color: 0xffffff
