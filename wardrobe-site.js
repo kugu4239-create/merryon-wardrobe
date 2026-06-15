@@ -882,7 +882,7 @@
     }
     // 그룹별 GLB 와 옷 개수(Blender 배치와 동일: x = k*0.6 - 0.3*(n-1)).
     // 전역 인덱스를 미리 배정해, 파일이 도착하는 즉시 봉의 제 위치에 건다(다른 파일을 기다리지 않음).
-    var files = [['hq_0.glb', 4], ['hq_1.glb', 4], ['hq_2.glb', 4], ['hq_3.glb', 1]];
+    var files = [['w2_0.glb', 4], ['w2_1.glb', 4], ['w2_2.glb', 4]];
     var total = 0, start = []; files.forEach(function (e) { start.push(total); total += e[1]; });
 
     // 각 메시를 가장 가까운 옷 슬롯에 배정(소매가 이웃 칸까지 퍼져도 중심 기준으로 정확히 분리).
