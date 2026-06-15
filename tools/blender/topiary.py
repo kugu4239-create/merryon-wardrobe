@@ -19,41 +19,41 @@ rim.data.materials.append(CERAMIC); allobj.append(rim)
 bpy.ops.mesh.primitive_cylinder_add(radius=0.022, depth=0.42, location=(0,0,0.5)); tr=bpy.context.active_object
 bpy.ops.object.shade_smooth(); tr.data.materials.append(TRUNK); allobj.append(tr)
 
-# 잎으로 덮인 구 — 작은 잎 plane 다수
-def leaf_ball(cz, R, count):
-    leaves=[]
+# 보타닉 무더기 — 불규칙 잎 클러스터 + 풍성한 블라썸(핑크/크림/화이트)
+ROSE2=mat("rose2",(0.93,0.78,0.82),0.6); CREAMF=mat("creamf",(0.95,0.90,0.80),0.6); WHITEF=mat("whitef",(0.97,0.95,0.92),0.6)
+FLOWERS=[ROSE,ROSE2,CREAMF,WHITEF,ROSE2]
+def leaf_ball(c, R, count):
     bm=bmesh.new()
     for i in range(count):
-        # 구면 임의점
         u=random.uniform(0,2*math.pi); v=math.acos(random.uniform(-1,1))
         n=mathutils.Vector((math.sin(v)*math.cos(u), math.sin(v)*math.sin(u), math.cos(v)))
-        p=mathutils.Vector((0,0,cz))+n*R*random.uniform(0.92,1.04)
-        # 잎 plane(작은 사각) — 바깥 향하게
-        sz=random.uniform(0.018,0.032)
-        # 두 삼각형
-        t=n.cross(mathutils.Vector((0,0,1)));
+        p=mathutils.Vector(c)+n*R*random.uniform(0.85,1.08)
+        sz=random.uniform(0.02,0.036)
+        t=n.cross(mathutils.Vector((0,0,1)))
         if t.length<1e-3: t=mathutils.Vector((1,0,0))
         t.normalize(); b2=n.cross(t).normalized()
         rot=random.uniform(0,2*math.pi); tt=t*math.cos(rot)+b2*math.sin(rot); bb=t*-math.sin(rot)+b2*math.cos(rot)
-        v1=bm.verts.new(p + tt*sz + bb*sz*0.5); v2=bm.verts.new(p - tt*sz + bb*sz*0.5)
-        v3=bm.verts.new(p - tt*sz - bb*sz*0.5); v4=bm.verts.new(p + tt*sz - bb*sz*0.5)
+        v1=bm.verts.new(p+tt*sz+bb*sz*0.5); v2=bm.verts.new(p-tt*sz+bb*sz*0.5)
+        v3=bm.verts.new(p-tt*sz-bb*sz*0.5); v4=bm.verts.new(p+tt*sz-bb*sz*0.5)
         bm.faces.new([v1,v2,v3,v4])
     me=bpy.data.meshes.new("leaves"); bm.to_mesh(me); bm.free()
     o=bpy.data.objects.new("leaves",me); sc.collection.objects.link(o)
     o.data.materials.append(LEAF if random.random()<0.5 else LEAF2)
     bpy.context.view_layer.objects.active=o; bpy.ops.object.shade_flat(); allobj.append(o)
-    # 베이스 구(잎 사이 빈틈 메움)
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=R*0.93, location=(0,0,cz)); base=bpy.context.active_object
-    bpy.ops.object.shade_smooth(); base.data.materials.append(LEAF); allobj.append(base)
-    # 장미 액센트
-    for r in range(5):
-        u=random.uniform(0,2*math.pi); v=math.acos(random.uniform(0.1,0.9))
-        n=mathutils.Vector((math.sin(v)*math.cos(u), math.sin(v)*math.sin(u), math.cos(v)))
-        p=mathutils.Vector((0,0,cz))+n*R*0.98
-        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.022, location=p); ro=bpy.context.active_object
-        bpy.ops.object.shade_smooth(); ro.data.materials.append(ROSE); allobj.append(ro)
-leaf_ball(0.92, 0.26, 230)
-leaf_ball(1.3, 0.2, 150)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=R*0.9, location=c); base=bpy.context.active_object
+    base.scale=(1,1,random.uniform(0.85,1.1)); bpy.ops.object.shade_smooth(); base.data.materials.append(LEAF); allobj.append(base)
+# 불규칙 무더기(여러 클러스터 지터)
+clusters=[(0,0,0.95,0.24),(0.07,0.05,1.12,0.18),(-0.08,0.04,1.05,0.17),(0.03,-0.07,0.86,0.16),(0,0,1.25,0.15)]
+for (cx,cy,cz,R) in clusters: leaf_ball((cx,cy,cz), R, int(R*900))
+# 풍성한 블라썸 — 무더기 표면 곳곳에 송이(크게)
+for f in range(46):
+    cx,cy,cz,R=random.choice(clusters)
+    u=random.uniform(0,2*math.pi); v=math.acos(random.uniform(-0.2,1.0))
+    n=mathutils.Vector((math.sin(v)*math.cos(u), math.sin(v)*math.sin(u), math.cos(v)))
+    p=mathutils.Vector((cx,cy,cz))+n*R*random.uniform(0.92,1.05)
+    rad=random.uniform(0.025,0.04)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=rad, location=p); ro=bpy.context.active_object
+    ro.scale=(1,1,0.8); bpy.ops.object.shade_smooth(); ro.data.materials.append(random.choice(FLOWERS)); allobj.append(ro)
 
 sc.render.engine='CYCLES'; sc.cycles.samples=6; sc.cycles.device='CPU'
 bpy.ops.object.select_all(action='DESELECT')
