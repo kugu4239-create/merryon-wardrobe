@@ -283,6 +283,7 @@
     this._setupComposer();
     this._setupInteraction();
     this._resize();
+    try { window.__MERRYON_SCENE__ = this; } catch (e) {}
 
     window.addEventListener('resize', function () { self._resize(); });
     // 컨테이너 크기 변동 대응
@@ -852,27 +853,23 @@
    * ----------------------------------------------------------------------- */
   P._buildArmoire = function () {
     var T = this.T, scene = this.scene;
-    var D = this.ROOM.D;
-    var AW = 4.8, AH = 2.15, AD_ = 0.5;
+    var D = this.ROOM.D, H = this.ROOM.H;
+    var AW = 3.84, AH = 2.15, AD_ = 0.5;
     var zBack = -D / 2 + 0.1;
 
-    // 갈색 우드(월넛) — 결 텍스처 + 클리어코트로 고급스러운 목재 옷장
-    var woodTex = this._woodTex('#5E4632', '40,26,16');
-    woodTex.wrapS = woodTex.wrapT = T.RepeatWrapping; woodTex.repeat.set(2, 3);
-    var lacquer = new T.MeshPhysicalMaterial({ map: woodTex, bumpMap: this._woodBump(), bumpScale: 0.012, color: 0xffffff, roughness: 0.42, metalness: 0.0, clearcoat: 0.45, clearcoatRoughness: 0.3, envMapIntensity: 0.8 });
+    // 빌트인 페인티드 — 벽과 통일된 아이보리(살짝 따뜻), 클리어코트로 도장 질감
+    var lacquer = new T.MeshPhysicalMaterial({ color: 0xEAE1CE, roughness: 0.5, metalness: 0.0, clearcoat: 0.25, clearcoatRoughness: 0.4, envMapIntensity: 0.6 });
     var goldEdge = this.goldMat;
 
     var arm = new T.Group();
     arm.position.set(0, 0, zBack);
     scene.add(arm);
 
-    // 내부 후면 패널 — 따뜻한 우드 톤(옷이 도드라지되 갈색 옷장과 통일감)
-    var inWoodTex = this._woodTex('#6B5038', '50,34,22');
-    inWoodTex.wrapS = inWoodTex.wrapT = T.RepeatWrapping; inWoodTex.repeat.set(3, 3);
-    var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ map: inWoodTex, color: 0xffffff, roughness: 0.7 }));
+    // 내부 후면 패널 — 빌트인 아이보리(살짝 그림자감), 의류가 도드라지게
+    var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.85 }));
     back.position.set(0, AH / 2, 0.02); arm.add(back);
-    // 측면 안쪽
-    var inSide = new T.MeshStandardMaterial({ color: 0x6B5038, roughness: 0.8 });
+    // 측면 안쪽 — 아이보리
+    var inSide = new T.MeshStandardMaterial({ color: 0xDED3BE, roughness: 0.85 });
     var inL = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
     inL.position.set(-AW / 2 + 0.12, AH / 2, AD_ / 2); arm.add(inL);
     var inR = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
@@ -888,20 +885,32 @@
     slab(AW + 0.36, 0.2, AD_, 0, AH, AD_ / 2);
     slab(AW + 0.36, 0.3, AD_, 0, 0.15, AD_ / 2);
 
-    // 골드 엣지 트림
+    // 골드 엣지 트림 — 훨씬 얇게(부담 줄임)
     function trim(w, h, d, x, y, z) {
       var m = new T.Mesh(new T.BoxGeometry(w, h, d), goldEdge);
       m.position.set(x, y, z); arm.add(m);
     }
-    trim(0.06, AH, 0.06, -AW / 2, AH / 2, AD_);
-    trim(0.06, AH, 0.06, AW / 2, AH / 2, AD_);
-    trim(AW, 0.06, 0.06, 0, AH, AD_);
-    trim(AW, 0.06, 0.06, 0, 0.32, AD_);
+    trim(0.02, AH, 0.02, -AW / 2, AH / 2, AD_);
+    trim(0.02, AH, 0.02, AW / 2, AH / 2, AD_);
+    trim(AW, 0.02, 0.02, 0, AH, AD_);
+    trim(AW, 0.02, 0.02, 0, 0.32, AD_);
+
+    // 빌트인 알코브 — 좌우 아이보리 리턴월(옷장 옆면을 가려 어느 각도서도 측면 비노출)
+    var retMat = this.wallMat || new T.MeshStandardMaterial({ color: 0xF1EADB, roughness: 0.96 });
+    var retZ0 = -0.1, retZ1 = AD_ + 0.12, retDepth = retZ1 - retZ0;
+    [-1, 1].forEach(function (s) {
+      var ret = new T.Mesh(new T.BoxGeometry(0.06, H - 0.02, retDepth), retMat);
+      ret.position.set(s * (AW / 2 + 0.14), (H - 0.02) / 2, (retZ0 + retZ1) / 2);
+      ret.receiveShadow = true; arm.add(ret);
+    });
+    // 상단 소핏(옷장 위~천장) — 알코브 헤더
+    var soffit = new T.Mesh(new T.BoxGeometry(AW + 0.4, H - AH - 0.1, retDepth), retMat);
+    soffit.position.set(0, (AH + 0.1 + H) / 2 - 0.05, (retZ0 + retZ1) / 2); arm.add(soffit);
 
     // 행잉 로드 (골드) — 두께 1/3 로 슬림하게
     var rod = new T.Mesh(new T.CylinderGeometry(0.0133, 0.0133, AW - 0.4, 16), goldEdge);
     rod.rotation.z = Math.PI / 2;
-    rod.position.set(0, AH * 0.78, AD_ * 0.55);
+    rod.position.set(0, AH * 0.78, AD_ * 0.74);
     arm.add(rod);
 
 
@@ -911,7 +920,7 @@
     arm.add(group);
     this.garmentGroup = group;
 
-    var rodY = AH * 0.78, rodZ = AD_ * 0.55;
+    var rodY = AH * 0.78, rodZ = AD_ * 0.74;
     // 실제 merryon 의류 컷아웃(투명 PNG)을 평면으로 걸고, 카메라를 향하는 yaw-빌보드로
     // 처리 → 어느 각도에서도 뒷면/옆모서리가 안 보임(평면의 단점 제거), 방은 계속 보인다.
     this._hangCutoutGarments(group, rodY, rodZ, AW - 0.9);
@@ -923,15 +932,16 @@
     this.billboards = this.billboards || [];
     // 실제 merryon 의류 컷아웃 8벌 [폴더, 파일, 종류]
     // 사이즈 규칙: 원피스(dress)=H0, 상의(top)=H0/2, 스커트(skirt)=H0/2, 하의(pants)=H0*2/3
+    // [폴더, 파일, 종류, 개별스케일]
     var CUTS = [
-      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress'],  // 블루 셔츠 원피스
-      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top'],    // 크림 타이 블라우스
-      ['up', 'daae53f5360161f404852168cfa80303.png', 'top'],    // 블랙 카라 가디건
-      ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt'],  // 민트 트위드 스커트
-      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress'],  // 블랙 플리츠 원피스
-      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt'],  // 핑크 러플 스커트
-      ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants'],  // 네이비 와이드 팬츠
-      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress']   // 블랙 오프숄더 롬퍼(원피스류)
+      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 1.0],  // 블루 셔츠 원피스
+      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', 1.0],    // 크림 타이 블라우스
+      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28],   // 블랙 카라 가디건(3번째 키움)
+      ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt', 1.0],  // 민트 트위드 스커트
+      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', 0.85], // 블랙 플리츠 원피스(5번째 15%↓)
+      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', 1.0],  // 핑크 러플 스커트
+      ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants', 1.2],  // 네이비 와이드 팬츠(7번째 20%↑)
+      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.85]  // 블랙 오프숄더 롬퍼(마지막 15%↓)
     ];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
@@ -939,30 +949,37 @@
     var n = CUTS.length;
     // 종류별 옷걸이: 어깨걸이(원피스·상의) / 집게걸이(스커트·팬츠)
     function shoulderHanger(parent, w) {
-      var hook = new T.Mesh(new T.TorusGeometry(0.028, 0.005, 8, 16, Math.PI), gold);
-      hook.rotation.y = Math.PI / 2; hook.position.y = 0.02; parent.add(hook);
-      var neck = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.05, 8), gold);
-      neck.position.y = -0.02; parent.add(neck);
-      var sw = Math.min(0.34, Math.max(0.18, w * 0.62));
+      // 후크(목 위로) + 옷 어깨선에 걸쳐 보이는 가시적 와이어 행거 → '걸린' 느낌
+      var hook = new T.Mesh(new T.TorusGeometry(0.026, 0.005, 8, 16, Math.PI), gold);
+      hook.rotation.y = Math.PI / 2; hook.position.y = 0.055; parent.add(hook);
+      var neck = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.06, 8), gold);
+      neck.position.y = 0.015; parent.add(neck);
+      var sw = 0.24;   // 모든 상의·원피스 통일된 목/어깨 폭(옷걸이 끝을 이 폭으로 맞춤)
+      // 어깨 와이어(앞쪽에 보이게): 중앙이 솟고 양끝이 어깨로 내려가는 삼각 행거
       var bar = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([
-        new T.Vector3(-sw / 2, -0.10, 0), new T.Vector3(0, -0.045, 0), new T.Vector3(sw / 2, -0.10, 0)
-      ]), 14, 0.006, 6, false), gold);
+        new T.Vector3(-sw / 2, -0.052, 0.02), new T.Vector3(0, -0.012, 0.02), new T.Vector3(sw / 2, -0.052, 0.02)
+      ]), 16, 0.005, 6, false), gold);
       parent.add(bar);
-      return -0.085;   // 평면 상단 y (어깨선 바로 아래)
+      [-1, 1].forEach(function (s) {
+        var tip = new T.Mesh(new T.SphereGeometry(0.008, 8, 6), gold);
+        tip.position.set(s * sw / 2, -0.052, 0.02); parent.add(tip);
+      });
+      return -0.045;   // 평면 상단(어깨)이 와이어 바로 아래에 걸침
     }
     function clipHanger(parent, w) {
       var hook = new T.Mesh(new T.TorusGeometry(0.028, 0.005, 8, 16, Math.PI), gold);
-      hook.rotation.y = Math.PI / 2; hook.position.y = 0.02; parent.add(hook);
+      hook.rotation.y = Math.PI / 2; hook.position.y = 0.055; parent.add(hook);
       var neck = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.07, 8), gold);
-      neck.position.y = -0.03; parent.add(neck);
-      var cw = Math.min(0.34, Math.max(0.16, w * 0.6));
+      neck.position.y = 0.01; parent.add(neck);
+      var cw = Math.min(0.34, Math.max(0.16, w * 0.62));
+      // 집게 바(앞쪽에 보이게) + 양끝 집게 → 허리에서 집힌 느낌
       var bar = new T.Mesh(new T.CylinderGeometry(0.005, 0.005, cw, 10), gold);
-      bar.rotation.z = Math.PI / 2; bar.position.y = -0.07; parent.add(bar);
+      bar.rotation.z = Math.PI / 2; bar.position.set(0, -0.03, 0.02); parent.add(bar);
       [-1, 1].forEach(function (s) {
-        var clip = new T.Mesh(new T.BoxGeometry(0.022, 0.032, 0.016), gold);
-        clip.position.set(s * cw * 0.42, -0.085, 0); parent.add(clip);
+        var clip = new T.Mesh(new T.BoxGeometry(0.022, 0.036, 0.018), gold);
+        clip.position.set(s * cw * 0.42, -0.04, 0.022); parent.add(clip);
       });
-      return -0.10;    // 평면 상단 y (허리=집게 바로 아래)
+      return -0.045;    // 평면 상단(허리)이 집게 바로 아래에 집힘
     }
     CUTS.forEach(function (entry, i) {
       var fx = n > 1 ? (-spanW / 2 + spanW * (i / (n - 1))) : 0;
@@ -977,8 +994,8 @@
         function (tex) {
           tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
           var aspect = tex.image.width / tex.image.height;
-          // 종류별 실제 높이(인체 대비) → 폭은 비율 유지
-          var h = HBY[type] || H0 / 2, w = h * aspect;
+          // 종류별 실제 높이(인체 대비) × 개별 스케일 → 폭은 비율 유지
+          var h = (HBY[type] || H0 / 2) * (entry[3] || 1), w = h * aspect;
           var clipType = (type === 'skirt' || type === 'pants');
           var topY = clipType ? clipHanger(pivot, w) : shoulderHanger(pivot, w);
           var mat = new T.MeshStandardMaterial({
@@ -986,7 +1003,7 @@
             roughness: 0.82, metalness: 0.0, color: 0xffffff
           });
           var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
-          plane.position.set(0, topY - h / 2, 0);   // 상단을 옷걸이 바로 아래에 정렬
+          plane.position.set(0, topY - h / 2, 0);   // 행거가 앞에서 보이게 평면은 뒤
           plane.castShadow = true;
           pivot.add(plane);
           self.billboards.push(pivot);
@@ -1790,7 +1807,7 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.45, radius: 3.3, targetTheta: 0, targetPhi: 1.45 };
+    this.cam = { theta: 0, phi: 1.45, radius: 2.6, targetTheta: 0, targetPhi: 1.45 };
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
@@ -1798,7 +1815,7 @@
 
     var DEG = Math.PI / 180;
     // 360° 무제한 회전 + 천장(위)↔바닥(아래)까지 둘러보기. 방이 4면으로 닫혀 어느 각도든 벽.
-    this.LIMIT = { theta: 0.5, hover: 6 * DEG, phiMin: 1.30, phiMax: 1.60 };
+    this.LIMIT = { theta: Infinity, hover: 6 * DEG, phiMin: 1.28, phiMax: 1.62 };   // 빌트인으로 옆면 가려져 360° 허용
 
     function rect() { return el.getBoundingClientRect(); }
 
@@ -1898,7 +1915,7 @@
       if (p >= 1) { p = 1; this.introDone = true; }
       // 천장 다이브 없이, 방을 넓게 잡았다가 옷장 정면으로 부드럽게 다가가는 establishing 샷
       var settle = this._spherical(this.cam.theta, this.cam.phi, this.cam.radius);
-      var start = new T.Vector3(0, 1.7, 3.1);
+      var start = new T.Vector3(0, 1.7, 2.5);
       var camPos = new T.Vector3().lerpVectors(start, settle, this._ease(p));
       this.camera.position.copy(camPos);
       this.camera.lookAt(this.target);
@@ -1919,7 +1936,10 @@
       var wp = this._bbV || (this._bbV = new T.Vector3());
       for (var bi = 0; bi < this.billboards.length; bi++) {
         var bb = this.billboards[bi]; bb.getWorldPosition(wp);
-        bb.rotation.y = Math.atan2(cp.x - wp.x, cp.z - wp.z) + (bb.userData.tilt || 0);
+        // 카메라를 향하되 ±57°로 제한 → 측면 각도서도 옷이 옷장 안으로 회전·관통하지 않음
+        var yaw = Math.atan2(cp.x - wp.x, cp.z - wp.z);
+        yaw = Math.max(-1.0, Math.min(1.0, yaw));
+        bb.rotation.y = yaw + (bb.userData.tilt || 0);
       }
     }
 
@@ -1962,7 +1982,7 @@
     this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, this.cam.targetPhi));
 
     // radius 살짝 호흡
-    this.cam.radius = 3.3 + Math.sin(t * 0.3) * 0.05;
+    this.cam.radius = 2.6 + Math.sin(t * 0.3) * 0.05;
 
     // 스무딩
     this.cam.theta += (this.cam.targetTheta - this.cam.theta) * 0.06;
