@@ -149,7 +149,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v6-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v7-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -1920,7 +1920,7 @@
     var D = this.ROOM.D;
     var g = new T.Group();
     var W = this.ROOM.W;
-    g.position.set(-W / 2 + 0.35, 0, -2.5); g.rotation.y = Math.PI / 2; scene.add(g);   // 좌벽 뒤쪽(화장대와 같은 벽, 옷장 옆에서 이동)
+    g.position.set(-W / 2 + 0.35, 0, -1.6); g.rotation.y = Math.PI / 2; scene.add(g);   // 좌벽(화장대 쪽으로 살짝 이동)
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xF1E9D8, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xF4FAFF, roughness: 0.05, metalness: 0.0, transmission: 0.92, transparent: true, opacity: 0.22, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
@@ -2132,10 +2132,14 @@
     var bundle = new T.Mesh(new T.CylinderGeometry(0.085, 0.05, 0.3, 12),
       new T.MeshStandardMaterial({ color: 0x4F6B3F, roughness: 0.85, transparent: true, opacity: 0.85 }));
     bundle.position.set(vx, 0.17, vz); scene.add(bundle);
-    // 풍성한 핑크 부케 — 다층 클러스터(피오니/로즈)
-    this._addFlowerCluster(vx, 0.345, vz, 1.45, PALETTE.dustyrose);
-    this._addFlowerCluster(vx, 0.40, vz, 1.05, PALETTE.blush);
-    this._addFlowerCluster(vx, 0.45, vz, 0.7, PALETTE.offwhite);
+    // 풍성한 핑크 피오니 부케 — Blender GLB(빽빽한 돔 + 잎, 병합)
+    if (this.AD.GLTFLoader) {
+      new this.AD.GLTFLoader().load(asset('bouquet.glb'), function (gltf) {
+        var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        s.position.set(vx, 0.40, vz); s.scale.setScalar(1.05);
+        scene.add(s);
+      }, undefined, function () { });
+    }
   };
 
   /* ----------------------------------------------------------------------- *
@@ -2306,7 +2310,7 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.505, radius: 3.4, targetTheta: 0, targetPhi: 1.505 };   // 높이 10%↓(phi↑)
+    this.cam = { theta: 0, phi: 1.46, radius: 3.4, targetTheta: 0, targetPhi: 1.46 };   // 초기 상하각: 살짝 내려다보는 establishing 구도
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
