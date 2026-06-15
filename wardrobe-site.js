@@ -2117,7 +2117,7 @@
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(2.3, 0, D / 2 - 0.36); g.rotation.y = Math.PI; scene.add(g);   // 앞벽(문 옆) — 책장 겹침 해소
+    g.position.set(1.6, 0, D / 2 - 0.36); g.rotation.y = Math.PI; scene.add(g);   // 앞벽, 문(x=0) 쪽으로 더 당김
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var panel = new T.MeshPhysicalMaterial({ color: 0xE7DDC8, roughness: 0.5, clearcoat: 0.3 });
@@ -2382,7 +2382,7 @@
   P._buildDisplayCase = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat, D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(2.0, 0, -4.3); g.rotation.y = 0; scene.add(g);   // 수납장 왼쪽, 뒷벽 쪽으로 더 붙임(실내 향함)
+    g.position.set(2.5, 0, -2.8); g.rotation.y = 0; scene.add(g);   // 바닥 선 자리(중앙-우 빈 바닥, 앞으로 빼냄), 실내 향함
     var CW = 1.7, CD = 0.52, CH = 0.82, plinth = 0.12;
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
