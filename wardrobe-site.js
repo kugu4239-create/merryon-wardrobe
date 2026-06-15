@@ -174,6 +174,8 @@
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = isMobile ? T.PCFShadowMap : T.PCFSoftShadowMap;
     this.renderer = renderer;
+    // 텍스처 선명도: 비등방 필터 최대치(보통 16) — 비스듬한 표면(바닥/벽)의 흐림 방지
+    this.maxAniso = renderer.capabilities.getMaxAnisotropy();
 
     var canvas = renderer.domElement;
     canvas.style.position = 'absolute';
@@ -251,11 +253,13 @@
    * ----------------------------------------------------------------------- */
   P._canvas = function (size, draw) {
     var c = document.createElement('canvas');
-    c.width = c.height = Math.min(size, 512);
+    c.width = c.height = Math.min(size, this.isMobile ? 1024 : 2048);
     draw(c.getContext('2d'), c.width);
     var tex = new this.T.CanvasTexture(c);
     tex.colorSpace = this.T.SRGBColorSpace;
-    tex.anisotropy = 4;
+    tex.anisotropy = this.maxAniso;
+    tex.generateMipmaps = true;
+    tex.minFilter = this.T.LinearMipmapLinearFilter;
     return tex;
   };
 
@@ -1120,8 +1124,15 @@
     var w = Math.max(1, this.container.clientWidth || window.innerWidth);
     var h = Math.max(1, this.container.clientHeight || window.innerHeight);
 
-    var composer = new AD.EffectComposer(this.renderer);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // MSAA(멀티샘플) 렌더타깃 — 얇은 골드 몰딩/패널 모서리의 계단현상 제거.
+    var pr = Math.min(window.devicePixelRatio || 1, 2);
+    var samples = this.isMobile ? 0 : 4;
+    var msaaRT = new T.WebGLRenderTarget(
+      Math.max(1, Math.floor(w * pr)), Math.max(1, Math.floor(h * pr)),
+      { type: T.HalfFloatType, samples: samples }
+    );
+    var composer = new AD.EffectComposer(this.renderer, msaaRT);
+    composer.setPixelRatio(pr);
     composer.setSize(w, h);
 
     composer.addPass(new AD.RenderPass(this.scene, this.camera));
