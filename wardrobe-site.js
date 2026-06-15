@@ -284,6 +284,7 @@
     this._buildGalleryWall();
     this._buildVanityChair();
     this._buildJewelryCabinet();
+    this._buildStorageAndSpeaker();
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
@@ -1688,8 +1689,7 @@
     }
     // 고품질 토피어리 — Blender 제작 GLB(잎 디테일+세라믹 화분+장미)를 클론 배치
     var plantSpots = [
-      [-W / 2 + 0.9, -D / 2 + 0.8, 1.2],   // 백-좌 코너
-      [W / 2 - 1.0, D / 2 - 1.0, 1.05]     // 앞-우 코너
+      [W / 2 - 1.0, D / 2 - 1.0, 1.05]     // 앞-우 코너 (옷장 왼쪽 백-좌 화분 삭제)
     ];
     // 화분(세라믹) → 바닥과 동일한 대리석 재질
     var potMat = self._potMarbleMat || (self._potMarbleMat = (function () {
@@ -2016,6 +2016,106 @@
     })();
   };
 
+  /* 2단 수납장(콘솔) + 마샬 스피커(바디 베이지) — 뒷벽 우측(커튼-책장 사이 빈 구간) */
+  P._buildStorageAndSpeaker = function () {
+    var T = this.T, scene = this.scene, gold = this.goldMat;
+    var D = this.ROOM.D;
+    var g = new T.Group();
+    g.position.set(3.45, 0, -D / 2 + 0.36); g.rotation.y = 0; scene.add(g);   // 뒷벽 우측
+
+    var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
+    var panel = new T.MeshPhysicalMaterial({ color: 0xE7DDC8, roughness: 0.5, clearcoat: 0.3 });
+
+    var BW = 1.0, BH = 0.80, BD = 0.42, legH = 0.16;
+    var y0 = legH, y1 = legH + BH;
+
+    // 다리 4(테이퍼 + 골드 페럴)
+    [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) {
+      var lx = sx * (BW / 2 - 0.07), lz = sz * (BD / 2 - 0.07);
+      var leg = new T.Mesh(new T.CylinderGeometry(0.026, 0.018, legH, 12), cream);
+      leg.position.set(lx, legH / 2, lz); leg.castShadow = true; g.add(leg);
+      var fer = new T.Mesh(new T.SphereGeometry(0.018, 10, 8), gold); fer.position.set(lx, 0.013, lz); g.add(fer);
+    }); });
+
+    // 캐비닛 바디
+    var body = new T.Mesh(new T.BoxGeometry(BW, BH, BD), cream);
+    body.position.set(0, (y0 + y1) / 2, 0); body.castShadow = true; body.receiveShadow = true; g.add(body);
+    // 천판(살짝 오버행 + 골드 엣지)
+    var top = new T.Mesh(new T.BoxGeometry(BW + 0.05, 0.03, BD + 0.05), cream);
+    top.position.set(0, y1 + 0.015, 0); top.castShadow = true; g.add(top);
+    var topEdge = new T.Mesh(new T.BoxGeometry(BW + 0.055, 0.006, BD + 0.055), gold);
+    topEdge.position.set(0, y1 + 0.002, 0); g.add(topEdge);
+
+    // 2단 × 2도어 = 4도어(패널 + 골드 노브) + 중앙 디바이더 라인
+    var midY = (y0 + y1) / 2;
+    var divider = new T.Mesh(new T.BoxGeometry(BW - 0.02, 0.012, BD - 0.02), gold);
+    divider.position.set(0, midY, BD / 2 - 0.005); g.add(divider);
+    [0, 1].forEach(function (tier) {
+      var cyc = y0 + BH * (tier === 0 ? 0.25 : 0.75);   // 하단/상단 중심
+      [-1, 1].forEach(function (s) {
+        var dw = BW / 2 - 0.03, dh = BH / 2 - 0.04;
+        var door = new T.Mesh(new T.BoxGeometry(dw, dh, 0.02), panel);
+        door.position.set(s * (BW / 4), cyc, BD / 2 - 0.005); g.add(door);
+        // 골드 몰딩 테두리
+        var fr = new T.Mesh(new T.BoxGeometry(dw + 0.012, dh + 0.012, 0.012), gold);
+        fr.position.set(s * (BW / 4), cyc, BD / 2 - 0.012); g.add(fr);
+        var face = new T.Mesh(new T.BoxGeometry(dw - 0.01, dh - 0.01, 0.016), panel);
+        face.position.set(s * (BW / 4), cyc, BD / 2 - 0.001); g.add(face);
+        // 노브(안쪽 모서리)
+        var knob = new T.Mesh(new T.SphereGeometry(0.018, 12, 10), gold);
+        knob.position.set(s * 0.06, cyc, BD / 2 + 0.012); g.add(knob);
+      });
+    });
+
+    // ---- 마샬 스피커 (천판 위) — 바디 베이지, 다크 그릴, 골드 프렛/탑플레이트, 화이트 스크립트 ----
+    (function () {
+      var sg = new T.Group(); sg.position.set(0.0, y1 + 0.03, 0.0); g.add(sg);
+      var beige = new T.MeshStandardMaterial({ color: 0xCEC0A2, roughness: 0.78, metalness: 0.0 });   // 텍스처드 비닐 베이지
+      var grilleM = new T.MeshStandardMaterial({ color: 0x35322B, roughness: 0.9, metalness: 0.0 });   // 다크 그릴
+      var brass = new T.MeshStandardMaterial({ color: 0xC9A24B, roughness: 0.35, metalness: 0.95 });
+      var SW = 0.36, SH = 0.27, SD = 0.21;
+      // 바디
+      var box = new T.Mesh(new T.BoxGeometry(SW, SH, SD), beige);
+      box.position.y = SH / 2; box.castShadow = true; box.receiveShadow = true;
+      var bbev = box; // (베벨 없음 — 박스형)
+      sg.add(box);
+      // 프론트 그릴(앞면 패널, 살짝 인셋)
+      var gr = new T.Mesh(new T.BoxGeometry(SW - 0.06, SH - 0.06, 0.012), grilleM);
+      gr.position.set(0, SH / 2, SD / 2 - 0.004); sg.add(gr);
+      // 골드 프렛 테두리(그릴 둘레 파이핑)
+      var fw = SW - 0.05, fh = SH - 0.05, ft = 0.008;
+      [[0, fh / 2, fw, ft], [0, -fh / 2, fw, ft], [-fw / 2, 0, ft, fh], [fw / 2, 0, ft, fh]].forEach(function (b) {
+        var bar = new T.Mesh(new T.BoxGeometry(b[2], b[3], 0.014), brass); bar.position.set(b[0], SH / 2 + b[1], SD / 2 - 0.002); sg.add(bar);
+      });
+      // 화이트 'Marshall' 스크립트 로고(그릴 상단)
+      var lc = document.createElement('canvas'); lc.width = 512; lc.height = 140;
+      var lg = lc.getContext('2d'); lg.clearRect(0, 0, 512, 140);
+      lg.fillStyle = '#F3F0E8'; lg.textAlign = 'center'; lg.textBaseline = 'middle';
+      lg.font = 'italic 900 92px Georgia, "Times New Roman", serif';
+      lg.fillText('Marshall', 256, 78);
+      var lt = new T.CanvasTexture(lc); lt.colorSpace = T.SRGBColorSpace; lt.anisotropy = 4;
+      var logo = new T.Mesh(new T.PlaneGeometry(SW - 0.10, (SW - 0.10) * 140 / 512),
+        new T.MeshBasicMaterial({ map: lt, transparent: true }));
+      logo.position.set(0, SH * 0.7, SD / 2 + 0.002); sg.add(logo);
+      // 탑 브라스 컨트롤 플레이트 + 노브들
+      var plate = new T.Mesh(new T.BoxGeometry(SW - 0.05, 0.012, 0.07), brass);
+      plate.position.set(0, SH + 0.002, -SD / 2 + 0.06); sg.add(plate);
+      for (var k = 0; k < 4; k++) {
+        var kn = new T.Mesh(new T.CylinderGeometry(0.011, 0.011, 0.016, 12), brass);
+        kn.position.set(-SW / 2 + 0.08 + k * 0.07, SH + 0.012, -SD / 2 + 0.06); sg.add(kn);
+      }
+      // 탑 캐리 핸들(골드 스트랩 아치)
+      var hpts = [new T.Vector3(-0.08, SH, 0.02), new T.Vector3(0, SH + 0.045, 0.02), new T.Vector3(0.08, SH, 0.02)];
+      var handle = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(hpts), 14, 0.007, 6, false), brass);
+      sg.add(handle);
+      // 프론트 골드 코너 캡(4)
+      [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(function (c) {
+        var cap = new T.Mesh(new T.SphereGeometry(0.016, 10, 8), brass);
+        cap.position.set(c[0] * (SW / 2 - 0.012), SH / 2 + c[1] * (SH / 2 - 0.012), SD / 2 - 0.01); sg.add(cap);
+      });
+    })();
+  };
+
   /* ----------------------------------------------------------------------- *
    * 더스티 로즈 오발 러그
    * ----------------------------------------------------------------------- */
@@ -2049,7 +2149,8 @@
       var lw = 0.95, lh = lw / asp;
       var lp = new T.Mesh(new T.PlaneGeometry(lw, lh),
         new T.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.35, roughness: 0.9, metalness: 0.0, depthWrite: false }));
-      lp.rotation.x = -Math.PI / 2; lp.position.set(RX, 0.028, RZ); lp.renderOrder = 3;
+      lp.rotation.x = -Math.PI / 2; lp.rotation.z = Math.PI;   // 바닥에 눕히고 180° 뒤집기
+      lp.position.set(RX, 0.028, RZ); lp.renderOrder = 3;
       scene.add(lp);
     }, undefined, function () { });
 
