@@ -170,7 +170,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.62;   // 과노출 방지(낮춤)
+    renderer.toneMappingExposure = 0.5;   // 과노출 방지(추가 하향)
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = isMobile ? T.PCFShadowMap : T.PCFSoftShadowMap;
     this.renderer = renderer;
@@ -512,7 +512,7 @@
     this.armoireSpot = sp;
 
     // 의류 정면 소프트 필 — 옷 사진이 어둡게 묻히지 않도록 앞에서 부드럽게 채움
-    var fill = new T.RectAreaLight(0xFFF3E6, 1.6, 5.6, 3.4);
+    var fill = new T.RectAreaLight(0xFFF3E6, 0.9, 5.6, 3.4);
     fill.position.set(0, 4.2, -2.4);
     fill.lookAt(0, 4.2, -6.0);
     scene.add(fill);
@@ -752,9 +752,15 @@
     arm.position.set(0, 0, zBack);
     scene.add(arm);
 
-    // 내부 후면 패널
-    var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ color: PALETTE.ivory, roughness: 0.7 }));
+    // 내부 후면 패널 — 짙은 네이비-슬레이트로 대비를 줘 흰 배경 상품컷이 또렷이 도드라지게
+    var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ color: 0x3A4456, roughness: 0.85 }));
     back.position.set(0, AH / 2, 0.02); arm.add(back);
+    // 측면 안쪽도 살짝 어둡게(빛 고임 방지)
+    var inSide = new T.MeshStandardMaterial({ color: 0x4A5468, roughness: 0.9 });
+    var inL = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
+    inL.position.set(-AW / 2 + 0.12, AH / 2, AD_ / 2); arm.add(inL);
+    var inR = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
+    inR.position.set(AW / 2 - 0.12, AH / 2, AD_ / 2); arm.add(inR);
 
     // 좌우 측면 + 상하
     function slab(w, h, d, x, y, z) {
@@ -1133,7 +1139,7 @@
     this.bloom = bloom;
 
     if (!this.isMobile) {
-      var bokeh = new AD.BokehPass(this.scene, this.camera, { focus: 6.0, aperture: 0.0009, maxblur: 0.008, width: w, height: h });
+      var bokeh = new AD.BokehPass(this.scene, this.camera, { focus: 9.5, aperture: 0.0003, maxblur: 0.005, width: w, height: h });
       composer.addPass(bokeh);
       this.bokeh = bokeh;
     }
