@@ -609,7 +609,7 @@
       reflector.rotation.x = -Math.PI / 2; reflector.position.y = 0.0;
       scene.add(reflector); this.reflector = reflector;
       var overlay = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
-        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.012, color: 0xE8DCC6,
+        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.012, color: 0xF3F0E8,
         roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.18,
         transparent: true, opacity: 0.82, envMapIntensity: 0.9
       }));
@@ -617,14 +617,14 @@
       scene.add(overlay);
     } else {
       var floor = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
-        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.012, color: 0xE8DCC6,
+        map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.012, color: 0xF3F0E8,
         roughness: 0.3, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 0.8
       }));
       floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
     }
 
-    /* 벽 (4면, 웜 베이지/타페 — 레퍼런스 톤온톤) */
-    var wallMat = new T.MeshStandardMaterial({ color: 0xE3D7C0, roughness: 0.95, metalness: 0.0 });
+    /* 벽 (4면 + 천장, 아이보리 통일 — 몰딩/패널 없음) */
+    var wallMat = new T.MeshStandardMaterial({ color: 0xF1EADb, roughness: 0.96, metalness: 0.0 });
     this.wallMat = wallMat;
     function wall(w, h, x, y, z, ry) {
       var m = new T.Mesh(new T.PlaneGeometry(w, h), wallMat);
@@ -635,29 +635,12 @@
     wall(D, H, -W / 2, H / 2, 0, Math.PI / 2);       // 좌벽
     wall(D, H, W / 2, H / 2, 0, -Math.PI / 2);       // 우벽
 
-    /* 몰딩: 베이스/체어레일/크라운 — 전부 얇은 골드 (웨인스코팅 패널 없음) */
-    function moldRun(width, x, z, ry, y, depth, height) {
-      var m = new T.Mesh(new T.BoxGeometry(width, height, depth), goldThin);
-      m.position.set(x, y, z); m.rotation.y = ry; m.receiveShadow = true; scene.add(m);
-    }
-    [
-      { w: W, x: 0, z: -D / 2 + 0.04, ry: 0 },
-      { w: W, x: 0, z: D / 2 - 0.04, ry: 0 },
-      { w: D, x: -W / 2 + 0.04, z: 0, ry: Math.PI / 2 },
-      { w: D, x: W / 2 - 0.04, z: 0, ry: Math.PI / 2 }
-    ].forEach(function (r) {
-      moldRun(r.w, r.x, r.z, r.ry, 0.1, 0.04, 0.16);       // 베이스보드(얇은 골드)
-      moldRun(r.w, r.x, r.z, r.ry, 0.92, 0.03, 0.04);      // 체어레일(가는 골드 라인, ≈0.9m)
-      moldRun(r.w, r.x, r.z, r.ry, H - 0.1, 0.05, 0.1);    // 크라운(얇은 골드)
-    });
+    /* 몰딩 전부 삭제(베이스/체어레일/크라운·웨인스코팅 패널·문 케이싱) — 벽/천장 아이보리 통일 */
 
-    /* 문 — 좌우 맞닿는 더블/싱글, 사람 키 기준 ≈2.05m, 슬림 골드 바 손잡이 */
+    /* 문 — 앞벽 더블, 케이싱 없이 심플 패널 도어 */
     function buildDoor(cx, cz, ry, dbl) {
       var grp = new T.Group(); grp.position.set(cx, 0, cz); grp.rotation.y = ry; scene.add(grp);
       var lh = 2.1, lw = dbl ? 0.85 : 0.92;
-      var caseW = (dbl ? lw * 2 : lw) + 0.16;
-      var casing = new T.Mesh(new T.BoxGeometry(caseW, lh + 0.16, 0.08), goldThin);
-      casing.position.set(0, lh / 2 + 0.03, -0.025); grp.add(casing);
       var leaves = dbl ? [-1, 1] : [0];
       leaves.forEach(function (s) {
         var cxo = dbl ? s * lw / 2 : 0;
@@ -674,8 +657,7 @@
       });
     }
     buildDoor(0, D / 2 - 0.04, Math.PI, true);            // 앞벽 중앙: 맞닿는 더블 도어(유지)
-    // 좌·우벽 방문 삭제(옷장 기준 좌/우) — 벽면을 패널 몰딩으로 채움
-    this._buildWallPaneling();
+    // 좌·우벽 방문 삭제, 몰딩/패널 없음(아이보리 벽 통일)
   };
 
   /* 픽처프레임 벽 패널링(웨인스코팅) — 레퍼런스 톤온톤 베이지 패널.
@@ -725,7 +707,7 @@
     var W = this.ROOM.W, H = this.ROOM.H, D = this.ROOM.D;
 
     var ceil = new T.Mesh(new T.PlaneGeometry(W, D),
-      new T.MeshStandardMaterial({ color: PALETTE.offwhite, roughness: 1.0, side: T.BackSide }));
+      new T.MeshStandardMaterial({ color: 0xF1EADB, roughness: 1.0, side: T.BackSide }));
     ceil.rotation.x = -Math.PI / 2; ceil.position.y = H;
     scene.add(ceil);
 

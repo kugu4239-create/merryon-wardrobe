@@ -38,7 +38,7 @@ def tufted_panel(name, w, h, nx, ny, depth):
         for i in range(nx): bm.faces.new([g[j][i],g[j][i+1],g[j+1][i+1],g[j+1][i]])
     me=bpy.data.meshes.new(name); bm.to_mesh(me); bm.free(); o=bpy.data.objects.new(name,me); sc.collection.objects.link(o)
     o.modifiers.new("sol","SOLIDIFY").thickness=0.05
-    sub=o.modifiers.new("s","SUBSURF"); sub.levels=2; sub.render_levels=2
+    sub=o.modifiers.new("s","SUBSURF"); sub.levels=1; sub.render_levels=1
     bpy.context.view_layer.objects.active=o; bpy.ops.object.shade_smooth(); o.data.materials.append(FAB); allobj.append(o)
     return o, btn, depth
 
@@ -63,16 +63,16 @@ backY=-SD/2+0.14
 rbox("base",SW,SD,0.18,(0,0,0.30),bevel=0.03,sub=1)
 # 좌면 쿠션 2개
 for sgn in (-1,1):
-    rbox("cushion",SW/2-0.08,SD-0.26,0.14,(sgn*(SW/4),0.06,0.46),FAB2,bevel=0.06,sub=2)
+    rbox("cushion",SW/2-0.08,SD-0.26,0.14,(sgn*(SW/4),0.06,0.46),FAB2,bevel=0.06,sub=1)
 # 롤 암(좌우) — 굵은 가로 롤 + 암 몸통
 for sgn in (-1,1):
-    cyl("arm",ROLL,SD-0.04,(sgn*(SW/2-0.11),0,ARMZ),(math.radians(90),0,0),FAB,sub=2)
+    cyl("arm",ROLL,SD-0.04,(sgn*(SW/2-0.11),0,ARMZ),(math.radians(90),0,0),FAB,sub=1)
     rbox("armbody",0.22,SD,ARMZ-0.30,(sgn*(SW/2-0.11),0,0.40),FAB,bevel=0.06,sub=1)
 # 등받이 터프팅 패널 (정면 +y)
 back,btn,bd=tufted_panel("back",SW-0.34,BACKH,14,5,0.09)
 back.location=(0,backY,SEAT+BACKH/2); bpy.context.view_layer.objects.active=back; bpy.ops.object.transform_apply(location=True)
 # 등 상단 롤
-cyl("backroll",ROLL,SW-0.30,(0,backY,TOP-ROLL+0.02),(0,math.radians(90),0),FAB,sub=2)
+cyl("backroll",ROLL,SW-0.30,(0,backY,TOP-ROLL+0.02),(0,math.radians(90),0),FAB,sub=1)
 # 버튼(골드, 다이아몬드) — 딤플 바닥에
 for (bu,bv) in btn:
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.016,location=(bu,backY-bd+0.02,SEAT+BACKH/2+bv)); bt=bpy.context.active_object
