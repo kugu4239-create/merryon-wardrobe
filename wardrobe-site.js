@@ -1314,39 +1314,24 @@
    * 2인 쇼파 (우측, 헤링본 패브릭)
    * ----------------------------------------------------------------------- */
   P._buildSofa = function () {
-    var T = this.T, scene = this.scene;
-    var sx = 2.7, sz = 1.0, ry = -Math.PI / 2.3;   // 우측, 방 중앙을 향함(≈1.6m 2인)
-    var fabTex = this._herringboneFab('#D7CEBE', '96,84,66');
-    fabTex.wrapS = fabTex.wrapT = T.RepeatWrapping; fabTex.repeat.set(3, 2);
-    var fab = new T.MeshStandardMaterial({ map: fabTex, bumpMap: this._velvetBump(), bumpScale: 0.003, color: 0xffffff, roughness: 0.9, metalness: 0.0, envMapIntensity: 0.4 });
-    var gold = this.goldMat;
+    var T = this.T, AD = this.AD, scene = this.scene;
+    // 우측, 방 중앙을 향하게 배치. Blender 제작 체스터필드(베이지/크림 벨벳) GLB.
     var grp = new T.Group();
-    grp.position.set(sx, 0, sz); grp.rotation.y = ry; scene.add(grp);
-
-    var W2 = 1.6, Dp = 0.8, seatY = 0.42;
-    // 베이스(시트 쿠션 받침)
-    var base = new T.Mesh(new T.BoxGeometry(W2, 0.28, Dp), fab);
-    base.position.set(0, seatY - 0.1, 0); base.castShadow = true; base.receiveShadow = true; grp.add(base);
-    // 등받이
-    var backrest = new T.Mesh(new T.BoxGeometry(W2, 0.55, 0.16), fab);
-    backrest.position.set(0, seatY + 0.25, -Dp / 2 + 0.08); backrest.castShadow = true; grp.add(backrest);
-    // 팔걸이 ×2
-    [-1, 1].forEach(function (s) {
-      var arm = new T.Mesh(new T.BoxGeometry(0.16, 0.36, Dp), fab);
-      arm.position.set(s * (W2 / 2 - 0.08), seatY + 0.08, 0); arm.castShadow = true; grp.add(arm);
-    });
-    // 시트 쿠션 ×2 (2인)
-    [-1, 1].forEach(function (s) {
-      var cu = new T.Mesh(new T.BoxGeometry(W2 / 2 - 0.2, 0.14, Dp - 0.2), fab);
-      cu.position.set(s * (W2 / 4 - 0.01), seatY + 0.07, 0.03); cu.castShadow = true; grp.add(cu);
-      var bp = new T.Mesh(new T.BoxGeometry(W2 / 2 - 0.22, 0.36, 0.1), fab);
-      bp.position.set(s * (W2 / 4 - 0.01), seatY + 0.26, -Dp / 2 + 0.16); grp.add(bp);
-    });
-    // 골드 다리 ×4
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (p) {
-      var leg = new T.Mesh(new T.CylinderGeometry(0.02, 0.028, 0.2, 10), gold);
-      leg.position.set(p[0] * (W2 / 2 - 0.14), 0.1, p[1] * (Dp / 2 - 0.14)); grp.add(leg);
-    });
+    grp.position.set(2.5, 0, 1.3); grp.rotation.y = -Math.PI / 2.3; scene.add(grp);
+    this.sofaGroup = grp;
+    if (!AD.GLTFLoader) return;
+    var loader = new AD.GLTFLoader();
+    loader.load(asset('sofa.glb'),
+      function (gltf) {
+        var s = gltf.scene;
+        s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        s.rotation.y = Math.PI;   // 등받이를 벽(바깥)쪽으로
+        grp.add(s);
+        try { window.__MERRYON_SOFA__ = true; } catch (e) {}
+      },
+      undefined,
+      function (e) { console.warn('[merryon] 소파 GLB 로드 실패', e && (e.message || e)); }
+    );
   };
 
   /* ----------------------------------------------------------------------- *
