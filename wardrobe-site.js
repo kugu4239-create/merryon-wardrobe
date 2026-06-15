@@ -1002,6 +1002,44 @@
         return (maxX - minX) / W;
       } catch (e) { return null; }
     }
+    // 디프린지: 반투명 가장자리(밝은 배경 잔상) 제거 — 알파 하드닝 + 컬러 블리드(딜레이션)
+    // 1) alpha<thr → 0, ≥thr → 255 (반투명 헤일로 링 제거)
+    // 2) 불투명 색을 투명영역으로 수 px 번지게 → 바이리니어 필터가 흰 테두리 대신 옷 색을 샘플
+    function defringe(img, thr) {
+      try {
+        var W = img.width, H = img.height, N = W * H;
+        var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        var ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0);
+        var id = ctx.getImageData(0, 0, W, H), d = id.data;
+        // 원본 알파 보존 + 하드 마스크(0/255)
+        var orig = new Uint8Array(N), msk = new Uint8Array(N);
+        for (var p = 0; p < N; p++) { orig[p] = d[p * 4 + 3]; msk[p] = orig[p] >= thr ? 255 : 0; }
+        // 컬러 블리드: 투명픽셀이 불투명(또는 이전패스에 채워진) 이웃 RGB 를 복사(6패스)
+        var cur = new Uint8Array(msk);
+        for (var pass = 0; pass < 6; pass++) {
+          var next = new Uint8Array(cur), changed = false;
+          for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+            var idx = y * W + x;
+            if (cur[idx]) continue;
+            var sr = 0, sg = 0, sb = 0, cnt = 0;
+            for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+              if (!dx && !dy) continue;
+              var nx = x + dx, ny = y + dy;
+              if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+              var ni = ny * W + nx;
+              if (cur[ni]) { var o = ni * 4; sr += d[o]; sg += d[o + 1]; sb += d[o + 2]; cnt++; }
+            }
+            if (cnt) { var q = idx * 4; d[q] = sr / cnt; d[q + 1] = sg / cnt; d[q + 2] = sb / cnt; next[idx] = 255; changed = true; }
+          }
+          cur = next;
+          if (!changed) break;
+        }
+        // 최종 알파 = 원본 하드컷(블리드된 RGB 위에 0/255 알파) → 흰 테두리 제거 + 깔끔한 외곽
+        for (var m = 0; m < N; m++) d[m * 4 + 3] = msk[m];
+        ctx.putImageData(id, 0, 0);
+        return cv;
+      } catch (e) { return img; }
+    }
     // 후크는 봉(피벗 원점, y≈0)에 걸리고, 어깨바·평면은 dz(깊이분리)만큼 앞/뒤로.
     function rodHook(parent) {
       var hook = new T.Mesh(new T.TorusGeometry(0.022, 0.0045, 8, 18, Math.PI * 1.15), gold);
@@ -1047,8 +1085,16 @@
       group.add(pivot);
       loader.load(cut(entry[0], entry[1]),
         function (tex) {
-          tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
-          var aspect = tex.image.width / tex.image.height;
+          // 디프린지 처리된 캔버스로 텍스처 교체(테두리 헤일로 제거)
+          var clean = defringe(tex.image, 150);
+          if (clean !== tex.image) {
+            var ct = new T.CanvasTexture(clean);
+            ct.colorSpace = T.SRGBColorSpace; ct.anisotropy = 4;
+            tex.dispose(); tex = ct;
+          } else {
+            tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+          }
+          var aspect = clean.width / clean.height;
           // 종류별 실제 높이(인체 대비) × 개별 스케일 → 폭은 비율 유지
           var h = (HBY[type] || H0 / 2) * (entry[3] || 1), w = h * aspect;
           var clipType = (type === 'skirt' || type === 'pants');
@@ -1062,7 +1108,7 @@
           if (type === 'top') topY += 0.045;
           topY += 0.022 + (entry[5] || 0);   // 전체 살짝 위로 + 개별 추가 올림
           var mat = new T.MeshStandardMaterial({
-            map: tex, transparent: true, alphaTest: 0.6, side: T.DoubleSide,   // 테두리(프린지) 제거 강화
+            map: tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide,   // 디프린지+하드알파로 테두리 제거
             roughness: 0.82, metalness: 0.0, color: 0xffffff
           });
           var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
