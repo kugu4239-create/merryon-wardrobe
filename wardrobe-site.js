@@ -642,7 +642,13 @@
     wall(W, H, 0, H / 2, -D / 2, 0);                 // 뒷벽(옷장)
     wall(W, H, 0, H / 2, D / 2, Math.PI);            // 앞벽
     wall(D, H, -W / 2, H / 2, 0, Math.PI / 2);       // 좌벽
-    wall(D, H, W / 2, H / 2, 0, -Math.PI / 2);       // 우벽
+    // 우벽 — 창 개구부(z ±1.3, y 0.45~천장)를 비워 정원이 보이게 세그먼트 분할
+    var woZ = 1.3, woY = 0.45;
+    wall(D, woY, W / 2, woY / 2, 0, -Math.PI / 2);                                   // 창 아래
+    [-1, 1].forEach(function (s) {
+      var segW = D / 2 - woZ;
+      wall(segW, H - woY, W / 2, woY + (H - woY) / 2, s * (woZ + D / 2) / 2, -Math.PI / 2);  // 창 좌우
+    });
 
     /* 몰딩 전부 삭제(베이스/체어레일/크라운·웨인스코팅 패널·문 케이싱) — 벽/천장 아이보리 통일 */
 
@@ -659,8 +665,8 @@
         leaf.position.set(cxo, lh / 2, 0.025); leaf.castShadow = true; grp.add(leaf);
         [lh * 0.74, lh * 0.46, lh * 0.18].forEach(function (py, pi) {
           var ph = (pi === 0 ? 0.42 : 0.26) * lh;
-          var dp = new T.Mesh(new T.BoxGeometry(lw * 0.62, ph, 0.012), doorPanelMat); dp.position.set(cxo, py, 0.052); grp.add(dp);
-          var tr = new T.Mesh(new T.BoxGeometry(lw * 0.66, ph + 0.04, 0.006), gold); tr.position.set(cxo, py, 0.047); grp.add(tr);
+          var tr = new T.Mesh(new T.BoxGeometry(lw * 0.66, ph + 0.04, 0.005), gold); tr.position.set(cxo, py, 0.0545); grp.add(tr);
+          var dp = new T.Mesh(new T.BoxGeometry(lw * 0.62, ph, 0.006), doorPanelMat); dp.position.set(cxo, py, 0.060); grp.add(dp);
         });
         var hx = dbl ? (cxo - s * (lw / 2 - 0.08)) : (lw / 2 - 0.1);
         var handle = new T.Mesh(new T.CylinderGeometry(0.014, 0.014, 0.34, 12), gold); handle.position.set(hx, lh * 0.5, 0.075); grp.add(handle);
@@ -812,8 +818,8 @@
     // 화이트 프레임(아치형 팔라디안 — 레퍼런스 화이트 그리드)
     var frameMat = new T.MeshStandardMaterial({ color: 0xF4EEE1, roughness: 0.55, metalness: 0.0, envMapIntensity: 0.7 });
     var glassMat = new T.MeshPhysicalMaterial({
-      color: 0xEAF5FF, roughness: 0.05, metalness: 0.0, transmission: 0.6, transparent: true,
-      opacity: 0.5, emissive: 0xF3ECDD, emissiveIntensity: 0.28, side: T.DoubleSide
+      color: 0xF2FBFF, roughness: 0.04, metalness: 0.0, transmission: 0.9, transparent: true,
+      opacity: 0.18, emissive: 0xEAF2E0, emissiveIntensity: 0.05, side: T.DoubleSide
     });
     var xb = wx - 0.1;   // 멀리언이 놓이는 x(실내쪽)
 
