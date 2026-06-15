@@ -198,10 +198,10 @@
 
     // 모바일은 세로 화면이라 넓은 FOV 로 더 멀리서 보는 느낌(답답함 완화)
     var camera = new T.PerspectiveCamera(isMobile ? 66 : 50, 1, 0.1, 100);
-    camera.position.set(0, 2.0, 2.6);
+    camera.position.set(0, 1.9, 2.5);
     this.camera = camera;
-    // 360° 체험형: 눈높이(≈1.5m) 피벗, 방 중앙 부근(어느 각도든 방 안)
-    this.target = new T.Vector3(0, 1.5, -0.3);
+    // 360° 체험형: 눈높이(≈1.45m) 피벗, 방 중앙 부근(어느 각도든 방 안)
+    this.target = new T.Vector3(0, 1.45, -0.3);
 
     AD.RectAreaLightUniformsLib.init();
 
@@ -236,8 +236,8 @@
     this.cubeMirrors = [];
     this.garmentGroup = null;
 
-    // 방 치수(사람 비율, 1 unit ≈ 1m) — 천장 3.4m 의 고급 침실/드레스룸
-    this.ROOM = { W: 8.0, H: 3.4, D: 7.0 };
+    // 방 치수(사람 비율, 1 unit ≈ 1m) — 천장 2.9m 의 현실적 고급 침실
+    this.ROOM = { W: 7.6, H: 2.9, D: 6.6 };
 
     this._buildLights();
     this._buildRoom();
@@ -630,7 +630,7 @@
     /* 문 — 좌우 맞닿는 더블/싱글, 사람 키 기준 ≈2.05m, 슬림 골드 바 손잡이 */
     function buildDoor(cx, cz, ry, dbl) {
       var grp = new T.Group(); grp.position.set(cx, 0, cz); grp.rotation.y = ry; scene.add(grp);
-      var lh = 2.05, lw = dbl ? 0.85 : 0.92;
+      var lh = 2.1, lw = dbl ? 0.85 : 0.92;
       var caseW = (dbl ? lw * 2 : lw) + 0.16;
       var casing = new T.Mesh(new T.BoxGeometry(caseW, lh + 0.16, 0.08), goldThin);
       casing.position.set(0, lh / 2 + 0.03, -0.025); grp.add(casing);
@@ -677,17 +677,17 @@
       scene.add(ring);
     }
 
-    /* 샹들리에 (≈0.9m 폭, 천장에서 1m 내려옴) */
+    /* 샹들리에 (천장 가까이, 짧게 매달림) */
     var chand = new T.Group();
-    chand.position.set(0, H - 0.55, -0.6);
-    chand.scale.setScalar(0.46);
+    chand.position.set(0, H - 0.16, -0.6);
+    chand.scale.setScalar(0.42);
     scene.add(chand);
     this.chandelier = chand;
 
     var gold = this.goldMat;
-    // 천장에서 내려오는 골드 체인
-    var chain = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 0.55, 10), gold);
-    chain.position.set(0, H - 0.28, -0.6); scene.add(chain);
+    // 천장에서 내려오는 짧은 골드 체인
+    var chain = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, 0.16, 10), gold);
+    chain.position.set(0, H - 0.08, -0.6); scene.add(chain);
 
     var stem = new T.Mesh(new T.CylinderGeometry(0.05, 0.05, 1.2, 12), gold);
     stem.position.y = -0.6; chand.add(stem);
@@ -794,7 +794,7 @@
   P._buildArmoire = function () {
     var T = this.T, scene = this.scene;
     var D = this.ROOM.D;
-    var AW = 3.4, AH = 2.45, AD_ = 0.5;
+    var AW = 3.2, AH = 2.15, AD_ = 0.5;
     var zBack = -D / 2 + 0.1;
 
     // 갈색 우드(월넛) — 결 텍스처 + 클리어코트로 고급스러운 목재 옷장
@@ -878,97 +878,84 @@
   /* 옷걸이 — hook 이 봉(parent 원점) 위를 감싸고, 어깨/클립 바가 아래에 */
   P._buildHangerOnRod = function (parent, type) {
     var T = this.T, gold = this.goldMat;
-    var hook = new T.Mesh(new T.TorusGeometry(0.05, 0.009, 8, 18, Math.PI), gold);
-    hook.rotation.y = Math.PI / 2;                 // Z-Y 평면 반원 → 봉 위를 감쌈
-    parent.add(hook);
-    var neck = new T.Mesh(new T.CylinderGeometry(0.008, 0.008, 0.16, 8), gold);
-    neck.position.set(0, -0.09, 0.05); parent.add(neck);
+    // 후크는 봉 위에 걸리고, 어깨 와이어는 옷 어깨선 안쪽(좁게)으로 들어가 가려진다.
+    var hook = new T.Mesh(new T.TorusGeometry(0.03, 0.006, 8, 16, Math.PI), gold);
+    hook.rotation.y = Math.PI / 2; parent.add(hook);
+    var neck = new T.Mesh(new T.CylinderGeometry(0.005, 0.005, 0.085, 8), gold);
+    neck.position.set(0, -0.045, 0.0); parent.add(neck);
 
     if (type === 'skirt' || type === 'pants') {
-      var clipbar = new T.Mesh(new T.CylinderGeometry(0.009, 0.009, 0.5, 10), gold);
-      clipbar.rotation.z = Math.PI / 2; clipbar.position.set(0, -0.16, 0.05); parent.add(clipbar);
-      [-0.18, 0.18].forEach(function (cx) {
-        var clip = new T.Mesh(new T.BoxGeometry(0.05, 0.06, 0.03), gold);
-        clip.position.set(cx, -0.18, 0.05); parent.add(clip);
+      var clipbar = new T.Mesh(new T.CylinderGeometry(0.005, 0.005, 0.3, 10), gold);
+      clipbar.rotation.z = Math.PI / 2; clipbar.position.set(0, -0.09, 0.0); parent.add(clipbar);
+      [-0.11, 0.11].forEach(function (cx) {
+        var clip = new T.Mesh(new T.BoxGeometry(0.028, 0.04, 0.02), gold);
+        clip.position.set(cx, -0.1, 0.0); parent.add(clip);
       });
     } else {
-      var sw = (type === 'jacket') ? 0.3 : 0.26;
+      var sw = (type === 'jacket' || type === 'coat') ? 0.155 : 0.13;
       var bar = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3([
-        new T.Vector3(-sw, -0.30, 0.05), new T.Vector3(0, -0.13, 0.05), new T.Vector3(sw, -0.30, 0.05)
-      ]), 14, 0.009, 6, false), gold);
+        new T.Vector3(-sw, -0.1, 0.0), new T.Vector3(0, -0.035, 0.0), new T.Vector3(sw, -0.1, 0.0)
+      ]), 12, 0.005, 6, false), gold);
       parent.add(bar);
-      var cb = new T.Mesh(new T.CylinderGeometry(0.007, 0.007, sw * 2, 8), gold);
-      cb.rotation.z = Math.PI / 2; cb.position.set(0, -0.30, 0.05); parent.add(cb);
     }
   };
 
-  /* 3D 의류 메시 — 회전체(드레이프) + 주름 + 소매 */
+  /* 3D 의류 — 어깨가 봉긋한 납작한 실루엣(ExtrudeGeometry). 어깨선이 옷걸이를 덮어
+   * 실제로 옷걸이에 걸린 천처럼 보이게 한다(상단 피크 = 후크 아래). */
   P._buildGarment = function (type, fabric, color) {
-    var T = this.T, self = this;
+    var T = this.T;
     var grp = new T.Group();
     var mat = this._fabricMat(fabric, color);
-    var topY = -0.18;                              // 어깨 위치(슬롯 기준)
-    var segs = this.isMobile ? 22 : 40;
+    var depth = 0.13;
+    var exOpt = { depth: depth, bevelEnabled: true, bevelThickness: 0.022, bevelSize: 0.022, bevelSegments: 2, steps: 1, curveSegments: 3 };
 
-    function lathe(profile, foldAmp, folds) {
-      var pts = profile.map(function (p) { return new T.Vector2(p[0], p[1]); });
-      var geo = new T.LatheGeometry(pts, segs);
-      if (foldAmp) {
-        var pos = geo.attributes.position, v, x, y, z, ang, r, nr;
-        for (v = 0; v < pos.count; v++) {
-          x = pos.getX(v); y = pos.getY(v); z = pos.getZ(v);
-          ang = Math.atan2(z, x); r = Math.sqrt(x * x + z * z);
-          nr = r + foldAmp * Math.sin(ang * folds) * Math.max(0.15, Math.min(1, -y / 0.5));
-          pos.setX(v, Math.cos(ang) * nr); pos.setZ(v, Math.sin(ang) * nr);
-        }
-        pos.needsUpdate = true; geo.computeVertexNormals();
-      }
+    function panel(pts) {
+      var s = new T.Shape();
+      s.moveTo(pts[0][0], pts[0][1]);
+      for (var i = 1; i < pts.length; i++) s.lineTo(pts[i][0], pts[i][1]);
+      s.closePath();
+      var geo = new T.ExtrudeGeometry(s, exOpt);
+      geo.translate(0, 0, -depth / 2 - 0.011);     // 깊이 중앙 정렬
       var m = new T.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true;
-      m.position.y = topY; grp.add(m); return m;
+      grp.add(m); return m;
     }
-    function sleeves(sx, len, ang) {
+    function sleeves(sx, sy, len, outAng) {        // 옆선으로 살짝 나오는 소매
       [-1, 1].forEach(function (s) {
-        var sl = new T.Mesh(new T.CylinderGeometry(0.055, 0.04, len, 12), mat);
-        sl.position.set(s * (sx + 0.02), topY - len * 0.45, 0.0);
-        sl.rotation.z = s * ang; sl.castShadow = true; grp.add(sl);
+        var sh = new T.Shape();
+        sh.moveTo(0, 0.03); sh.lineTo(s * 0.11, 0.0); sh.lineTo(s * 0.14, -len); sh.lineTo(s * 0.03, -len); sh.closePath();
+        var geo = new T.ExtrudeGeometry(sh, { depth: depth * 0.7, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 1 });
+        geo.translate(0, 0, -depth * 0.35);
+        var m = new T.Mesh(geo, mat); m.position.set(s * sx, sy, 0); m.rotation.z = s * outAng; m.castShadow = true; grp.add(m);
       });
+    }
+    function frontLine(h, yc, op) {
+      var l = new T.Mesh(new T.BoxGeometry(0.008, h, depth + 0.02),
+        new T.MeshStandardMaterial({ color: 0x3a2e22, transparent: true, opacity: op }));
+      l.position.set(0, yc, 0); grp.add(l);
     }
 
     if (type === 'dress') {
-      lathe([[0.17, 0], [0.205, -0.22], [0.16, -0.55], [0.235, -0.82], [0.34, -1.55]], 0.02, 9);
-      sleeves(0.17, 0.32, 0.5);
-    } else if (type === 'top') {
-      lathe([[0.18, 0], [0.225, -0.22], [0.205, -0.6]], 0.018, 8);
-      sleeves(0.18, 0.26, 0.6);
-    } else if (type === 'skirt') {
-      lathe([[0.19, 0], [0.205, -0.1], [0.345, -0.92]], 0.022, 10);
-    } else if (type === 'jacket') {
-      lathe([[0.25, 0], [0.255, -0.22], [0.235, -0.5], [0.255, -0.82]], 0.012, 7);
-      sleeves(0.24, 0.5, 0.32);
-      var line = new T.Mesh(new T.BoxGeometry(0.012, 0.78, 0.012),
-        new T.MeshStandardMaterial({ color: 0x000000, transparent: true, opacity: 0.16 }));
-      line.position.set(0, topY - 0.42, 0.255); grp.add(line);
-    } else if (type === 'coat') {
-      // 롱 코트 — 곧고 길게, 긴 소매 + 앞 여밈
-      lathe([[0.24, 0], [0.255, -0.3], [0.235, -0.75], [0.255, -1.3], [0.27, -1.7]], 0.01, 6);
-      sleeves(0.24, 0.66, 0.26);
-      var cl = new T.Mesh(new T.BoxGeometry(0.012, 1.5, 0.012),
-        new T.MeshStandardMaterial({ color: 0x000000, transparent: true, opacity: 0.14 }));
-      cl.position.set(0, topY - 0.78, 0.26); grp.add(cl);
+      panel([[0, 0.04], [-0.2, -0.06], [-0.15, -0.55], [-0.32, -1.5], [0.32, -1.5], [0.15, -0.55], [0.2, -0.06]]);
+      sleeves(0.18, -0.06, 0.22, 0.5);
     } else if (type === 'aline') {
-      // A라인 원피스 — 허리에서 크게 퍼짐
-      lathe([[0.18, 0], [0.2, -0.28], [0.17, -0.52], [0.42, -1.35]], 0.024, 11);
-      sleeves(0.17, 0.28, 0.55);
+      panel([[0, 0.04], [-0.19, -0.06], [-0.17, -0.45], [-0.42, -1.4], [0.42, -1.4], [0.17, -0.45], [0.19, -0.06]]);
+      sleeves(0.17, -0.06, 0.18, 0.55);
+    } else if (type === 'top') {
+      panel([[0, 0.04], [-0.21, -0.06], [-0.2, -0.35], [-0.23, -0.62], [0.23, -0.62], [0.2, -0.35], [0.21, -0.06]]);
+      sleeves(0.19, -0.06, 0.2, 0.6);
+    } else if (type === 'jacket') {
+      panel([[0, 0.04], [-0.24, -0.05], [-0.24, -0.45], [-0.25, -0.85], [0.25, -0.85], [0.24, -0.45], [0.24, -0.05]]);
+      sleeves(0.22, -0.05, 0.52, 0.3); frontLine(0.82, -0.43, 0.16);
+    } else if (type === 'coat') {
+      panel([[0, 0.04], [-0.24, -0.05], [-0.24, -0.7], [-0.27, -1.55], [0.27, -1.55], [0.24, -0.7], [0.24, -0.05]]);
+      sleeves(0.22, -0.05, 0.7, 0.24); frontLine(1.5, -0.78, 0.14);
+    } else if (type === 'skirt') {
+      panel([[-0.19, 0], [-0.2, -0.08], [-0.34, -0.92], [0.34, -0.92], [0.2, -0.08], [0.19, 0]]);
     } else if (type === 'pants') {
-      [-1, 1].forEach(function (s) {
-        var leg = new T.Mesh(new T.CylinderGeometry(0.085, 0.07, 1.0, 14), mat);
-        leg.position.set(s * 0.1, topY - 0.5, 0.0); leg.castShadow = true; grp.add(leg);
-      });
-      var waist = new T.Mesh(new T.CylinderGeometry(0.2, 0.19, 0.12, 16), mat);
-      waist.position.set(0, topY - 0.04, 0); grp.add(waist);
+      panel([[-0.2, 0], [0.2, 0], [0.18, -0.12], [0.05, -0.12], [0.07, -1.02], [-0.07, -1.02], [-0.05, -0.12], [-0.18, -0.12]]);
     }
-    // 사람 비율(드레스 ≈1.3m) — 1m 스케일에 맞춰 축소
-    grp.scale.set(0.85, 0.85, 0.85);
+    grp.scale.set(0.85, 0.85, 1.0);
+    grp.position.y = -0.05;                          // 피크가 후크 살짝 아래로
     return grp;
   };
 
@@ -1086,7 +1073,7 @@
    * ----------------------------------------------------------------------- */
   P._buildFloorMirror = function () {
     var T = this.T, scene = this.scene;
-    var mx = 3.1, mz = -2.4, ry = -0.55;   // 우-백측, 방 안으로 기울여 세움(≈1.7m)
+    var mx = 3.3, mz = 1.9, ry = -0.95;    // 우-앞측(소파 옆), 방 안으로 기울여 세움(≈1.5m)
     var gold = this.goldMat;
 
     var arch = new T.Shape();
@@ -1364,7 +1351,7 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.32, radius: 2.9, targetTheta: 0, targetPhi: 1.32 };
+    this.cam = { theta: 0, phi: 1.3, radius: 2.6, targetTheta: 0, targetPhi: 1.3 };
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
@@ -1372,7 +1359,7 @@
 
     var DEG = Math.PI / 180;
     // 360° 무제한 회전 + 천장(위)↔바닥(아래)까지 둘러보기. 방이 4면으로 닫혀 어느 각도든 벽.
-    this.LIMIT = { theta: Infinity, hover: 9 * DEG, phiMin: 0.95, phiMax: 1.72 };
+    this.LIMIT = { theta: Infinity, hover: 9 * DEG, phiMin: 1.05, phiMax: 1.62 };
 
     function rect() { return el.getBoundingClientRect(); }
 
@@ -1472,7 +1459,7 @@
       if (p >= 1) { p = 1; this.introDone = true; }
       // 천장 다이브 없이, 방을 넓게 잡았다가 옷장 정면으로 부드럽게 다가가는 establishing 샷
       var settle = this._spherical(this.cam.theta, this.cam.phi, this.cam.radius);
-      var start = new T.Vector3(0, 2.1, 2.9);
+      var start = new T.Vector3(0, 1.9, 2.7);
       var camPos = new T.Vector3().lerpVectors(start, settle, this._ease(p));
       this.camera.position.copy(camPos);
       this.camera.lookAt(this.target);
@@ -1526,7 +1513,7 @@
     this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, this.cam.targetPhi));
 
     // radius 살짝 호흡
-    this.cam.radius = 2.9 + Math.sin(t * 0.3) * 0.05;
+    this.cam.radius = 2.6 + Math.sin(t * 0.3) * 0.05;
 
     // 스무딩
     this.cam.theta += (this.cam.targetTheta - this.cam.theta) * 0.06;
