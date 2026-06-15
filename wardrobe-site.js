@@ -2014,7 +2014,7 @@
     var D = this.ROOM.D;
     var g = new T.Group();
     var W = this.ROOM.W;
-    g.position.set(-W / 2 + 0.35, 0, -1.6); g.rotation.y = Math.PI / 2; scene.add(g);   // 좌벽(화장대 쪽으로 살짝 이동)
+    g.position.set(W / 2 - 0.45, 0, D / 2 - 0.2); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 오른쪽 코너에 바싹(실내 -z 향함)
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xF1E9D8, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xF4FAFF, roughness: 0.05, metalness: 0.0, transmission: 0.92, transparent: true, opacity: 0.22, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
