@@ -573,10 +573,16 @@
     scene.add(dir, dir.target);
     this.sunLight = dir;
 
-    // LightProbe (부드러운 환경 채움)
+    // LightProbe (부드러운 환경 채움) — 살짝 웜 톤(차가운 회색 캐스트 제거)
     var probe = new T.LightProbe();
-    probe.sh.coefficients[0].setScalar(0.32);
+    probe.sh.coefficients[0].set(0.355, 0.325, 0.285);
     scene.add(probe);
+
+    // 앞벽 웜 워시 — 앞벽(문·갤러리)이 직사광을 못 받아 차갑게 보이는 것 보정(다른 벽과 톤 통일)
+    var frontWash = new T.RectAreaLight(0xFFE7CB, 1.1, R.W * 0.95, R.H * 0.85);
+    frontWash.position.set(0, R.H / 2, R.D / 2 - 2.4);
+    frontWash.lookAt(0, R.H / 2, R.D / 2);
+    scene.add(frontWash);
 
     // 바니티 미러 위 (백-좌측)
     var vm = new T.RectAreaLight(0xFFD4CC, 0.8, 0.9, 0.8);
@@ -662,7 +668,7 @@
       var yTop = springY + archR;
       sp.moveTo(-woZ, springY); sp.lineTo(-woZ, yTop); sp.lineTo(woZ, yTop); sp.lineTo(woZ, springY);
       sp.lineTo(archR, springY); sp.absarc(0, springY, archR, 0, Math.PI, false); sp.lineTo(-woZ, springY);
-      var sm = new T.Mesh(new T.ShapeGeometry(sp), wallMat);
+      var sm = new T.Mesh(new T.ShapeGeometry(sp, 96), wallMat);   // 곡선 분할↑(아치 매끈하게)
       sm.position.set(W / 2 - 0.001, 0, 0); sm.rotation.y = -Math.PI / 2; sm.receiveShadow = true; scene.add(sm);
     })();
 
@@ -871,20 +877,8 @@
 
     // 창 커튼봉 제거(요청) — 커튼은 빌트인 드레이프로 대체
 
-    // 천장→바닥 쉬폰 커튼 (wave morph)
-    var curtH = H - 0.6;
-    var cg = new T.PlaneGeometry(winW + 1.4, curtH, 28, 16);
-    var cmat = new T.MeshPhysicalMaterial({
-      color: PALETTE.offwhite, roughness: 0.6, transmission: 0.55,
-      thickness: 0.2, transparent: true, opacity: 0.5, side: T.DoubleSide,
-      sheen: 1.0, sheenColor: new T.Color(0xFFF4E8)
-    });
-    var curtain = new T.Mesh(cg, cmat);
-    curtain.rotation.y = -Math.PI / 2;
-    curtain.position.set(wx - 0.36, curtH / 2 + 0.2, cz);
-    scene.add(curtain);
-    this.curtain = curtain;
-    this.curtainBase = cg.attributes.position.array.slice();
+    // 중앙 쉬폰 커튼 제거 — 물결 morph 가 창 위에서 울퉁불퉁하게 보여 삭제(양옆 드레이프 GLB 로 대체)
+    this.curtain = null;
   };
 
   /* ----------------------------------------------------------------------- *
@@ -1447,20 +1441,33 @@
     var crest2 = new T.Mesh(new T.TorusGeometry(0.035, 0.01, 8, 18, Math.PI), gold);
     crest2.position.set(0, cy + ory + 0.06, 0.02); g.add(crest2);
 
-    // 셰발 스탠드 — 한 쌍의 매끈한 기둥(위는 피벗, 아래는 바깥으로 벌어져 발) + 크로스바
+    // 셰발(전신) 스탠드 — 곧은 세로 기둥 한 쌍(상단 피니얼 + 중앙 피벗 노브 + 썰매발) + 크로스바
+    var px = orx + 0.09;            // 기둥 x(프레임 바로 바깥)
+    var postTop = cy + ory * 0.5;   // 기둥 상단(미러 중상부)
+    var postBot = 0.05;
     [-1, 1].forEach(function (s) {
-      var topX = s * (orx + 0.05), botX = s * (orx + 0.2), topY = cy, botY = 0.03;
-      var len = Math.hypot(botX - topX, botY - topY);
-      var post = new T.Mesh(new T.CylinderGeometry(0.013, 0.017, len, 10), gold);
-      post.position.set((topX + botX) / 2, (topY + botY) / 2, 0);
-      post.rotation.z = Math.atan2(topX - botX, topY - botY); g.add(post);
-      var pivot = new T.Mesh(new T.SphereGeometry(0.024, 10, 8), gold);
-      pivot.position.set(topX, cy, 0.02); g.add(pivot);
-      var foot = new T.Mesh(new T.SphereGeometry(0.02, 10, 8), gold);
-      foot.scale.set(1.6, 0.7, 1); foot.position.set(botX, 0.02, 0); g.add(foot);
+      var x = s * px, len = postTop - postBot;
+      var post = new T.Mesh(new T.CylinderGeometry(0.015, 0.018, len, 14), gold);
+      post.position.set(x, (postTop + postBot) / 2, 0); g.add(post);
+      // 상단 피니얼(장식구)
+      var fin = new T.Mesh(new T.SphereGeometry(0.026, 12, 10), gold);
+      fin.position.set(x, postTop + 0.012, 0); g.add(fin);
+      // 중앙 피벗 노브 — 오벌 프레임이 회전 결합되는 부분
+      var knob = new T.Mesh(new T.CylinderGeometry(0.019, 0.019, 0.05, 14), gold);
+      knob.rotation.x = Math.PI / 2; knob.position.set(x - s * 0.005, cy, 0.018); g.add(knob);
+      // 썰매발(앞뒤로 뻗는 발) + 둥근 끝
+      var foot = new T.Mesh(new T.CylinderGeometry(0.013, 0.013, 0.36, 12), gold);
+      foot.rotation.x = Math.PI / 2; foot.position.set(x, 0.05, 0); g.add(foot);
+      [-1, 1].forEach(function (d) {
+        var cap = new T.Mesh(new T.SphereGeometry(0.019, 10, 8), gold);
+        cap.position.set(x, 0.05, d * 0.18); g.add(cap);
+      });
     });
-    var crossbar = new T.Mesh(new T.CylinderGeometry(0.011, 0.011, (orx + 0.14) * 2, 10), gold);
-    crossbar.rotation.z = Math.PI / 2; crossbar.position.set(0, 0.16, 0); g.add(crossbar);
+    // 하단 크로스바(스트레처) + 가운데 터닝 장식
+    var crossbar = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, px * 2, 12), gold);
+    crossbar.rotation.z = Math.PI / 2; crossbar.position.set(0, 0.34, 0); g.add(crossbar);
+    var orn = new T.Mesh(new T.SphereGeometry(0.028, 12, 10), gold);
+    orn.scale.set(1, 1.5, 1); orn.position.set(0, 0.34, 0); g.add(orn);
 
     // 오벌 반사면(프레임 안)
     var ng = new T.CircleGeometry(orx - 0.06, 40); ng.scale(1, (ory - 0.06) / (orx - 0.06), 1);
@@ -1765,13 +1772,14 @@
         s.position.y = 0.1; bagG.add(s);   // 바닥(좌석)에 앉게
       }, undefined, function () { });
     }
-    // 아이폰(다크) — 화면 살짝 비침
+    // 아이폰(다크) — 좌석 표면(가방과 동일 높이 0.6)에 올려 소파 로드 후에도 안 묻히게
+    var phY = 0.6;
     var phone = new T.Mesh(new T.BoxGeometry(0.075, 0.012, 0.155),
       new T.MeshStandardMaterial({ color: 0x101013, roughness: 0.3, metalness: 0.4 }));
-    phone.position.set(0.4, seatY + 0.01, 0.3); phone.rotation.y = -0.6; phone.castShadow = true; scene.add(phone);
+    phone.position.set(0.45, phY + 0.006, 0.42); phone.rotation.y = -0.6; phone.castShadow = true; scene.add(phone);
     var screen = new T.Mesh(new T.PlaneGeometry(0.066, 0.142),
       new T.MeshStandardMaterial({ color: 0x2A3550, emissive: 0x223047, emissiveIntensity: 0.4, roughness: 0.2 }));
-    screen.rotation.set(-Math.PI / 2, 0, -0.6); screen.position.set(0.4, seatY + 0.017, 0.3); scene.add(screen);
+    screen.rotation.set(-Math.PI / 2, 0, -0.6); screen.position.set(0.45, phY + 0.013, 0.42); scene.add(screen);
   };
 
   /* 빈티지 보타닉 아트 패턴(캔버스) — 액자 안 그림 */
