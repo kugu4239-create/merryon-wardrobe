@@ -3250,6 +3250,9 @@
       // 스크린스페이스 갓레이 uniform — 창 중심을 화면에 투영해 광선 원점(uSun) 갱신
       if (this.godRayPass) {
         var Tn = this.T, sx = this.ROOM.W / 2 - 0.05, sy = w.rayY, sz = w.rayZ;   // 빛 시작점(툴 조정)
+        // 투영 전에 카메라 행렬 강제 갱신(렌더 전이라 matrixWorldInverse가 stale → inFront/uSun 오류 방지)
+        this.camera.updateMatrixWorld();
+        this.camera.matrixWorldInverse.copy(this.camera.matrixWorld).invert();
         var vc = this._grSunV || (this._grSunV = new Tn.Vector3());
         vc.set(sx, sy, sz).applyMatrix4(this.camera.matrixWorldInverse);   // 뷰공간
         var inFront = vc.z < 0 ? 1.0 : 0.0;                               // 카메라 앞이면 1
@@ -3259,7 +3262,7 @@
         this.godRayPass.uniforms.uSun.value.set(su, sv);
         var ox = Math.max(0, Math.max(-su, su - 1)), oy = Math.max(0, Math.max(-sv, sv - 1));
         var outside = Math.sqrt(ox * ox + oy * oy);
-        var onScreen = 1.0 - this._ss(0.0, 0.6, outside);                 // 화면 밖이면 페이드
+        var onScreen = 1.0 - this._ss(0.5, 1.5, outside);                 // 화면 밖으로 많이 벗어날 때만 페이드(완화)
         var sunFade = this._ss(0.02, 0.25, w.sunInt);
         var active = (this.introDone ? 1.0 : 0.0) * inFront * onScreen * sunFade;
         this._grActive = (this._grActive || 0) + (active - (this._grActive || 0)) * 0.18;   // 팝 방지 스무딩
