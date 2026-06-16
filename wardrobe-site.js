@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayX: 7.0, rayY: 3.2, rayZ: 0.0, rayStr: 2.5, aimX: 0.0, aimZ: -1.5, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 2.30, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayX: 5.60, rayY: 4.15, rayZ: 0.0, rayStr: 6.0, aimX: 0.35, aimZ: -3.40, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -327,7 +327,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 06:48 UTC', note: '빛 조준점 추가(하늘색 마커=방안 어디로 쏠지) · 옷장 향하면 아치+옷 그림자 · 콘 넓힘' };
+  WardrobeScene.BUILD = { time: '06-16 07:01 UTC', note: '커튼 A→B 크림 매칭 · 날씨 값 베이크 · 모바일 카메라 뒤로(전경 30%↑)' };
 
   var P = WardrobeScene.prototype;
 
@@ -2214,6 +2214,7 @@
             o.castShadow = true; o.receiveShadow = true;
             o.material = o.material.clone(); o.material.side = T.DoubleSide;
             if (p[5] != null) o.material.color = new T.Color(p[5]);   // 짙은 베이지 오버라이드
+            else if (p[0] === 'curtain_logo.glb') o.material.color.setRGB(1.14, 1.20, 1.36);   // 로고 커튼 천을 플레인 크림 톤으로 리프트(맵×color)
           }
         });
         s.position.set(p[1], 0, p[2]); s.rotation.y = p[3];
@@ -3076,7 +3077,7 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.373, phiInit: 1.373, radius: 3.4, targetTheta: 0, targetPhi: 1.373 };   // 초기 상하각(하향 틸트 ~11°)
+    this.cam = { theta: 0, phi: 1.373, phiInit: 1.373, radius: this.isMobile ? 4.42 : 3.4, targetTheta: 0, targetPhi: 1.373 };   // 초기 상하각(하향 틸트 ~11°), 모바일 더 뒤로
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스, 좌우만)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
@@ -3284,7 +3285,7 @@
     this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, phi));
 
     // radius 살짝 호흡
-    this.cam.radius = 3.4 + Math.sin(t * 0.3) * 0.05;
+    this.cam.radius = (this.isMobile ? 4.42 : 3.4) + Math.sin(t * 0.3) * 0.05;   // 모바일은 더 뒤로(전경 ~30%↑)
 
     // 스무딩
     this.cam.theta += (this.cam.targetTheta - this.cam.theta) * 0.06;
