@@ -2964,7 +2964,10 @@
         '  vec2 dd = (vUv - uSun); dd.x *= uAspect;',                  // 창 주변 방사형 게이트(종횡비 보정)
         '  float rad = smoothstep(1.25, 0.0, length(dd));',
         '  accum *= uExposure * uStrength * uActive * (0.35 + 0.65 * rad);',
-        '  gl_FragColor = vec4(scene + max(accum, 0.0), 1.0);',
+        '  float rl = clamp((accum.r + accum.g + accum.b) * 0.5, 0.0, 1.0);',   // 광선 세기(0..1)
+        '  vec3 gold = vec3(1.0, 0.85, 0.58);',
+        '  vec3 outc = mix(scene, gold, rl * 0.65) + max(accum, 0.0) * 0.25;',  // 워밍 틴트(흰 표면에도 보임)+약한 가산
+        '  gl_FragColor = vec4(outc, 1.0);',
         '}'
       ].join('\n')
     };
