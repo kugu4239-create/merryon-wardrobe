@@ -202,27 +202,7 @@
     this._lite = !!window.__MERRYON_LITE__;
 
     /* --- 렌더러 --------------------------------------------------------- */
-    var renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2));   // 모바일 DPR 캡(거의 무체감, 픽셀 −23%)
-    renderer.outputColorSpace = T.SRGBColorSpace;
-    renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = T.PCFSoftShadowMap;   // 모바일도 PC와 동일
-    // 그림자 맵을 매 프레임 재생성하지 않고 몇 프레임마다(=FPS↑, 회전 매끄럽게). 외형 동일.
-    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
-    this.renderer = renderer;
-    // 텍스처 선명도: 비등방 필터 최대치(보통 16) — 비스듬한 표면(바닥/벽)의 흐림 방지
-    this.maxAniso = renderer.capabilities.getMaxAnisotropy();
-
-    var canvas = renderer.domElement;
-    canvas.style.position = 'absolute';
-    canvas.style.inset = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.display = 'block';
-    canvas.style.zIndex = '0';
-    container.appendChild(canvas);
+    var renderer = this._makeRenderer(container);
 
     /* --- 씬 / 카메라 ---------------------------------------------------- */
     var scene = new T.Scene();
@@ -243,26 +223,7 @@
      * 즉시: RoomEnvironment(빠른 폴백) → 로드 후: 실사 HDRI 로 교체(IBL/반사 사실감).
      * HDRI 는 조명/반사용으로만 쓰고, 배경은 브랜드 컬러 유지(파우더룸이 아니므로).
      */
-    var pmrem = new T.PMREMGenerator(renderer);
-    pmrem.compileEquirectangularShader();
-    this.pmrem = pmrem;
-    var envTex = pmrem.fromScene(new AD.RoomEnvironment(), 0.04).texture;
-    scene.environment = envTex;
-    scene.environmentIntensity = 0.72;
-    this.envTex = envTex;
-
-    (function (self) {
-      try {
-        new AD.RGBELoader().load(GH + 'equirectangular/royal_esplanade_1k.hdr',
-          function (hdr) {
-            hdr.mapping = T.EquirectangularReflectionMapping;
-            var env = self.pmrem.fromEquirectangular(hdr).texture;
-            scene.environment = env;
-            self.envTex = env;
-            hdr.dispose();
-          }, undefined, function () { /* 실패 시 RoomEnvironment 유지 */ });
-      } catch (e) { /* noop */ }
-    })(this);
+    this._setupEnv();
 
     /* --- 구성 ----------------------------------------------------------- */
     this.crystals = [];
@@ -352,31 +313,108 @@
     }
   }
 
+  /* 렌더러 생성(최초 + 재진입 재생성 공용). 캔버스 스타일/속성까지 세팅 후 컨테이너에 부착. */
+  P._makeRenderer = function (container) {
+    var T = this.T;
+    var renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.isMobile ? 1.75 : 2));   // 모바일 DPR 캡(거의 무체감, 픽셀 −23%)
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = T.PCFSoftShadowMap;   // 모바일도 PC와 동일
+    // 그림자 맵을 매 프레임 재생성하지 않고 몇 프레임마다(=FPS↑, 회전 매끄럽게). 외형 동일.
+    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
+    this.renderer = renderer;
+    // 텍스처 선명도: 비등방 필터 최대치(보통 16) — 비스듬한 표면(바닥/벽)의 흐림 방지
+    this.maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+    var canvas = renderer.domElement;
+    canvas.style.position = 'absolute';
+    canvas.style.inset = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.display = 'block';
+    canvas.style.zIndex = '0';
+    canvas.style.touchAction = 'none';
+    canvas.setAttribute('draggable', 'false');
+    container.appendChild(canvas);
+    return renderer;
+  };
+
+  /* 환경맵(IBL) 셋업 — 최초 + 재진입 공용. 즉시 RoomEnvironment → 로드 후 실사 HDRI 교체. */
+  P._setupEnv = function () {
+    var T = this.T, AD = this.AD, scene = this.scene;
+    var pmrem = new T.PMREMGenerator(this.renderer);
+    pmrem.compileEquirectangularShader();
+    this.pmrem = pmrem;
+    var envTex = pmrem.fromScene(new AD.RoomEnvironment(), 0.04).texture;
+    scene.environment = envTex;
+    scene.environmentIntensity = 0.72;
+    this.envTex = envTex;
+    (function (self) {
+      try {
+        new AD.RGBELoader().load(GH + 'equirectangular/royal_esplanade_1k.hdr',
+          function (hdr) {
+            if (!self.pmrem) { hdr.dispose(); return; }   // 재슬립 등으로 사라졌으면 무시
+            hdr.mapping = T.EquirectangularReflectionMapping;
+            var env = self.pmrem.fromEquirectangular(hdr).texture;
+            scene.environment = env;
+            self.envTex = env;
+            hdr.dispose();
+          }, undefined, function () { /* 실패 시 RoomEnvironment 유지 */ });
+      } catch (e) { /* noop */ }
+    })(this);
+  };
+
   /* 화면 밖 즉시: 렌더 루프 정지 + 캔버스 컴포지팅 제외(다른 섹션 영향 0). 비용 무(無). */
   P._pause = function () {
     if (this._paused) return; this._paused = true;
     this.renderer.setAnimationLoop(null);
-    this.renderer.domElement.style.display = 'none';
+    if (this.renderer.domElement) this.renderer.domElement.style.display = 'none';
   };
-  /* 일정 시간 화면 밖: 모든 렌더타깃 1×1 축소 + 그림자 맵 dispose → 대형 VRAM 해제. */
+  /* 일정 시간 화면 밖: WebGL 컨텍스트 완전 해제 — 컴포저/PMREM/RT/그림자/GLB VRAM 전부 반납.
+   * 다른 섹션에 GPU/메모리 영향 0(재진입 시 _wake 가 렌더러부터 재생성). */
   P._sleep = function () {
     this._pause();
     if (this._slept) return; this._slept = true;
-    this.renderer.setSize(1, 1, false);
-    if (this.composer) this.composer.setSize(1, 1);
-    if (this.lightRT) this.lightRT.setSize(1, 1);
+    // 그림자 맵 해제
     var ls = [this.sunLight, this.armoireSpot, this.windowProjector].concat(this.chandLights || []);
     ls.forEach(function (l) { if (l && l.shadow && l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } });
+    // 포스트프로세싱/환경맵/갓레이 RT 해제
+    try { if (this.composer && this.composer.dispose) this.composer.dispose(); } catch (e) {}
+    this.composer = null; this.godRayPass = null; this.gradePass = null; this.bloom = null;
+    try { if (this.lightRT) this.lightRT.dispose(); } catch (e) {}
+    this.lightRT = null;
+    try { if (this.pmrem) this.pmrem.dispose(); } catch (e) {}
+    this.pmrem = null;
+    // 반사 바닥 RT 해제(있으면) — 재진입 시 새 컨텍스트에서 재할당
+    try { if (this.reflector && this.reflector.getRenderTarget) this.reflector.getRenderTarget().dispose(); } catch (e) {}
+    // 컨텍스트/캔버스 완전 해제
+    var old = this.renderer;
+    try { old.setAnimationLoop(null); } catch (e) {}
+    try { old.dispose(); } catch (e) {}
+    try { old.forceContextLoss(); } catch (e) {}
+    try { if (old.domElement && old.domElement.parentNode) old.domElement.parentNode.removeChild(old.domElement); } catch (e) {}
+    this.renderer = null;
   };
-  /* 재진입: 크기 복구 + 렌더 재개. */
+  /* 재진입: 렌더러/환경맵/컴포저 재생성 → 씬 지오메트리·텍스처는 새 컨텍스트에 자동 재업로드. */
   P._wake = function () {
-    this.renderer.domElement.style.display = 'block';
-    if (this._slept) { this._slept = false; this._resize(); this.renderer.shadowMap.needsUpdate = true; }
+    if (this._slept) {
+      this._slept = false;
+      this._makeRenderer(this.container);
+      this._setupEnv();
+      this._setupComposer();
+      this._resize();
+      this.renderer.shadowMap.needsUpdate = true;
+    } else if (this.renderer && this.renderer.domElement) {
+      this.renderer.domElement.style.display = 'block';
+    }
     if (this._paused) { this._paused = false; if (this.clock) this.clock.getDelta(); this.renderer.setAnimationLoop(this._animate); }
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 09:25 UTC', note: '화면밖 즉시 렌더정지+VRAM해제(다른섹션 영향0)·리사이즈 가드' };
+  WardrobeScene.BUILD = { time: '06-16 10:40 UTC', note: '화면밖 WebGL 컨텍스트 완전 해제(재진입 재로드)·다른 섹션 GPU/메모리 영향 0' };
 
   var P = WardrobeScene.prototype;
 
