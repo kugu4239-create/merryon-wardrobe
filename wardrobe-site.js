@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 19:12 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
+  WardrobeScene.BUILD = { time: '06-16 19:25 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -1826,9 +1826,9 @@
       var knob = new T.Mesh(new T.SphereGeometry(0.018, 12, 10), gold);
       knob.position.set(bx + dI * 0.38, 0.64, bz + 0.27); vg.add(knob);
     }
-    // 카브리올(살짝 휜) 화이트 다리 ×4 — 위 굵고 아래 가늘게 + 바깥 스플레이
+    // 카브리올(살짝 휜) 다리 ×4 — 골드톤 통일, 위 굵고 아래 가늘게 + 바깥 스플레이
     [[-0.55, -0.18, -1], [0.55, -0.18, 1], [-0.55, 0.18, -1], [0.55, 0.18, 1]].forEach(function (lp) {
-      var leg = new T.Mesh(new T.CylinderGeometry(0.035, 0.018, 0.52, 12), white);
+      var leg = new T.Mesh(new T.CylinderGeometry(0.035, 0.018, 0.52, 12), gold);
       leg.position.set(bx + lp[0], 0.26, bz + lp[1]); leg.rotation.z = lp[2] * 0.07; leg.castShadow = true; vg.add(leg);
       var foot = new T.Mesh(new T.SphereGeometry(0.022, 10, 8), gold);
       foot.position.set(bx + lp[0] + lp[2] * 0.035, 0.01, bz + lp[1]); vg.add(foot);
@@ -2440,13 +2440,18 @@
 
   /* 프렌치 화장대 의자 — 화장대 앞 대각 배치(카브리올 다리 + 카브드 등 + 그레이 시트) */
   P._buildVanityChair = function () {
-    var T = this.T, AD = this.AD, scene = this.scene;
+    var T = this.T, AD = this.AD, scene = this.scene, gold = this.goldMat;
     // 화장대 앞 대각 — Blender 프렌치 의자(카브리올 다리+카브드 오벌 등받이) GLB
     var W = this.ROOM.W;
     var g = new T.Group(); g.position.set(-3.8, 0, 0.0); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('화장대 의자', g);   // 화장대(좌벽) 앞
     if (AD.GLTFLoader) {
       new AD.GLTFLoader().load(asset('chair.glb'), function (gltf) {
-        var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        var s = gltf.scene; s.traverse(function (o) {
+          if (o.isMesh) {
+            o.castShadow = true; o.receiveShadow = true;
+            if (o.material && o.material.name === 'wood') o.material = gold;   // 프레임(다리 포함) 골드톤 통일 — GLB상 다리/프레임 단일 메쉬
+          }
+        });
         g.add(s);
       }, undefined, function () { });
     }
@@ -2853,10 +2858,10 @@
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xEAF1F4, roughness: 0.06, metalness: 0.0, transmission: 0.9, transparent: true, opacity: 0.2, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
 
-    // 플린스 베이스 + 발
-    var base = new T.Mesh(new T.BoxGeometry(CW, plinth, CD), cream); base.position.y = plinth / 2; base.castShadow = true; base.receiveShadow = true; g.add(base);
+    // 플린스 베이스 + 발 — 하부 골드톤 통일
+    var base = new T.Mesh(new T.BoxGeometry(CW, plinth, CD), gold); base.position.y = plinth / 2; base.castShadow = true; base.receiveShadow = true; g.add(base);
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
-      var foot = new T.Mesh(new T.BoxGeometry(0.07, 0.04, 0.07), creamD);
+      var foot = new T.Mesh(new T.BoxGeometry(0.07, 0.04, 0.07), gold);
       foot.position.set(c[0] * (CW / 2 - 0.06), 0.0, c[1] * (CD / 2 - 0.06)); foot.position.y = -0.0; g.add(foot);
     });
     var y0 = plinth, y1 = CH, yc = (y0 + y1) / 2;
