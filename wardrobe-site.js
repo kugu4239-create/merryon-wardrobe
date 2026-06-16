@@ -418,7 +418,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 15:10 UTC', note: '모바일 픽셀비 3 고정(인앱 웹뷰 저보고 DPR 대응) + MSAA off — 앱에서도 풀해상도' };
+  WardrobeScene.BUILD = { time: '06-16 15:25 UTC', note: '모바일 카메라 5% 뒤로(화면 축소) + 픽셀비3 고정·MSAA off' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3165,7 +3165,7 @@
     // 카메라 구면 파라미터
     var _phi0 = this.isMobile ? 1.450 : 1.373;   // 모바일은 약간 더 정면(수평)으로 ~7%
     var _th0 = this.isMobile ? 0.38 : 0;   // 모바일 초기 시점을 merryon 로고 커튼(좌-뒤) 쪽 사선으로
-    this.cam = { theta: _th0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 3.74 : 3.4, targetTheta: _th0, targetPhi: _phi0 };   // 초기 상하각, 모바일은 뒤로(전경↑)+10% 확대
+    this.cam = { theta: _th0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 3.93 : 3.4, targetTheta: _th0, targetPhi: _phi0 };   // 초기 상하각, 모바일 뒤로(전경↑) — 추가 5% 더 축소
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스, 좌우만)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: _th0 };
     this.lastInteract = -10;
@@ -3398,7 +3398,7 @@
     this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, phi));
 
     // radius 살짝 호흡
-    this.cam.radius = (this.isMobile ? 3.74 : 3.4) + Math.sin(t * 0.3) * 0.05;   // 모바일 뒤로(전경↑)+10% 확대
+    this.cam.radius = (this.isMobile ? 3.93 : 3.4) + Math.sin(t * 0.3) * 0.05;   // 모바일 뒤로(전경↑) — 추가 5% 더 축소
 
     // 스무딩(관성) — PC·모바일 모두 거의 없게(거의 1:1 직접 회전, 미세 지터만 방지)
     var sm = 0.5;
