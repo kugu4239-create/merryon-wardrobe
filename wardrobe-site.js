@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 17:25 UTC', note: '셀프 커피바 추가(물병·접시·커피머신·메모홀더=coffee 핫스팟) + 스툴 셋업·DPR2' };
+  WardrobeScene.BUILD = { time: '06-16 18:20 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3090,32 +3090,37 @@
   P._buildCoffeeBar = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(2.5, 0, 3.3); g.rotation.y = Math.PI;   // 바 정면이 방 안(소파)쪽
+    g.position.set(3.582, 0, 4.819); g.rotation.y = Math.PI;   // 바 정면이 방 안쪽
     scene.add(g);
     this._regProp('커피 바', g);
     this._registerHotspot('coffee', g);   // 탭 핫스팟
 
-    var marble = new T.MeshPhysicalMaterial({ color: 0xF4F1EC, roughness: 0.22, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.8 });
-    var cream = new T.MeshStandardMaterial({ color: 0xEDE4D2, roughness: 0.5, metalness: 0.0 });
+    // 2단 수납장과 통일된 크림(클리어코트) + 패널
+    var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
+    var panel = new T.MeshPhysicalMaterial({ color: 0xE7DDC8, roughness: 0.5, clearcoat: 0.3 });
     var chrome = new T.MeshStandardMaterial({ color: 0xD9D4CB, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.0 });
     var white = new T.MeshStandardMaterial({ color: 0xF6F1E8, roughness: 0.45, metalness: 0.0 });
 
-    // --- 콘솔(바) ---
-    var BW = 1.5, BD = 0.46, legH = 0.10, bodyH = 0.74, topTh = 0.045;
+    // --- 콘솔(바) ---  좌우 2배 폭
+    var BW = 3.0, BD = 0.46, legH = 0.10, bodyH = 0.74, topTh = 0.045;
     var bodyYc = legH + bodyH / 2, topY = legH + bodyH, topYc = topY + topTh / 2;
     // 캐비닛 바디(크림)
     var body = new T.Mesh(new T.BoxGeometry(BW - 0.06, bodyH, BD - 0.05), cream);
     body.position.set(0, bodyYc, 0); body.castShadow = true; body.receiveShadow = true; g.add(body);
-    // 도어 라인(가운데 분할 + 골드 노브)
-    [-1, 1].forEach(function (sx) {
-      var door = new T.Mesh(new T.BoxGeometry(BW / 2 - 0.07, bodyH - 0.08, 0.012), white);
-      door.position.set(sx * (BW / 4 - 0.01), bodyYc, (BD - 0.05) / 2 + 0.006); g.add(door);
+    // 도어 4짝 + 골드 노브
+    var dz = (BD - 0.05) / 2 + 0.006, dw = BW / 4 - 0.04;
+    [-1.5, -0.5, 0.5, 1.5].forEach(function (k) {
+      var dx = k * (BW / 4);
+      var door = new T.Mesh(new T.BoxGeometry(dw, bodyH - 0.08, 0.012), panel);
+      door.position.set(dx, bodyYc, dz); g.add(door);
       var knob = new T.Mesh(new T.SphereGeometry(0.014, 12, 10), gold);
-      knob.position.set(sx * 0.04, bodyYc, (BD - 0.05) / 2 + 0.02); g.add(knob);
+      knob.position.set(dx + (k < 0 ? dw / 2 - 0.03 : -dw / 2 + 0.03), bodyYc, dz + 0.016); g.add(knob);
     });
-    // 마블 상판
-    var top = new T.Mesh(new T.BoxGeometry(BW, topTh, BD), marble);
+    // 상판(수납장 통일 크림) + 골드 엣지
+    var top = new T.Mesh(new T.BoxGeometry(BW, topTh, BD), cream);
     top.position.set(0, topYc, 0); top.castShadow = true; top.receiveShadow = true; g.add(top);
+    var topEdge = new T.Mesh(new T.BoxGeometry(BW + 0.012, 0.006, BD + 0.012), gold);
+    topEdge.position.set(0, topY + 0.001, 0); g.add(topEdge);
     // 골드 다리 4개
     [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) {
       var leg = new T.Mesh(new T.CylinderGeometry(0.02, 0.014, legH, 12), gold);
@@ -3126,7 +3131,7 @@
     // --- 물병(물 채워짐) — 좌측 ---
     var glassMat = new T.MeshPhysicalMaterial({ color: 0xFBFEFF, roughness: 0.05, metalness: 0.0, transmission: 0.95, transparent: true, opacity: 0.32, thickness: 0.08, ior: 1.45, envMapIntensity: 1.0 });
     var waterMat = new T.MeshPhysicalMaterial({ color: 0xCFE6EE, roughness: 0.08, metalness: 0.0, transmission: 0.85, transparent: true, opacity: 0.6, thickness: 0.1, ior: 1.33 });
-    var carafe = new T.Group(); carafe.position.set(-0.56, TY, 0.02); g.add(carafe);
+    var carafe = new T.Group(); carafe.position.set(-1.15, TY, 0.02); g.add(carafe);
     var bH = 0.24, bR = 0.052;
     var bottle = new T.Mesh(new T.CylinderGeometry(bR * 0.7, bR, bH, 24), glassMat); bottle.position.y = bH / 2; bottle.castShadow = true; carafe.add(bottle);
     var neck = new T.Mesh(new T.CylinderGeometry(0.022, bR * 0.7, 0.05, 20), glassMat); neck.position.y = bH + 0.02; carafe.add(neck);
@@ -3134,38 +3139,50 @@
     var cork = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.03, 16), cream); cork.position.y = bH + 0.055; carafe.add(cork);
 
     // --- 접시 + 에스프레소 잔 2개 — 중앙 ---
-    var plate = new T.Mesh(new T.CylinderGeometry(0.11, 0.095, 0.018, 28), white); plate.position.set(0.04, TY + 0.009, 0.04); plate.castShadow = true; plate.receiveShadow = true; g.add(plate);
+    var plate = new T.Mesh(new T.CylinderGeometry(0.11, 0.095, 0.018, 28), white); plate.position.set(0.45, TY + 0.009, 0.04); plate.castShadow = true; plate.receiveShadow = true; g.add(plate);
     [-0.05, 0.06].forEach(function (cx, i) {
       var cup = new T.Mesh(new T.CylinderGeometry(0.028, 0.022, 0.04, 18), white);
-      cup.position.set(0.04 + cx, TY + 0.04, 0.04 + (i ? -0.03 : 0.02)); cup.castShadow = true; g.add(cup);
+      cup.position.set(0.45 + cx, TY + 0.04, 0.04 + (i ? -0.03 : 0.02)); cup.castShadow = true; g.add(cup);
       var saucer = new T.Mesh(new T.CylinderGeometry(0.04, 0.036, 0.006, 18), white); saucer.position.set(cup.position.x, TY + 0.021, cup.position.z); g.add(saucer);
     });
 
-    // --- 커피 머신 — 좌중앙 뒤 ---
-    var mc = new T.Group(); mc.position.set(-0.18, TY, -0.07); g.add(mc);
-    var mBody = new T.Mesh(new T.BoxGeometry(0.26, 0.30, 0.20), white); mBody.position.y = 0.15; mBody.castShadow = true; mc.add(mBody);
-    var mTop = new T.Mesh(new T.BoxGeometry(0.27, 0.03, 0.21), chrome); mTop.position.y = 0.31; mc.add(mTop);
-    var head = new T.Mesh(new T.BoxGeometry(0.10, 0.07, 0.08), chrome); head.position.set(0, 0.12, 0.13); mc.add(head);
-    var port = new T.Mesh(new T.CylinderGeometry(0.026, 0.026, 0.022, 16), chrome); port.position.set(0, 0.085, 0.15); mc.add(port);
-    var handle = new T.Mesh(new T.CylinderGeometry(0.009, 0.009, 0.085, 12), new T.MeshStandardMaterial({ color: PALETTE.navy, roughness: 0.4 })); handle.rotation.x = Math.PI / 2; handle.position.set(0, 0.085, 0.21); mc.add(handle);
-    var tray = new T.Mesh(new T.BoxGeometry(0.12, 0.012, 0.09), chrome); tray.position.set(0, 0.018, 0.135); mc.add(tray);
-    var espCup = new T.Mesh(new T.CylinderGeometry(0.02, 0.016, 0.03, 16), white); espCup.position.set(0, 0.04, 0.15); mc.add(espCup);
-    [-0.06, 0.06].forEach(function (bx) { var b = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.01, 16), gold); b.rotation.x = Math.PI / 2; b.position.set(bx, 0.26, 0.101); mc.add(b); });
+    // --- 커피 머신(실버+골드+블랙, 좌우 크게·듀얼) — 좌중앙 뒤 ---
+    var silver = new T.MeshStandardMaterial({ color: 0xCFC9BE, roughness: 0.28, metalness: 0.9, envMapIntensity: 1.1 });
+    var black = new T.MeshStandardMaterial({ color: 0x1A1A1E, roughness: 0.4, metalness: 0.35, envMapIntensity: 0.7 });
+    var mc = new T.Group(); mc.position.set(-0.45, TY, -0.06); g.add(mc);
+    var MW = 0.5;   // 좌우 크게
+    var mBody = new T.Mesh(new T.BoxGeometry(MW, 0.32, 0.24), silver); mBody.position.y = 0.16; mc.add(mBody);
+    var mFront = new T.Mesh(new T.BoxGeometry(MW - 0.05, 0.26, 0.012), black); mFront.position.set(0, 0.18, 0.126); mc.add(mFront);   // 블랙 전면 패널
+    var mTop = new T.Mesh(new T.BoxGeometry(MW + 0.02, 0.04, 0.26), silver); mTop.position.y = 0.34; mc.add(mTop);
+    var topTrim = new T.Mesh(new T.BoxGeometry(MW + 0.025, 0.012, 0.02), gold); topTrim.position.set(0, 0.355, 0.13); mc.add(topTrim);   // 골드 트림
+    var brand = new T.Mesh(new T.BoxGeometry(0.16, 0.02, 0.004), gold); brand.position.set(0, 0.30, 0.133); mc.add(brand);   // 골드 로고바
+    // 듀얼 그룹헤드 + 포터필터 + 핸들 + 잔
+    [-0.13, 0.13].forEach(function (hx) {
+      var head = new T.Mesh(new T.BoxGeometry(0.11, 0.07, 0.085), silver); head.position.set(hx, 0.135, 0.135); mc.add(head);
+      var port = new T.Mesh(new T.CylinderGeometry(0.028, 0.028, 0.022, 18), gold); port.position.set(hx, 0.098, 0.16); mc.add(port);   // 골드 포터필터
+      var handle = new T.Mesh(new T.CylinderGeometry(0.0095, 0.0095, 0.09, 12), black); handle.rotation.x = Math.PI / 2; handle.position.set(hx, 0.098, 0.225); mc.add(handle);
+      var espCup = new T.Mesh(new T.CylinderGeometry(0.022, 0.017, 0.032, 16), white); espCup.position.set(hx, 0.05, 0.16); mc.add(espCup);
+    });
+    var tray = new T.Mesh(new T.BoxGeometry(MW - 0.06, 0.014, 0.11), black); tray.position.set(0, 0.022, 0.15); mc.add(tray);
+    var trayTop = new T.Mesh(new T.BoxGeometry(MW - 0.08, 0.004, 0.09), silver); trayTop.position.set(0, 0.031, 0.15); mc.add(trayTop);
+    // 골드 버튼/노브 행
+    [-0.16, 0, 0.16].forEach(function (bx) { var b = new T.Mesh(new T.CylinderGeometry(0.014, 0.014, 0.012, 18), gold); b.rotation.x = Math.PI / 2; b.position.set(bx, 0.235, 0.133); mc.add(b); });
+    var steam = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.11, 12), silver); steam.position.set(MW / 2 - 0.01, 0.13, 0.12); steam.rotation.z = 0.5; mc.add(steam);   // 스팀완드
     mc.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
 
-    // --- 메모 홀더 + 메모(우측 끝 위) — 추후 cafe24 터치 지점 ---
-    var memo = new T.Group(); memo.position.set(0.62, TY, -0.02); memo.rotation.y = -0.25; g.add(memo);
-    var mbase = new T.Mesh(new T.CylinderGeometry(0.035, 0.04, 0.02, 20), marble); mbase.position.y = 0.01; mbase.castShadow = true; memo.add(mbase);
-    var post = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.10, 10), gold); post.position.set(-0.012, 0.06, 0); memo.add(post);
-    var clip = new T.Mesh(new T.TorusGeometry(0.012, 0.0035, 8, 16), gold); clip.position.set(-0.012, 0.105, 0); clip.rotation.x = Math.PI / 2; memo.add(clip);
-    // 메모 카드(연한 줄, 글자 없음)
+    // --- 메모 홀더 + 메모(우측 끝 위, 2배 크게·골드 홀더) — 추후 cafe24 터치 지점 ---
+    var memo = new T.Group(); memo.position.set(1.28, TY, -0.02); memo.rotation.y = -0.25; g.add(memo);
+    var mbase = new T.Mesh(new T.CylinderGeometry(0.07, 0.08, 0.04, 24), gold); mbase.position.y = 0.02; mbase.castShadow = true; memo.add(mbase);   // 골드 베이스
+    var post = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.20, 12), gold); post.position.set(-0.024, 0.12, 0); memo.add(post);
+    var clip = new T.Mesh(new T.TorusGeometry(0.024, 0.006, 8, 18), gold); clip.position.set(-0.024, 0.21, 0); clip.rotation.x = Math.PI / 2; memo.add(clip);
+    // 메모 카드(연한 줄, 글자 없음) — 2배
     var cardTex = this._canvas(128, function (c, S) {
       c.fillStyle = '#FCF8EF'; c.fillRect(0, 0, S, S);
       c.strokeStyle = 'rgba(120,110,90,0.18)'; c.lineWidth = 1;
       for (var y = S * 0.28; y < S * 0.85; y += S * 0.12) { c.beginPath(); c.moveTo(S * 0.16, y); c.lineTo(S * 0.84, y); c.stroke(); }
     });
-    var card = new T.Mesh(new T.BoxGeometry(0.075, 0.095, 0.003), new T.MeshStandardMaterial({ map: cardTex, roughness: 0.9 }));
-    card.position.set(0.012, 0.085, 0); card.rotation.set(-0.12, 0, 0.04); card.castShadow = true; memo.add(card);
+    var card = new T.Mesh(new T.BoxGeometry(0.15, 0.19, 0.005), new T.MeshStandardMaterial({ map: cardTex, roughness: 0.9 }));
+    card.position.set(0.024, 0.17, 0); card.rotation.set(-0.12, 0, 0.04); card.castShadow = true; memo.add(card);
   };
 
   /* ----------------------------------------------------------------------- *
@@ -3384,10 +3401,11 @@
     this.drag = { active: false, lastX: 0, lastY: 0, theta: _th0, phi: 0 };   // phi: 세로 드래그 상하 기울기 오프셋
     this.lastInteract = -10;
     this.gyro = { active: false, tilt: 0, betaNeutral: null };   // 상하(phi)는 기기 틸트로만
+    this._vDrag = ((window.MERRYON_WARDROBE_CONFIG || {}).verticalDrag !== false);   // 세로 드래그 상하기울기(기본 ON, config 로 끔)
 
     var DEG = Math.PI / 180;
     // 좌우(theta) 360° 무제한 = 드래그/스크롤만. 상하(phi) = 기기 틸트만(데스크탑은 초기각 고정).
-    this.LIMIT = { theta: Infinity, hover: 6 * DEG, phiMin: 1.15, phiMax: 1.66 };
+    this.LIMIT = { theta: Infinity, hover: 0, phiMin: 1.15, phiMax: 1.66 };   // hover 0: 클릭(드래그) 없이는 화면 안 움직임(호버 패럴랙스 off)
 
     function rect() { return el.getBoundingClientRect(); }
 
@@ -3402,14 +3420,16 @@
         self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
         self.drag.theta += dx * 0.0044;   // 좌우(theta)
         self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, self.drag.theta));
-        // 세로 드래그 = 상하 기울기(phi). 아래로 끌면 위(천장), 위로 끌면 아래(바닥). windup 방지로 범위 클램프.
-        self.drag.phi += dy * 0.0035;
-        self.drag.phi = Math.max(self.LIMIT.phiMin - self.cam.phiInit, Math.min(self.LIMIT.phiMax - self.cam.phiInit, self.drag.phi));
+        // 세로 드래그 = 상하 기울기(phi). config.verticalDrag:false 면 비활성.
+        if (self._vDrag) {
+          self.drag.phi += dy * 0.0035;
+          self.drag.phi = Math.max(self.LIMIT.phiMin - self.cam.phiInit, Math.min(self.LIMIT.phiMax - self.cam.phiInit, self.drag.phi));
+        }
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 5) dragMoved = true;
         self.lastInteract = self.elapsed;
       } else {
         self.lastInteract = self.elapsed;
-        if (!self.isMobile) self._hoverHotspot(e.clientX, e.clientY);   // 데스크탑 호버: 핫스팟 커서/하이라이트
+        // (호버 하이라이트 비활성 — 요청)
       }
     });
     el.addEventListener('pointerdown', function (e) {
@@ -3444,9 +3464,11 @@
       if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
       self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.0066));   // 모바일 회전 감도
-      // 세로 스와이프 = 상하 기울기(phi). 범위 클램프(windup 방지).
-      var dyT = e.touches[0].clientY - tStartY;
-      self.drag.phi = Math.max(self.LIMIT.phiMin - self.cam.phiInit, Math.min(self.LIMIT.phiMax - self.cam.phiInit, tPhi + dyT * 0.0050));
+      // 세로 스와이프 = 상하 기울기(phi). config.verticalDrag:false 면 비활성.
+      if (self._vDrag) {
+        var dyT = e.touches[0].clientY - tStartY;
+        self.drag.phi = Math.max(self.LIMIT.phiMin - self.cam.phiInit, Math.min(self.LIMIT.phiMax - self.cam.phiInit, tPhi + dyT * 0.0050));
+      }
       self.lastInteract = self.elapsed;
     }, { passive: true });
 
