@@ -376,7 +376,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:40 UTC', note: '섹션 떠나면 sleep(렌더타깃·그림자 VRAM 해제→페이지 가벼움), 재진입 wake' };
+  WardrobeScene.BUILD = { time: '06-16 08:46 UTC', note: '유휴 시 30fps 캡(회전중엔 60fps) → GPU 부하 절반, 무체감' };
 
   var P = WardrobeScene.prototype;
 
@@ -3238,6 +3238,8 @@
     this.elapsed += dt;
     var t = this.elapsed;
     this._frame++;
+    // 유휴(드래그/최근 인터랙션 없음) 시 30fps로 절반 스킵 — 미세 애니메이션은 무체감, 회전 중엔 60fps 유지
+    if (this.introDone && !this.drag.active && (t - (this.lastInteract || 0) > 0.5) && (this._frame & 1)) return;
     // 그림자 갱신 스로틀 — 4프레임마다(태양/날씨는 느려서 무체감, 회전 FPS↑)
     if ((this._frame & 3) === 0) this.renderer.shadowMap.needsUpdate = true;
 
