@@ -260,6 +260,7 @@
     this._buildStorageAndSpeaker();
     this._buildBookshelfVase();
     this._buildWritingStool();   // 소파 옆 둥글린 사각 스툴 + 종이 + 만년필(적는 공간)
+    this._buildCoffeeBar();      // 셀프 커피 바(물병/접시/커피머신 + 메모홀더 = 터치 지점)
     this._buildGoldRack();
     this._buildTrunk();
     this._buildDisplayCase();
@@ -419,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 16:55 UTC', note: '스툴 위치 고정(1.359,0,-0.065) + 만년필 수직 펜홀더에 꽂힘 + 탭 핫스팟·DPR2' };
+  WardrobeScene.BUILD = { time: '06-16 17:25 UTC', note: '셀프 커피바 추가(물병·접시·커피머신·메모홀더=coffee 핫스팟) + 스툴 셋업·DPR2' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3083,6 +3084,88 @@
     pen.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
     pen.position.set(0.003, 0.035, 0.002); pen.rotation.set(0.12, 0, 0.16);   // 컵에 꽂혀 살짝 기울어짐
     holderG.add(pen);
+  };
+
+  /* 셀프 커피 바 — 콘솔 + 물병/접시/커피머신, 우측 끝 메모홀더(추후 cafe24 터치 지점) */
+  P._buildCoffeeBar = function () {
+    var T = this.T, scene = this.scene, gold = this.goldMat;
+    var g = new T.Group();
+    g.position.set(2.5, 0, 3.3); g.rotation.y = Math.PI;   // 바 정면이 방 안(소파)쪽
+    scene.add(g);
+    this._regProp('커피 바', g);
+    this._registerHotspot('coffee', g);   // 탭 핫스팟
+
+    var marble = new T.MeshPhysicalMaterial({ color: 0xF4F1EC, roughness: 0.22, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.8 });
+    var cream = new T.MeshStandardMaterial({ color: 0xEDE4D2, roughness: 0.5, metalness: 0.0 });
+    var chrome = new T.MeshStandardMaterial({ color: 0xD9D4CB, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.0 });
+    var white = new T.MeshStandardMaterial({ color: 0xF6F1E8, roughness: 0.45, metalness: 0.0 });
+
+    // --- 콘솔(바) ---
+    var BW = 1.5, BD = 0.46, legH = 0.10, bodyH = 0.74, topTh = 0.045;
+    var bodyYc = legH + bodyH / 2, topY = legH + bodyH, topYc = topY + topTh / 2;
+    // 캐비닛 바디(크림)
+    var body = new T.Mesh(new T.BoxGeometry(BW - 0.06, bodyH, BD - 0.05), cream);
+    body.position.set(0, bodyYc, 0); body.castShadow = true; body.receiveShadow = true; g.add(body);
+    // 도어 라인(가운데 분할 + 골드 노브)
+    [-1, 1].forEach(function (sx) {
+      var door = new T.Mesh(new T.BoxGeometry(BW / 2 - 0.07, bodyH - 0.08, 0.012), white);
+      door.position.set(sx * (BW / 4 - 0.01), bodyYc, (BD - 0.05) / 2 + 0.006); g.add(door);
+      var knob = new T.Mesh(new T.SphereGeometry(0.014, 12, 10), gold);
+      knob.position.set(sx * 0.04, bodyYc, (BD - 0.05) / 2 + 0.02); g.add(knob);
+    });
+    // 마블 상판
+    var top = new T.Mesh(new T.BoxGeometry(BW, topTh, BD), marble);
+    top.position.set(0, topYc, 0); top.castShadow = true; top.receiveShadow = true; g.add(top);
+    // 골드 다리 4개
+    [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) {
+      var leg = new T.Mesh(new T.CylinderGeometry(0.02, 0.014, legH, 12), gold);
+      leg.position.set(sx * (BW / 2 - 0.08), legH / 2, sz * (BD / 2 - 0.07)); leg.castShadow = true; g.add(leg);
+    }); });
+    var TY = topY + topTh;   // 상판 윗면
+
+    // --- 물병(물 채워짐) — 좌측 ---
+    var glassMat = new T.MeshPhysicalMaterial({ color: 0xFBFEFF, roughness: 0.05, metalness: 0.0, transmission: 0.95, transparent: true, opacity: 0.32, thickness: 0.08, ior: 1.45, envMapIntensity: 1.0 });
+    var waterMat = new T.MeshPhysicalMaterial({ color: 0xCFE6EE, roughness: 0.08, metalness: 0.0, transmission: 0.85, transparent: true, opacity: 0.6, thickness: 0.1, ior: 1.33 });
+    var carafe = new T.Group(); carafe.position.set(-0.56, TY, 0.02); g.add(carafe);
+    var bH = 0.24, bR = 0.052;
+    var bottle = new T.Mesh(new T.CylinderGeometry(bR * 0.7, bR, bH, 24), glassMat); bottle.position.y = bH / 2; bottle.castShadow = true; carafe.add(bottle);
+    var neck = new T.Mesh(new T.CylinderGeometry(0.022, bR * 0.7, 0.05, 20), glassMat); neck.position.y = bH + 0.02; carafe.add(neck);
+    var water = new T.Mesh(new T.CylinderGeometry(bR * 0.74, bR * 0.94, bH * 0.66, 24), waterMat); water.position.y = bH * 0.33 + 0.006; carafe.add(water);
+    var cork = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.03, 16), cream); cork.position.y = bH + 0.055; carafe.add(cork);
+
+    // --- 접시 + 에스프레소 잔 2개 — 중앙 ---
+    var plate = new T.Mesh(new T.CylinderGeometry(0.11, 0.095, 0.018, 28), white); plate.position.set(0.04, TY + 0.009, 0.04); plate.castShadow = true; plate.receiveShadow = true; g.add(plate);
+    [-0.05, 0.06].forEach(function (cx, i) {
+      var cup = new T.Mesh(new T.CylinderGeometry(0.028, 0.022, 0.04, 18), white);
+      cup.position.set(0.04 + cx, TY + 0.04, 0.04 + (i ? -0.03 : 0.02)); cup.castShadow = true; g.add(cup);
+      var saucer = new T.Mesh(new T.CylinderGeometry(0.04, 0.036, 0.006, 18), white); saucer.position.set(cup.position.x, TY + 0.021, cup.position.z); g.add(saucer);
+    });
+
+    // --- 커피 머신 — 좌중앙 뒤 ---
+    var mc = new T.Group(); mc.position.set(-0.18, TY, -0.07); g.add(mc);
+    var mBody = new T.Mesh(new T.BoxGeometry(0.26, 0.30, 0.20), white); mBody.position.y = 0.15; mBody.castShadow = true; mc.add(mBody);
+    var mTop = new T.Mesh(new T.BoxGeometry(0.27, 0.03, 0.21), chrome); mTop.position.y = 0.31; mc.add(mTop);
+    var head = new T.Mesh(new T.BoxGeometry(0.10, 0.07, 0.08), chrome); head.position.set(0, 0.12, 0.13); mc.add(head);
+    var port = new T.Mesh(new T.CylinderGeometry(0.026, 0.026, 0.022, 16), chrome); port.position.set(0, 0.085, 0.15); mc.add(port);
+    var handle = new T.Mesh(new T.CylinderGeometry(0.009, 0.009, 0.085, 12), new T.MeshStandardMaterial({ color: PALETTE.navy, roughness: 0.4 })); handle.rotation.x = Math.PI / 2; handle.position.set(0, 0.085, 0.21); mc.add(handle);
+    var tray = new T.Mesh(new T.BoxGeometry(0.12, 0.012, 0.09), chrome); tray.position.set(0, 0.018, 0.135); mc.add(tray);
+    var espCup = new T.Mesh(new T.CylinderGeometry(0.02, 0.016, 0.03, 16), white); espCup.position.set(0, 0.04, 0.15); mc.add(espCup);
+    [-0.06, 0.06].forEach(function (bx) { var b = new T.Mesh(new T.CylinderGeometry(0.012, 0.012, 0.01, 16), gold); b.rotation.x = Math.PI / 2; b.position.set(bx, 0.26, 0.101); mc.add(b); });
+    mc.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+
+    // --- 메모 홀더 + 메모(우측 끝 위) — 추후 cafe24 터치 지점 ---
+    var memo = new T.Group(); memo.position.set(0.62, TY, -0.02); memo.rotation.y = -0.25; g.add(memo);
+    var mbase = new T.Mesh(new T.CylinderGeometry(0.035, 0.04, 0.02, 20), marble); mbase.position.y = 0.01; mbase.castShadow = true; memo.add(mbase);
+    var post = new T.Mesh(new T.CylinderGeometry(0.004, 0.004, 0.10, 10), gold); post.position.set(-0.012, 0.06, 0); memo.add(post);
+    var clip = new T.Mesh(new T.TorusGeometry(0.012, 0.0035, 8, 16), gold); clip.position.set(-0.012, 0.105, 0); clip.rotation.x = Math.PI / 2; memo.add(clip);
+    // 메모 카드(연한 줄, 글자 없음)
+    var cardTex = this._canvas(128, function (c, S) {
+      c.fillStyle = '#FCF8EF'; c.fillRect(0, 0, S, S);
+      c.strokeStyle = 'rgba(120,110,90,0.18)'; c.lineWidth = 1;
+      for (var y = S * 0.28; y < S * 0.85; y += S * 0.12) { c.beginPath(); c.moveTo(S * 0.16, y); c.lineTo(S * 0.84, y); c.stroke(); }
+    });
+    var card = new T.Mesh(new T.BoxGeometry(0.075, 0.095, 0.003), new T.MeshStandardMaterial({ map: cardTex, roughness: 0.9 }));
+    card.position.set(0.012, 0.085, 0); card.rotation.set(-0.12, 0, 0.04); card.castShadow = true; memo.add(card);
   };
 
   /* ----------------------------------------------------------------------- *
