@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 0.70, sunHeight: 6.0, temp: 0.0, exposure: 0.48, fog: 0.022, skyBright: 1.0, daycycle: true };
+    this.weatherDef = { sunInt: 0.70, sunHeight: 3.4, temp: 0.0, exposure: 0.48, fog: 0.022, skyBright: 1.0, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -297,6 +297,7 @@
     // this._buildMannequin();   // 사람 목업 삭제(요청)
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
+    this._buildLightShafts();   // 창밖에서 사선으로 들어오는 가시 광선(갓레이)
 
     this._setupComposer();
     this._setupInteraction();
@@ -579,8 +580,8 @@
     this.windowLight = win;
 
     var dir = new T.DirectionalLight(0xFFF0DC, 0.7);
-    dir.position.set(3.2, 3.0, 2.2);
-    dir.target.position.set(-0.5, 0.8, -1.0);
+    dir.position.set(9, 3.4, 0.4);
+    dir.target.position.set(-2.0, 1.0, -0.3);   // 창(우벽)에서 수평으로 흘러 들어오는 방향
     if (!this.isMobile) {
       dir.castShadow = true;
       dir.shadow.mapSize.set(2048, 2048);
@@ -1967,6 +1968,39 @@
     }
   };
 
+  /* 창밖에서 사선으로 들어오는 가시 광선(god ray) — 창 안쪽에 앵커한 애디티브 빔 평면.
+   * 매 프레임 카메라를 향해 yaw(빌보드)하고, 날씨(sunInt)에 따라 밝기 변동. */
+  P._buildLightShafts = function () {
+    var T = this.T, scene = this.scene, R = this.ROOM;
+    // 길이 방향 밝기(창쪽 밝고 안쪽으로 사라짐) + 폭 방향 페더 그라데이션
+    var c = document.createElement('canvas'); c.width = 128; c.height = 64; var g = c.getContext('2d');
+    var img = g.createImageData(128, 64);
+    for (var y = 0; y < 64; y++) for (var x = 0; x < 128; x++) {
+      var fx = x / 127;                          // u=1(+X, 창쪽) 밝음
+      var fy = Math.sin((y / 63) * Math.PI);     // 위/아래 가장자리 페더
+      var a = Math.pow(fx, 1.7) * Math.pow(fy, 1.3);
+      var i = (y * 128 + x) * 4;
+      img.data[i] = 255; img.data[i + 1] = 247; img.data[i + 2] = 222; img.data[i + 3] = Math.min(255, a * 255);
+    }
+    g.putImageData(img, 0, 0);
+    var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
+
+    var pivot = new T.Group();
+    pivot.position.set(R.W / 2 - 0.3, 1.55, 0.0);   // 창 안쪽 중앙
+    scene.add(pivot); this.lightShafts = pivot;
+
+    var L = 6.0, slope = 0.5;   // 빔 길이 / 하향 사선 각(라디안)
+    // [dz(슬랫 오프셋), dy, 폭, 기본 불투명도]
+    var beams = [[0.0, 0.05, 1.7, 0.50], [-0.55, 0.30, 1.1, 0.34], [0.55, -0.25, 1.1, 0.34], [-1.1, 0.55, 0.8, 0.22], [1.1, -0.5, 0.8, 0.22]];
+    beams.forEach(function (b) {
+      var geo = new T.PlaneGeometry(L, b[2]); geo.translate(-L / 2, 0, 0);   // +X 끝(밝은 쪽)을 피벗(창)에 정렬
+      var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, opacity: b[3], toneMapped: false });
+      var pl = new T.Mesh(geo, mat);
+      pl.position.set(0, b[1], b[0]); pl.rotation.z = slope;   // 안쪽 끝이 아래로 → 사선 하강
+      pl.userData.baseOp = b[3]; pivot.add(pl);
+    });
+  };
+
   /* 보타닉 — 화분(트리/토피어리) + 책장+책 + 플로어 화병 */
   P._buildBotanic = function () {
     var T = this.T, scene = this.scene, self = this;
@@ -3102,7 +3136,7 @@
       var day = w.daycycle ? (t % 60) / 60 : 0.5;
       var ang = -0.5 + day * 1.0;
       // 빛 길이 = 태양 높이(낮을수록 그림자 길어짐 — 골든아워)
-      this.sunLight.position.set(9, w.sunHeight + Math.sin(day * Math.PI) * 1.5, 4 + ang * 3);
+      this.sunLight.position.set(9, w.sunHeight + Math.sin(day * Math.PI) * 1.2, ang * 3.0);
       this.sunLight.intensity = w.sunInt;
       // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
@@ -3117,6 +3151,16 @@
       }
       // 창밖 하늘 밝기
       if (this.gardenBack) this.gardenBack.material.color.copy(this.gardenBackBase).multiplyScalar(w.skyBright);
+      // 가시 광선(갓레이) — 카메라 향해 빌보드 + 햇빛 강도/미세 셔머
+      if (this.lightShafts) {
+        var cp = this.camera.position, lp = this.lightShafts.position;
+        this.lightShafts.rotation.y = Math.atan2(cp.x - lp.x, cp.z - lp.z);
+        var sh = Math.min(1.4, w.sunInt / 0.70) * (0.86 + 0.14 * Math.sin(t * 0.7));
+        this.lightShafts.visible = this.introDone && w.sunInt > 0.02;
+        for (var s = 0; s < this.lightShafts.children.length; s++) {
+          var m = this.lightShafts.children[s]; m.material.opacity = m.userData.baseOp * sh;
+        }
+      }
     }
     // 창 유리 은은한 밝기 변화
     if (this.windowGlass) {
