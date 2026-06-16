@@ -866,8 +866,9 @@
     // 화이트 프레임(아치형 팔라디안 — 레퍼런스 화이트 그리드)
     var frameMat = new T.MeshStandardMaterial({ color: 0xF4EEE1, roughness: 0.55, metalness: 0.0, envMapIntensity: 0.7 });
     var glassMat = new T.MeshPhysicalMaterial({
-      color: 0xF2FBFF, roughness: 0.04, metalness: 0.0, transmission: 0.9, transparent: true,
-      opacity: 0.18, emissive: 0xEAF2E0, emissiveIntensity: 0.05, side: T.DoubleSide
+      color: 0xF2FBFF, roughness: 0.12, metalness: 0.0, transmission: 0.9, transparent: true,
+      opacity: 0.18, emissive: 0xEAF2E0, emissiveIntensity: 0.05, side: T.DoubleSide,
+      specularIntensity: 0.0   // 태양광 스페큘러 하이라이트(유리 위 '태양' 원반) 제거
     });
     var xb = wx - 0.1;   // 멀리언이 놓이는 x(실내쪽)
 
