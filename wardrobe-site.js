@@ -426,7 +426,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 12:35 UTC', note: 'GLB meshopt 압축(10→2.9MB) + 비등방8·메인그림자1024·반사512/3프레임(화질 무손실) + 이미지1280px캡 + 컨텍스트 완전해제' };
+  WardrobeScene.BUILD = { time: '06-16 13:05 UTC', note: '모바일 발열완화(권장): 30fps캡+유휴 5fps하트비트+샹들리에 그림자OFF+반사 6프레임+옷/창 그림자 512 / GLB meshopt 압축 / 화질무손실 렌더조정' };
 
   var P = WardrobeScene.prototype;
 
@@ -670,7 +670,7 @@
     // 천장에서 더 떨어뜨려(풀 확산·부드럽게) 천장의 '빛그림자' 단 완화
     var p1 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p1.position.set(-0.25, R.H - 1.35, -0.6);
     var p2 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p2.position.set(0.25, R.H - 1.35, -0.6);
-    p1.castShadow = p2.castShadow = true;   // 모바일도 PC와 동일
+    p1.castShadow = p2.castShadow = !this.isMobile;   // 모바일: 샹들리에 그림자 OFF(발열↓, 폰에선 거의 안 보임)
     p1.shadow.mapSize.set(1024, 1024); p2.shadow.mapSize.set(1024, 1024);
     p1.shadow.bias = p2.shadow.bias = -0.0006;
     scene.add(p1, p2);
@@ -716,8 +716,8 @@
     var sp = new T.SpotLight(0xFFF6EC, 2.6, 8, Math.PI / 3.6, 0.45, 1.1);
     sp.position.set(0, R.H - 0.5, -2.4);
     sp.target.position.set(0, 1.4, -3.3);
-    sp.castShadow = true;
-    sp.shadow.mapSize.set(1024, 1024);   // 모바일도 PC와 동일
+    sp.castShadow = true;   // 옷 그림자 — 모바일도 유지(이전 요청)
+    sp.shadow.mapSize.set(this.isMobile ? 512 : 1024, this.isMobile ? 512 : 1024);   // 모바일 512(옷 그림자 유지, 비용↓)
     sp.shadow.camera.near = 0.5; sp.shadow.camera.far = 6;
     sp.shadow.bias = -0.0006; sp.shadow.radius = 4;            // 소프트 엣지(약한 그림자)
     if ('intensity' in sp.shadow) sp.shadow.intensity = 0.5;   // 그림자 농도 낮춤(r165+)
@@ -761,8 +761,8 @@
     var proj = new T.SpotLight(0xFFF0DC, 0.0, 34, 0.82, 0.35, 0.8);
     proj.map = this._windowMapTex();
     proj.position.set(7, 3.2, 0); proj.target.position.set(1.0, 0.2, 0);
-    proj.castShadow = true;                          // 모바일도 PC와 동일(맵 투영 보장 + 방 오브젝트 그림자)
-    proj.shadow.mapSize.set(1024, 1024);
+    proj.castShadow = true;                          // 맵(창 빛 패턴) 투영이 여기에 묶여 있어 유지
+    proj.shadow.mapSize.set(this.isMobile ? 512 : 1024, this.isMobile ? 512 : 1024);   // 모바일 512(패턴 유지, 비용↓)
     proj.shadow.camera.near = 1; proj.shadow.camera.far = 24;
     proj.shadow.bias = -0.0006;
     scene.add(proj, proj.target);
@@ -796,8 +796,9 @@
       reflector.rotation.x = -Math.PI / 2; reflector.position.y = 0.0;
       // 매 3프레임만 갱신 — 반사는 이전 텍스처 재사용(거의 정적 씬이라 무체감), 전체 씬 재렌더 비용↓
       var selfR = this, _obr = reflector.onBeforeRender;
+      var rfEvery = this.isMobile ? 6 : 3;   // 모바일은 매 6프레임(발열↓), PC 매 3프레임
       reflector.onBeforeRender = function (rnd, scn, cam, geo, mat, grp) {
-        if (selfR._frame % 3 !== 0) return;   // 3프레임마다 1회 갱신
+        if (selfR._frame % rfEvery !== 0) return;
         _obr.call(this, rnd, scn, cam, geo, mat, grp);
       };
       scene.add(reflector); this.reflector = reflector;
@@ -3236,8 +3237,11 @@
       self.gyro.active = true;
       if (self.gyro.betaNeutral == null) self.gyro.betaNeutral = e.beta;
       var d = Math.max(-40, Math.min(40, e.beta - self.gyro.betaNeutral));
-      self.gyro.tilt = (d / 40) * 0.28;   // 뒤로 기울이면 위로, 앞으로 기울이면 아래로(±~16°)
-      self.lastInteract = self.elapsed;
+      var nt = (d / 40) * 0.28;   // 뒤로 기울이면 위로, 앞으로 기울이면 아래로(±~16°)
+      // 기울기가 '실제로' 변할 때만 인터랙션 취급 — 폰을 가만히 들고 있으면(이벤트는 계속 와도)
+      // 유휴로 떨어져 저전력 하트비트가 동작(발열↓). 미세 노이즈는 무시.
+      if (Math.abs(nt - self.gyro.tilt) > 0.002) self.lastInteract = self.elapsed;
+      self.gyro.tilt = nt;
     }
     this._enableGyro = function () {
       if (typeof DeviceOrientationEvent !== 'undefined' &&
@@ -3289,8 +3293,18 @@
     this.elapsed += dt;
     var t = this.elapsed;
     this._frame++;
-    // 유휴(드래그/최근 인터랙션 없음) 시 30fps로 절반 스킵 — 미세 애니메이션은 무체감, 회전 중엔 60fps 유지
-    if (this.introDone && !this.drag.active && (t - (this.lastInteract || 0) > 0.5) && (this._frame & 1)) return;
+    // 프레임 캡 — 발열/스로틀 완화.
+    if (this.introDone) {
+      var idle = !this.drag.active && (t - (this.lastInteract || 0) > (this.isMobile ? 1.2 : 0.5));
+      if (this.isMobile) {
+        // 모바일: 유휴 시 ~5fps 하트비트(사실상 정지·발열 0에 가깝게), 활성 시 30fps 캡
+        if (idle) { if (this._frame % 12 !== 0) return; }
+        else if (this._frame & 1) { return; }
+      } else {
+        // PC: 유휴 시 30fps, 활성 시 60fps(기존)
+        if (idle && (this._frame & 1)) return;
+      }
+    }
     // 그림자 갱신 스로틀 — 4프레임마다(태양/날씨는 느려서 무체감, 회전 FPS↑)
     if ((this._frame & 3) === 0) this.renderer.shadowMap.needsUpdate = true;
 
