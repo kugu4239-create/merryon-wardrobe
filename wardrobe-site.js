@@ -1354,8 +1354,9 @@
     function up() { if (dragging) { dragging = false; savePos(); } }
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
     copyB.onclick = function () {
-      var lines = ['merryon 소품 위치 (name: x,y,z):'];
-      props.forEach(function (p) { var q = p.obj.position; lines.push(p.name + ': ' + q.x.toFixed(3) + ', ' + q.y.toFixed(3) + ', ' + q.z.toFixed(3)); });
+      var list = sel ? [sel] : props;   // 선택된 것만(없으면 전체)
+      var lines = ['merryon ' + (sel ? '선택 소품' : '소품 전체') + ' 위치 (name: x,y,z):'];
+      list.forEach(function (p) { var q = p.obj.position; lines.push(p.name + ': ' + q.x.toFixed(3) + ', ' + q.y.toFixed(3) + ', ' + q.z.toFixed(3)); });
       var txt = lines.join('\n');
       if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { copyB.textContent = '복사됨!'; setTimeout(function () { copyB.textContent = '위치 복사'; }, 1200); });
       else window.prompt('복사:', txt);
