@@ -1289,7 +1289,7 @@
     var self = this, T = this.T, el = this.container;
     var props = this.editProps || [];
     var rc = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3();
-    var sel = null, dragging = false;
+    var sel = null, dragging = false, grab = new T.Vector3();
     self._propEdit = false;
     var selBox = new T.BoxHelper(new T.Object3D(), 0xff5fbf); selBox.visible = false; this.scene.add(selBox);
     function showBox() { if (sel && self._propEdit) { selBox.setFromObject(sel.obj); selBox.visible = true; } else selBox.visible = false; }
@@ -1343,13 +1343,20 @@
     el.addEventListener('pointerdown', function (e) {
       if (!self._propEdit) return;
       var p = pick(e);
-      if (p) { sel = p; dragging = true; selLbl.textContent = '선택: ' + p.name; showBox(); e.preventDefault(); if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {} }
+      if (p) {
+        sel = p; dragging = true; selLbl.textContent = '선택: ' + p.name; showBox(); e.preventDefault();
+        // 잡은 지점과 오브젝트 위치의 오프셋 보정(좌석 윗부분 탭 시 바닥평면으로 순간이동 방지)
+        plane.constant = -sel.obj.position.y;
+        if (rc.ray.intersectPlane(plane, hit)) grab.set(sel.obj.position.x - hit.x, 0, sel.obj.position.z - hit.z);
+        else grab.set(0, 0, 0);
+        if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {}
+      }
     });
     el.addEventListener('pointermove', function (e) {
       if (!self._propEdit || !dragging || !sel) return;
       setNdc(e); rc.setFromCamera(ndc, self.camera);
       plane.constant = -sel.obj.position.y;
-      if (rc.ray.intersectPlane(plane, hit)) { sel.obj.position.x = hit.x; sel.obj.position.z = hit.z; showBox(); }
+      if (rc.ray.intersectPlane(plane, hit)) { sel.obj.position.x = hit.x + grab.x; sel.obj.position.z = hit.z + grab.z; showBox(); }
     });
     function up() { if (dragging) { dragging = false; savePos(); } }
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
@@ -2057,7 +2064,15 @@
   P._regProp = function (name, obj) {
     this.editProps = this.editProps || [];
     var def = obj.position.clone();
-    try { var all = JSON.parse(localStorage.getItem('MERRYON_PROP_POS') || '{}'); var s = all[name]; if (s && s.length === 3) obj.position.set(s[0], s[1], s[2]); } catch (e) {}
+    var R = this.ROOM, hx = R.W / 2, hz = R.D / 2;
+    try {
+      var all = JSON.parse(localStorage.getItem('MERRYON_PROP_POS') || '{}'); var s = all[name];
+      if (s && s.length === 3 && isFinite(s[0]) && isFinite(s[1]) && isFinite(s[2])) {
+        // 저장 좌표가 방 밖이면 무시(드래그 사고로 소품이 사라지는 것 방지 — 자동 복구)
+        if (Math.abs(s[0]) <= hx && Math.abs(s[2]) <= hz && s[1] >= -0.5 && s[1] <= R.H + 0.5)
+          obj.position.set(s[0], s[1], s[2]);
+      }
+    } catch (e) {}
     this.editProps.push({ name: name, obj: obj, def: def });
   };
 
@@ -2352,6 +2367,7 @@
   P._buildBookshelfVase = function () {
     var T = this.T, scene = this.scene;
     var vx = 4.15, vz = -4.15;   // 책장(우측 백벽) 앞 바닥
+    var g = new T.Group(); g.position.set(vx, 0, vz); scene.add(g); this._regProp('꽃병', g);
     // 클리어 글라스 화병(테이퍼)
     // 프로스트 글라스 — 반투명이지만 또렷하게 보이게(꽃 떠보임 방지)
     var glass = new T.MeshPhysicalMaterial({
@@ -2360,15 +2376,15 @@
       clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 1.1, reflectivity: 0.6
     });
     var vase = new T.Mesh(new T.CylinderGeometry(0.16, 0.10, 0.36, 28), glass);
-    vase.position.set(vx, 0.18, vz); scene.add(vase);
+    vase.position.set(0, 0.18, 0); g.add(vase);
     var rim = new T.Mesh(new T.TorusGeometry(0.155, 0.008, 8, 28), glass);
-    rim.rotation.x = Math.PI / 2; rim.position.set(vx, 0.36, vz); scene.add(rim);
+    rim.rotation.x = Math.PI / 2; rim.position.set(0, 0.36, 0); g.add(rim);
     // 핑크 장미 부케만(초록 요소 제거) — 화병 입구까지 내려 틈 없이 채움
     if (this.AD.GLTFLoader) {
       new this.AD.GLTFLoader().load(asset('bouquet.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-        s.position.set(vx, 0.31, vz); s.scale.setScalar(1.0);   // 하단 꽃이 화병 림에 걸치게(떠보임 방지)
-        scene.add(s);
+        s.position.set(0, 0.31, 0); s.scale.setScalar(1.0);   // 하단 꽃이 화병 림에 걸치게(떠보임 방지)
+        g.add(s);
       }, undefined, function () { });
     }
   };
@@ -2378,7 +2394,7 @@
   P._buildGoldRack = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(-4.9, 0, -3.3); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('골드 행거랙', g);   // 좌측 벽
+    g.position.set(-4.9, 0, -3.8); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('골드 행거랙', g);   // 좌측 벽
     var goldS = new T.MeshStandardMaterial({ color: PALETTE.gold, metalness: 1.0, roughness: 0.26, envMapIntensity: 1.3 });
 
     var HW = 0.72, PH = 1.62, railY = 1.5;   // 포스트 반폭 / 높이 / 레일 높이
@@ -2520,7 +2536,7 @@
   P._buildDisplayCase = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat, D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(-4.851, 0, -1.515); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('잡화 진열장', g);   // 좌벽, 화장대 왼쪽
+    g.position.set(-4.85, 0, -1.7); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('잡화 진열장', g);   // 좌벽, 화장대 왼쪽
     var CW = 1.7, CD = 0.52, CH = 0.82, plinth = 0.12;
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
