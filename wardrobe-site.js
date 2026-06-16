@@ -1164,6 +1164,11 @@
         map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide,
         roughness: 0.82, metalness: 0.0, color: (bk.tint != null) ? bk.tint : 0xffffff   // 틴트=색감 보정(블로우아웃 완화)
       });
+      // 약한 드롭 그림자 — 같은 실루엣을 어둡게, 살짝 뒤(+우하단) 오프셋(빌보드 동반)
+      var shMat = new T.MeshBasicMaterial({ map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide, color: 0x000000, opacity: 0.16, depthWrite: false, toneMapped: false });
+      var shadow = new T.Mesh(new T.PlaneGeometry(w, h), shMat);
+      shadow.position.set(0.028, topY - h / 2 + dyv - 0.03, dz - 0.06); shadow.scale.set(1.02, 1.0, 1.0); shadow.renderOrder = -1;
+      pivot.add(shadow);
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
       plane.position.set(0, topY - h / 2 + dyv, dz); plane.castShadow = false; pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
       self._garmentState[i] = { pivot: pivot, type: type, name: entry[3] || type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: dyDef }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
@@ -3253,8 +3258,15 @@
     if (this.sunLight && w) {
       var day = w.daycycle ? (t % 60) / 60 : 0.5;
       var ang = -0.5 + day * 1.0;
-      // 빛 길이 = 태양 높이(낮을수록 그림자 길어짐 — 골든아워)
-      this.sunLight.position.set(9, w.sunHeight + Math.sin(day * Math.PI) * 1.0, 3.6 + ang * 1.5);
+      // 태양광을 '빛점'(창 평면 위 rayY/rayZ)에서 파생 → 태양·창 광선·바닥 빛풀이 같은 점에 강력 연동
+      var sp = this._sunSrc || (this._sunSrc = new this.T.Vector3());
+      var sd = this._sunDir || (this._sunDir = new this.T.Vector3());
+      sp.set(this.ROOM.W / 2 - 0.05, w.rayY, w.rayZ);                 // 빛점(창 통과 지점)
+      var down = 0.3 + w.sunHeight * 0.07;                            // sunHeight로 하강 경사(빛 길이)
+      sd.set(-1.0, -down, -0.32 + (w.daycycle ? ang * 0.3 : 0)).normalize();   // 창→방안 하강 방향
+      this.sunLight.position.copy(sp).addScaledVector(sd, -8);        // 태양: 창 밖(빛점 뒤쪽)
+      this.sunLight.target.position.copy(sp).addScaledVector(sd, 6);  // 타깃: 방안 바닥쪽
+      this.sunLight.target.updateMatrixWorld();
       this.sunLight.intensity = w.sunInt;
       // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
