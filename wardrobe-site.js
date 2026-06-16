@@ -1184,11 +1184,12 @@
           var tainted = false; try { dctx.getImageData(0, 0, 1, 1); } catch (e) { tainted = true; }
           var finalTex, aspect, band = null;
           if (tainted) {   // 교차출처 → 캔버스 처리 불가, 원본 텍스처로 폴백
-            tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; finalTex = tex; aspect = img.width / img.height;
+            tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; tex.generateMipmaps = false; tex.minFilter = T.LinearFilter; finalTex = tex; aspect = img.width / img.height;
           } else {
             band = clipType ? topOpaqueFrac(dc, 0.0, 0.06) : topOpaqueFrac(dc, 0.0, 0.04);
-            var clean = defringe(dc, 130, 2);
+            var clean = defringe(dc, 150, 3);   // 임계↑·침식↑ → 밝은 프린지 링 제거 강화
             finalTex = new T.CanvasTexture(clean); finalTex.colorSpace = T.SRGBColorSpace; finalTex.anisotropy = 4;
+            finalTex.generateMipmaps = false; finalTex.minFilter = T.LinearFilter;   // 밉맵 끄기(가장자리 반투명 헤일로 방지)
             tex.dispose(); aspect = dw / dh;
           }
           cache[i] = { tex: finalTex, aspect: aspect, band: band };
@@ -1958,14 +1959,14 @@
         s.position.y = 0.1; bagG.add(s);   // 바닥(좌석)에 앉게
       }, undefined, function () { });
     }
-    // 아이폰(다크) — 좌석 표면(가방과 동일 높이 0.6)에 올려 소파 로드 후에도 안 묻히게
+    // 아이폰(로즈골드) — 좌석 표면(가방과 동일 높이 0.6)에 올려 소파 로드 후에도 안 묻히게
     var phY = 0.6;
     var phone = new T.Mesh(new T.BoxGeometry(0.075, 0.012, 0.155),
-      new T.MeshStandardMaterial({ color: 0x101013, roughness: 0.3, metalness: 0.4 }));
-    phone.position.set(0.45, phY + 0.006, 0.42); phone.rotation.y = -0.6; phone.castShadow = true; scene.add(phone);
+      new T.MeshStandardMaterial({ color: 0xE7B7A6, roughness: 0.28, metalness: 0.85 }));   // 로즈골드
+    phone.position.set(0.42, phY + 0.006, 0.12); phone.rotation.y = -0.6; phone.castShadow = true; scene.add(phone);   // 소파 앞쪽으로
     var screen = new T.Mesh(new T.PlaneGeometry(0.066, 0.142),
       new T.MeshStandardMaterial({ color: 0x2A3550, emissive: 0x223047, emissiveIntensity: 0.4, roughness: 0.2 }));
-    screen.rotation.set(-Math.PI / 2, 0, -0.6); screen.position.set(0.45, phY + 0.013, 0.42); scene.add(screen);
+    screen.rotation.set(-Math.PI / 2, 0, -0.6); screen.position.set(0.42, phY + 0.013, 0.12); scene.add(screen);
   };
 
   /* 빈티지 보타닉 아트 패턴(캔버스) — 액자 안 그림 */
@@ -2317,9 +2318,8 @@
     // 드레이프 천(아이보리/핑크) — Blender GLB 여러 장
     if (this.AD.GLTFLoader) {
       var cloths = [
-        [-0.42, 0xF2EBDD, 1.0, 0.02],   // [x, color, 높이scale, z] — 천 갯수 6→3(요청)
-        [-0.02, 0xE7BFCB, 1.05, -0.005],
-        [0.42, 0xEFE7D7, 0.92, 0.02]
+        [-0.22, 0xF2EBDD, 1.0, 0.02],   // [x, color, 높이scale, z] — 천 갯수 3→2(절반)
+        [0.22, 0xE7BFCB, 1.05, -0.005]
       ];
       var loader = new this.AD.GLTFLoader();
       loader.load(asset('cloth.glb'), function (gltf) {
