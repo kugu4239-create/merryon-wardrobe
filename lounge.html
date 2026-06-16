@@ -58,10 +58,11 @@
 
 <script>
 (function () {
-  // @main 고정 — cafe24 코드는 다시 안 고쳐도 됨.
+  // 에셋(GLB/이미지)은 jsDelivr(@main, CORS 허용) — 코드 내부 av= 버전으로 캐시.
   var CDN = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main';
-  // JS 캐시 안 함: 매 로드마다 고유값 → 항상 최신 JS 즉시 반영(브라우저 캐시 미사용).
-  // (JS 208KB 라 매번 받아도 부담 적음. GLB·이미지는 코드 내부 av= 버전으로 캐시 유지)
+  // JS 는 GitHub Pages 에서 로드 → 머지 후 ~1분이면 안정적 반영(jsDelivr 엣지 지연 회피).
+  // + 매 로드 고유값으로 브라우저 캐시도 미사용 → 항상 최신.
+  var JS = 'https://kugu4239-create.github.io/merryon-wardrobe';
   var V = Date.now();
 
   var box = document.getElementById('merryon3d');
@@ -74,7 +75,7 @@
   };
 
   var s = document.createElement('script');
-  s.src = CDN + '/wardrobe-site.js?v=' + V;
+  s.src = JS + '/wardrobe-site.js?v=' + V;
   s.async = true;
   s.onload = function () {
     // 캔버스가 생기면 플레이스홀더 페이드아웃
