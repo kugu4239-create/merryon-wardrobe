@@ -334,49 +334,49 @@
     this._frame = 0;
 
     this._animate = this._animate.bind(this);
-    // 화면에 보일 때만 가동, 벗어나면 sleep(렌더타깃 1×1로 축소 → VRAM 해제, 페이지 가벼움)
+    // 화면 밖: 즉시 렌더 정지(스크롤·다른 섹션에 영향 0), 잠시 뒤 sleep(VRAM 해제)
     var self2 = this;
     if ('IntersectionObserver' in window) {
       var sleepTimer = null;
       var vio = new IntersectionObserver(function (es) {
         var vis = !!(es[0] && es[0].isIntersecting);
         if (vis) { clearTimeout(sleepTimer); self2._wake(); }
-        else { clearTimeout(sleepTimer); sleepTimer = setTimeout(function () { self2._sleep(); }, 700); }  // 잠깐 벗어남엔 thrash 방지
-      }, { rootMargin: '60px' });
+        else { self2._pause(); clearTimeout(sleepTimer); sleepTimer = setTimeout(function () { self2._sleep(); }, 600); }
+      }, { rootMargin: '0px' });
       vio.observe(container);
       this._visObserver = vio;
       var r0 = container.getBoundingClientRect();
-      if (r0.bottom > -60 && r0.top < (window.innerHeight || 0) + 60) this._wake(); else this._sleep();
+      if (r0.bottom > 0 && r0.top < (window.innerHeight || 0)) this._wake(); else this._sleep();
     } else {
       this._wake();
     }
   }
 
-  /* 화면 밖: 렌더 정지 + 모든 렌더타깃 1×1 축소 → VRAM 해제(페이지 다시 가벼워짐). 캔버스도 컴포지팅 제외. */
-  P._sleep = function () {
-    if (this._asleep) return; this._asleep = true;
+  /* 화면 밖 즉시: 렌더 루프 정지 + 캔버스 컴포지팅 제외(다른 섹션 영향 0). 비용 무(無). */
+  P._pause = function () {
+    if (this._paused) return; this._paused = true;
     this.renderer.setAnimationLoop(null);
     this.renderer.domElement.style.display = 'none';
+  };
+  /* 일정 시간 화면 밖: 모든 렌더타깃 1×1 축소 + 그림자 맵 dispose → 대형 VRAM 해제. */
+  P._sleep = function () {
+    this._pause();
+    if (this._slept) return; this._slept = true;
     this.renderer.setSize(1, 1, false);
     if (this.composer) this.composer.setSize(1, 1);
     if (this.lightRT) this.lightRT.setSize(1, 1);
-    // 그림자 맵 VRAM 해제(재진입 시 자동 재생성)
     var ls = [this.sunLight, this.armoireSpot, this.windowProjector].concat(this.chandLights || []);
     ls.forEach(function (l) { if (l && l.shadow && l.shadow.map) { l.shadow.map.dispose(); l.shadow.map = null; } });
   };
-  /* 재진입: 원래 크기로 복구 + 렌더 재개(컴포저 재생성 없이 안전). */
+  /* 재진입: 크기 복구 + 렌더 재개. */
   P._wake = function () {
-    if (this._asleep === false) { this.renderer.domElement.style.display = 'block'; return; }
-    this._asleep = false;
     this.renderer.domElement.style.display = 'block';
-    this._resize();                 // 렌더러/컴포저/lightRT/uRes 원래 크기로
-    this.renderer.shadowMap.needsUpdate = true;   // 그림자 재생성
-    if (this.clock) this.clock.getDelta();   // dt 점프 방지
-    this.renderer.setAnimationLoop(this._animate);
+    if (this._slept) { this._slept = false; this._resize(); this.renderer.shadowMap.needsUpdate = true; }
+    if (this._paused) { this._paused = false; if (this.clock) this.clock.getDelta(); this.renderer.setAnimationLoop(this._animate); }
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 09:22 UTC', note: '모바일 회전 감도↑(0.0075) · 관성 거의 없음' };
+  WardrobeScene.BUILD = { time: '06-16 09:25 UTC', note: '화면밖 즉시 렌더정지+VRAM해제(다른섹션 영향0)·리사이즈 가드' };
 
   var P = WardrobeScene.prototype;
 
@@ -3218,6 +3218,7 @@
    * 리사이즈
    * ----------------------------------------------------------------------- */
   P._resize = function () {
+    if (this._slept) return;   // 잠든 동안 리사이즈(주소창 토글 등)로 렌더타깃 재팽창 방지 → 화면 밖 영향 0
     var w = Math.max(1, this.container.clientWidth || window.innerWidth);
     var h = Math.max(1, this.container.clientHeight || window.innerHeight);
     this.renderer.setSize(w, h, false);
