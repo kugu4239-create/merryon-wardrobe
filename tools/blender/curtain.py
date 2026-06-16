@@ -25,7 +25,7 @@ for j in range(NY+1):
     for i in range(NX+1):
         u=i/NX; x=(u-0.5)*W; z=H*(1-j/NY)
         # 11자(직선) 패널 — 게더 없이 균일 폭, 세로 직선 주름
-        fold=0.045*math.sin(u*math.pi*2*7.0)+0.016*math.sin(u*math.pi*2*15.0+phases[i%8])
+        fold=(0.045*math.sin(u*math.pi*2*7.0)+0.016*math.sin(u*math.pi*2*15.0+phases[i%8]))*min(1.0,0.18+1.4*(j/NY))  # 상단 주름 약화(천장쪽 울어보임 방지)
         bm.verts.new((x, fold, z))
         g[j][i]=None
 verts=[v for v in bm.verts]

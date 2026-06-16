@@ -149,7 +149,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v9-20260615';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v10-20260616';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -2698,12 +2698,8 @@
 
     composer.addPass(new AD.RenderPass(this.scene, this.camera));
 
-    if (!this.isMobile) {
-      var ssao = new AD.SSAOPass(this.scene, this.camera, w, h);
-      ssao.kernelRadius = 0.12; ssao.minDistance = 0.001; ssao.maxDistance = 0.05;
-      composer.addPass(ssao);
-      this.ssao = ssao;
-    }
+    // SSAO 제거 — 알파컷 의류 가장자리에 PC에서만 울퉁불퉁 헤일로 생겨서(모바일=SSAO 없음) 끔
+    // if (!this.isMobile) { var ssao = new AD.SSAOPass(...); ssao.kernelRadius=0.12; ...; composer.addPass(ssao); }
 
     var bloom = new AD.UnrealBloomPass(new T.Vector2(w, h), 0.7, 0.6, 0.9);
     bloom.threshold = 0.92; bloom.strength = this.isMobile ? 0.15 : 0.2; bloom.radius = 0.5;
