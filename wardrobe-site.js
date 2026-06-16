@@ -667,7 +667,7 @@
     wall(W, H, 0, H / 2, D / 2, Math.PI);            // 앞벽
     wall(D, H, -W / 2, H / 2, 0, Math.PI / 2);       // 좌벽
     // 우벽 — 아치창 개구부(사각 z±1.2 + 아치)만 비우고 나머지는 벽. 스팬드럴(아치 양옆 윗부분)도 벽.
-    var woZ = 1.2, woY = 0.45, springY = 1.8, archR = 1.2;
+    var woZ = 1.2, woY = 0.45, springY = 1.6, archR = 1.2;   // 아치 꼭대기(1.6+1.2=2.8)<천장(2.9): 천장 뚫림 방지
     wall(D, woY, W / 2, woY / 2, 0, -Math.PI / 2);                                   // 창 아래
     [-1, 1].forEach(function (s) {
       var segW = D / 2 - woZ;
@@ -676,7 +676,7 @@
     // 스팬드럴(아치 위 코너) 벽 채움 — z[-1.2,1.2], y[springY..springY+R] 에서 아치(반원)를 뺀 영역
     (function () {
       var sp = new T.Shape();
-      var yTop = springY + archR;
+      var yTop = H;   // 천장까지 채워 아치 위 틈/테두리 제거
       sp.moveTo(-woZ, springY); sp.lineTo(-woZ, yTop); sp.lineTo(woZ, yTop); sp.lineTo(woZ, springY);
       sp.lineTo(archR, springY); sp.absarc(0, springY, archR, 0, Math.PI, false); sp.lineTo(-woZ, springY);
       var sm = new T.Mesh(new T.ShapeGeometry(sp, 96), wallMat);   // 곡선 분할↑(아치 매끈하게)
@@ -846,7 +846,7 @@
     var T = this.T, scene = this.scene;
     var W = this.ROOM.W, H = this.ROOM.H;
     var wx = W / 2 - 0.05;
-    var cz = 0.0, winW = 2.4, R = winW / 2, sill = 0.5, winH = 1.3;   // 사각부 높이
+    var cz = 0.0, winW = 2.4, R = winW / 2, sill = 0.5, winH = 1.1;   // 사각부 높이(아치 꼭대기 2.8<천장)
     var rectTop = sill + winH, archY = rectTop, winY = sill + winH / 2;
     // 화이트 프레임(아치형 팔라디안 — 레퍼런스 화이트 그리드)
     var frameMat = new T.MeshStandardMaterial({ color: 0xF4EEE1, roughness: 0.55, metalness: 0.0, envMapIntensity: 0.7 });
@@ -984,7 +984,7 @@
       ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', '핑크 스커트', { h: 0.600, hl: 0.130, hr: 0.125, dy: 0.000 }],
       ['up', '벨리나 스커트.png', 'skirt', '벨리나 스커트', { h: 3.350, hl: 0.125, hr: 0.125, dy: 0.615 }],
       ['up', '이븐 레이스.png', 'top', '이븐 레이스', { h: 3.380, hl: 0.126, hr: 0.126, dy: 0.530 }],
-      ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스', { h: 2.580, hl: 0.130, hr: 0.140, dy: 0.550 }],
+      ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스', { h: 2.420, hl: 0.130, hr: 0.140, dy: 0.510 }],
       ['up', '노에아 벨트 스커트.png', 'skirt', '노에아 벨트 스커트', { h: 3.220, hl: 0.105, hr: 0.130, dy: 0.575 }],
       ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스', { h: 1.850, hl: 0.040, hr: 0.045, dy: 0.530 }],
       ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스', { h: 2.230, hl: 0.060, hr: 0.060, dy: 0.405, tint: 0xFCF7F6 }]
