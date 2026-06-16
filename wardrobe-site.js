@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 18:10 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
+  WardrobeScene.BUILD = { time: '06-16 18:20 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3095,8 +3095,9 @@
     this._regProp('커피 바', g);
     this._registerHotspot('coffee', g);   // 탭 핫스팟
 
-    var marble = new T.MeshPhysicalMaterial({ color: 0xF4F1EC, roughness: 0.22, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.8 });
-    var cream = new T.MeshStandardMaterial({ color: 0xEDE4D2, roughness: 0.5, metalness: 0.0 });
+    // 2단 수납장과 통일된 크림(클리어코트) + 패널
+    var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
+    var panel = new T.MeshPhysicalMaterial({ color: 0xE7DDC8, roughness: 0.5, clearcoat: 0.3 });
     var chrome = new T.MeshStandardMaterial({ color: 0xD9D4CB, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.0 });
     var white = new T.MeshStandardMaterial({ color: 0xF6F1E8, roughness: 0.45, metalness: 0.0 });
 
@@ -3110,14 +3111,16 @@
     var dz = (BD - 0.05) / 2 + 0.006, dw = BW / 4 - 0.04;
     [-1.5, -0.5, 0.5, 1.5].forEach(function (k) {
       var dx = k * (BW / 4);
-      var door = new T.Mesh(new T.BoxGeometry(dw, bodyH - 0.08, 0.012), white);
+      var door = new T.Mesh(new T.BoxGeometry(dw, bodyH - 0.08, 0.012), panel);
       door.position.set(dx, bodyYc, dz); g.add(door);
       var knob = new T.Mesh(new T.SphereGeometry(0.014, 12, 10), gold);
       knob.position.set(dx + (k < 0 ? dw / 2 - 0.03 : -dw / 2 + 0.03), bodyYc, dz + 0.016); g.add(knob);
     });
-    // 마블 상판
-    var top = new T.Mesh(new T.BoxGeometry(BW, topTh, BD), marble);
+    // 상판(수납장 통일 크림) + 골드 엣지
+    var top = new T.Mesh(new T.BoxGeometry(BW, topTh, BD), cream);
     top.position.set(0, topYc, 0); top.castShadow = true; top.receiveShadow = true; g.add(top);
+    var topEdge = new T.Mesh(new T.BoxGeometry(BW + 0.012, 0.006, BD + 0.012), gold);
+    topEdge.position.set(0, topY + 0.001, 0); g.add(topEdge);
     // 골드 다리 4개
     [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) {
       var leg = new T.Mesh(new T.CylinderGeometry(0.02, 0.014, legH, 12), gold);
