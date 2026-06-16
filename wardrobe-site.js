@@ -376,7 +376,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:58 UTC', note: '모바일 DPR 1.75 + MSAA 2(가벼움, 거의 무체감) · 유휴 30fps · sleep' };
+  WardrobeScene.BUILD = { time: '06-16 09:10 UTC', note: '모바일 회전 20%↑(터치 0.006) · DPR1.75/MSAA2 · 유휴 30fps' };
 
   var P = WardrobeScene.prototype;
 
@@ -3176,7 +3176,7 @@
     el.addEventListener('touchmove', function (e) {
       if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
-      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.005));   // PC와 동일 회전속도
+      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.006));   // 모바일 회전 20%↑(0.005→0.006)
       self.lastInteract = self.elapsed;
     }, { passive: true });
 
