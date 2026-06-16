@@ -2168,7 +2168,7 @@
     var D = this.ROOM.D;
     var g = new T.Group();
     var W = this.ROOM.W;
-    g.position.set(-4.93, 0, 4.828); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('주얼리 장식장', g);   // 화장대 벽 앞-코너
+    g.position.set(-4.916, 0, 4.334); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('주얼리 장식장', g);   // 화장대 벽 앞-코너
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xF1E9D8, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xF4FAFF, roughness: 0.05, metalness: 0.0, transmission: 0.92, transparent: true, opacity: 0.22, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
@@ -2366,7 +2366,7 @@
   /* 책장 앞 플로어 꽃병 — 클리어 글라스 화병 + 풍성한 핑크 피오니/로즈 부케 */
   P._buildBookshelfVase = function () {
     var T = this.T, scene = this.scene;
-    var vx = 4.15, vz = -4.15;   // 책장(우측 백벽) 앞 바닥
+    var vx = 4.85, vz = -4.1;   // 책장(우측 백벽) 앞 바닥
     var g = new T.Group(); g.position.set(vx, 0, vz); scene.add(g); this._regProp('꽃병', g);
     // 클리어 글라스 화병(테이퍼)
     // 프로스트 글라스 — 반투명이지만 또렷하게 보이게(꽃 떠보임 방지)
