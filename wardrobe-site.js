@@ -296,6 +296,7 @@
     this._setupComposer();
     this._setupInteraction();
     this._buildGarmentEditor();   // 옷 편집 패널(?edit 또는 localStorage.MERRYON_EDIT='1')
+    this._buildPropEditor();      // 소품(아이폰/가방/목업) 드래그 편집
     this._resize();
     try { window.__MERRYON_SCENE__ = this; } catch (e) {}
 
@@ -1282,6 +1283,79 @@
     self._refreshGarmentEditor();
   };
 
+  /* 소품 편집 모드 — 아이폰/가방/목업을 탭→드래그(바닥 이동)+높이▲▼로 배치, 위치값 복사/저장.
+   * 개발 중 항상 표시(런칭 전 호출 제거). */
+  P._buildPropEditor = function () {
+    var self = this, T = this.T, el = this.container;
+    var props = this.editProps || [];
+    var rc = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3();
+    var sel = null, dragging = false;
+    self._propEdit = false;
+
+    function savePos() {
+      var all = {}; try { all = JSON.parse(localStorage.getItem('MERRYON_PROP_POS') || '{}'); } catch (e) {}
+      props.forEach(function (p) { var q = p.obj.position; all[p.name] = [+q.x.toFixed(3), +q.y.toFixed(3), +q.z.toFixed(3)]; });
+      try { localStorage.setItem('MERRYON_PROP_POS', JSON.stringify(all)); } catch (e) {}
+    }
+    function setNdc(e) { var r = el.getBoundingClientRect(), cx = e.touches ? e.touches[0].clientX : e.clientX, cy = e.touches ? e.touches[0].clientY : e.clientY; ndc.x = (cx - r.left) / r.width * 2 - 1; ndc.y = -((cy - r.top) / r.height * 2 - 1); }
+    function pick(e) {
+      setNdc(e); rc.setFromCamera(ndc, self.camera);
+      var hits = rc.intersectObjects(props.map(function (p) { return p.obj; }), true);
+      if (!hits.length) return null;
+      var o = hits[0].object;
+      while (o) { for (var i = 0; i < props.length; i++) if (props[i].obj === o) return props[i]; o = o.parent; }
+      return null;
+    }
+
+    var btn = document.createElement('button'); btn.textContent = '✦ 소품';
+    btn.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99999;padding:8px 12px;border-radius:18px;border:none;background:#3a2f55;color:#fff;font:13px sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;';
+    document.body.appendChild(btn);
+    var panel = document.createElement('div');
+    panel.style.cssText = 'position:fixed;left:12px;bottom:54px;z-index:99999;width:236px;background:rgba(24,22,30,.95);color:#f0ece6;border-radius:12px;padding:10px 12px;font:12px/1.4 sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);display:none;';
+    document.body.appendChild(panel);
+    var infod = document.createElement('div'); infod.style.cssText = 'margin-bottom:6px;color:#b8aec8;'; infod.textContent = '소품을 탭/클릭 후 드래그=바닥 이동, 높이는 ▲▼. [위치 복사] 후 채팅에 붙여주세요.';
+    var selLbl = document.createElement('div'); selLbl.style.cssText = 'font-weight:600;color:#e8c0e8;margin-bottom:6px;'; selLbl.textContent = '선택: 없음';
+    var yrow = document.createElement('div'); yrow.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;';
+    var yUp = document.createElement('button'), yDn = document.createElement('button'); yUp.textContent = '높이 ▲'; yDn.textContent = '높이 ▼';
+    [yUp, yDn].forEach(function (b) { b.style.cssText = 'flex:1;padding:6px;border:none;border-radius:6px;background:#4a4258;color:#fff;cursor:pointer;'; });
+    yrow.appendChild(yUp); yrow.appendChild(yDn);
+    var foot = document.createElement('div'); foot.style.cssText = 'display:flex;gap:6px;';
+    var copyB = document.createElement('button'), resetB = document.createElement('button'); copyB.textContent = '위치 복사'; resetB.textContent = '초기화';
+    [copyB, resetB].forEach(function (b) { b.style.cssText = 'flex:1;padding:7px;border:none;border-radius:8px;background:#cdb6e0;color:#221;cursor:pointer;'; });
+    foot.appendChild(copyB); foot.appendChild(resetB);
+    panel.appendChild(infod); panel.appendChild(selLbl); panel.appendChild(yrow); panel.appendChild(foot);
+
+    btn.onclick = function () {
+      self._propEdit = !self._propEdit;
+      panel.style.display = self._propEdit ? 'block' : 'none';
+      btn.style.background = self._propEdit ? '#7a5fae' : '#3a2f55';
+      if (!self._propEdit) { sel = null; dragging = false; selLbl.textContent = '선택: 없음'; }
+    };
+    el.addEventListener('pointerdown', function (e) {
+      if (!self._propEdit) return;
+      var p = pick(e);
+      if (p) { sel = p; dragging = true; selLbl.textContent = '선택: ' + p.name; e.preventDefault(); if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {} }
+    });
+    el.addEventListener('pointermove', function (e) {
+      if (!self._propEdit || !dragging || !sel) return;
+      setNdc(e); rc.setFromCamera(ndc, self.camera);
+      plane.constant = -sel.obj.position.y;
+      if (rc.ray.intersectPlane(plane, hit)) { sel.obj.position.x = hit.x; sel.obj.position.z = hit.z; }
+    });
+    function up() { if (dragging) { dragging = false; savePos(); } }
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    yUp.onclick = function () { if (sel) { sel.obj.position.y += 0.02; savePos(); } };
+    yDn.onclick = function () { if (sel) { sel.obj.position.y -= 0.02; savePos(); } };
+    copyB.onclick = function () {
+      var lines = ['merryon 소품 위치 (name: x,y,z):'];
+      props.forEach(function (p) { var q = p.obj.position; lines.push(p.name + ': ' + q.x.toFixed(3) + ', ' + q.y.toFixed(3) + ', ' + q.z.toFixed(3)); });
+      var txt = lines.join('\n');
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { copyB.textContent = '복사됨!'; setTimeout(function () { copyB.textContent = '위치 복사'; }, 1200); });
+      else window.prompt('복사:', txt);
+    };
+    resetB.onclick = function () { try { localStorage.removeItem('MERRYON_PROP_POS'); } catch (e) {} props.forEach(function (p) { p.obj.position.copy(p.def); }); sel = null; selLbl.textContent = '선택: 없음'; };
+  };
+
   /* GLB 의류 로딩 — 그룹별 GLB 를 불러와 오브젝트를 x 좌표로 옷별 클러스터링하고,
    * 내장된 넓은 봉(rod)은 제외, 각 옷을 후크가 원점에 오도록 정규화한 뒤 봉에 균등 분배. */
   P._loadGarmentGLBs = function (group, rodY, rodZ, spanW) {
@@ -1959,14 +2033,24 @@
         s.position.y = 0.1; bagG.add(s);   // 바닥(좌석)에 앉게
       }, undefined, function () { });
     }
-    // 아이폰(로즈골드) — 좌석 표면(가방과 동일 높이 0.6)에 올려 소파 로드 후에도 안 묻히게
-    var phY = 0.6;
+    // 아이폰(로즈골드) — 좌석 표면(가방과 동일 높이)에 그룹으로
+    var phoneG = new T.Group(); phoneG.position.set(0.42, 0.6, 0.4); phoneG.rotation.y = -0.6; scene.add(phoneG);
     var phone = new T.Mesh(new T.BoxGeometry(0.075, 0.012, 0.155),
       new T.MeshStandardMaterial({ color: 0xE7B7A6, roughness: 0.28, metalness: 0.85 }));   // 로즈골드
-    phone.position.set(0.42, phY + 0.006, 0.12); phone.rotation.y = -0.6; phone.castShadow = true; scene.add(phone);   // 소파 앞쪽으로
+    phone.position.y = 0.006; phone.castShadow = true; phoneG.add(phone);
     var screen = new T.Mesh(new T.PlaneGeometry(0.066, 0.142),
       new T.MeshStandardMaterial({ color: 0x2A3550, emissive: 0x223047, emissiveIntensity: 0.4, roughness: 0.2 }));
-    screen.rotation.set(-Math.PI / 2, 0, -0.6); screen.position.set(0.42, phY + 0.013, 0.12); scene.add(screen);
+    screen.rotation.x = -Math.PI / 2; screen.position.y = 0.013; phoneG.add(screen);
+    this._regProp('아이폰', phoneG);
+    this._regProp('핸드백', bagG);
+  };
+
+  /* 소품 편집 등록 — 드래그 이동 + 위치 저장(localStorage) 대상. */
+  P._regProp = function (name, obj) {
+    this.editProps = this.editProps || [];
+    var def = obj.position.clone();
+    try { var all = JSON.parse(localStorage.getItem('MERRYON_PROP_POS') || '{}'); var s = all[name]; if (s && s.length === 3) obj.position.set(s[0], s[1], s[2]); } catch (e) {}
+    this.editProps.push({ name: name, obj: obj, def: def });
   };
 
   /* 빈티지 보타닉 아트 패턴(캔버스) — 액자 안 그림 */
@@ -2500,6 +2584,7 @@
   P._buildMannequin = function () {
     var T = this.T, scene = this.scene;
     var g = new T.Group(); g.position.set(2.3, 0, -3.6); g.rotation.y = 0; scene.add(g);   // 옷장 앞(가늠용)
+    this._regProp('사람 목업', g);
     var skin = new T.MeshStandardMaterial({ color: 0xD9CFC0, roughness: 0.85, metalness: 0.0 });
     // 토르소(여성 실루엣) — LatheGeometry
     var prof = [[0.001, 0.96], [0.16, 0.97], [0.135, 1.05], [0.11, 1.13], [0.118, 1.21], [0.155, 1.30], [0.16, 1.37], [0.14, 1.43], [0.06, 1.47], [0.001, 1.47]];
@@ -2711,6 +2796,7 @@
     function rect() { return el.getBoundingClientRect(); }
 
     el.addEventListener('pointermove', function (e) {
+      if (self._propEdit) return;   // 소품 편집 모드: 오빗 정지
       var r = rect();
       self.pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
       self.pointer.y = ((e.clientY - r.top) / r.height) * 2 - 1;
@@ -2727,6 +2813,7 @@
       }
     });
     el.addEventListener('pointerdown', function (e) {
+      if (self._propEdit) return;   // 소품 편집 모드: 오빗 비활성(소품 드래그가 처리)
       e.preventDefault();
       self.drag.active = true; self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
       dragMoved = false; downX = e.clientX; downY = e.clientY;
@@ -2741,12 +2828,12 @@
     /* 모바일: 터치 스와이프 = 가로 오빗 */
     var tStartX = 0, tTheta = 0;
     el.addEventListener('touchstart', function (e) {
-      if (!e.touches.length) return;
+      if (self._propEdit || !e.touches.length) return;
       tStartX = e.touches[0].clientX; tTheta = self.drag.theta;
       self.lastInteract = self.elapsed;
     }, { passive: true });
     el.addEventListener('touchmove', function (e) {
-      if (!e.touches.length) return;
+      if (self._propEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
       self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.006));
       self.lastInteract = self.elapsed;
