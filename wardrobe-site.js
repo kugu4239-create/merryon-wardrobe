@@ -999,8 +999,8 @@
       ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스', { h: 1.850, hl: 0.040, hr: 0.045, dy: 0.530 }],
       ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스', { h: 2.230, hl: 0.060, hr: 0.060, dy: 0.405, tint: 0xFCF7F6 }]
     ];
-    // 편집 패널에서 확정한 표시 순서(garment index) — 핑크스커트,블루,크림블,블랙가디건,이븐레이스,벨리나블,벨리나스,블랙플리츠,넴프,노에아,로엘
-    var DEFAULT_ORDER = [4, 0, 1, 2, 6, 10, 5, 3, 7, 8, 9];
+    // 편집 패널에서 확정한 표시 순서(garment index) — 핑크스커트,크림블,이븐레이스,벨리나블,벨리나스,블루,블랙가디건,블랙플리츠,넴프,노에아,로엘
+    var DEFAULT_ORDER = [4, 1, 6, 10, 5, 0, 2, 3, 7, 8, 9];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
     var loader = new T.TextureLoader(); loader.setCrossOrigin('anonymous');
