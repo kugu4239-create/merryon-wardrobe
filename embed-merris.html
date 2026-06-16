@@ -25,6 +25,9 @@
     text-transform: lowercase; background: #F6F0E4; transition: opacity .5s ease; z-index: 1;
   }
   #merryon3d.is-ready .m3d-load { opacity: 0; pointer-events: none; }
+  /* 마지막(3D) 섹션에선 상단 띠배너 + Q&A 버튼 숨김(섹션 벗어나면 복귀) */
+  body.merris-active #promotionBanner2,
+  body.merris-active .q6-qna-fab { display: none !important; }
 </style>
 
 <div id="merryon3d" class="main_image_1_background">
@@ -75,6 +78,14 @@
       });
     }, { threshold: [0, 0.55, 0.9] });
     io.observe(sec);
+
+    // 마지막 섹션 활성 동안 상단 띠배너 + Q&A 버튼 숨김(섹션 벗어나면 복귀) — 지속 관찰
+    var vis = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) {
+        document.body.classList.toggle('merris-active', e.isIntersecting && e.intersectionRatio >= 0.55);
+      });
+    }, { threshold: [0, 0.55, 0.9] });
+    vis.observe(sec);
   } else {
     load();
   }
