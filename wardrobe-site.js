@@ -1125,7 +1125,7 @@
       if (prev && prev.pivot) { group.remove(prev.pivot); }
       // 빌드
       var pivot = new T.Group();
-      pivot.position.set(fx, rodY + dyv, rodZ);
+      pivot.position.set(fx, rodY, rodZ);   // 옷걸이(피벗)는 봉에 고정
       pivot.userData.tilt = (i % 2 ? 1 : -1) * (6 * Math.PI / 180);
       group.add(pivot);
       var h = (HBY[type] || H0 / 2) * hmul, w = h * aspect;
@@ -1137,7 +1137,7 @@
         roughness: 0.82, metalness: 0.0, color: 0xffffff
       });
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
-      plane.position.set(0, topY - h / 2, dz); plane.castShadow = false; pivot.add(plane);
+      plane.position.set(0, topY - h / 2 + dyv, dz); plane.castShadow = false; pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
       self._garmentState[i] = { pivot: pivot, type: type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: 0 }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
       // 빌보드 목록 재구성
       var bb = []; for (var k = 0; k < n; k++) { if (self._garmentState[k] && self._garmentState[k].pivot) bb.push(self._garmentState[k].pivot); }
