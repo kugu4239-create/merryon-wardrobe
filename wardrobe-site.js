@@ -149,7 +149,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v10-20260616';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v11-20260616';   // GLB 캐시 무효화(에셋 갱신 시 증가)
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -289,7 +289,7 @@
     this._buildGoldRack();
     this._buildTrunk();
     this._buildDisplayCase();
-    this._buildMannequin();   // 임시: 옷 사이즈 가늠용 사람 목업
+    // this._buildMannequin();   // 사람 목업 삭제(요청)
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
