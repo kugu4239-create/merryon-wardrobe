@@ -668,7 +668,8 @@
     }
 
     /* 벽 (4면 + 천장, 아이보리 통일 — 몰딩/패널 없음) */
-    var wallMat = new T.MeshStandardMaterial({ color: 0xF1EADb, roughness: 0.96, metalness: 0.0 });
+    // 벽에도 약한 자체발광 — 직사광 못 받는 앞벽 등이 천장(emissive)보다 어두워 경계 단이 보이던 것 완화
+    var wallMat = new T.MeshStandardMaterial({ color: 0xF1EADb, roughness: 0.96, metalness: 0.0, emissive: 0xF3ECDD, emissiveIntensity: 0.20 });
     this.wallMat = wallMat;
     function wall(w, h, x, y, z, ry) {
       var m = new T.Mesh(new T.PlaneGeometry(w, h), wallMat);
@@ -784,7 +785,7 @@
     // 천장은 아래를 향한 면이라 직사광/헤미스피어를 거의 못 받아 벽보다 어둡고, 그 경계가 '턱'처럼 보임 →
     // 약한 자체발광(emissive)으로 벽 밝기에 맞춰 경계 단차 제거
     var ceil = new T.Mesh(new T.PlaneGeometry(W, D),
-      new T.MeshStandardMaterial({ color: 0xF1EADB, roughness: 1.0, side: T.BackSide, emissive: 0xF3ECDD, emissiveIntensity: 0.42 }));
+      new T.MeshStandardMaterial({ color: 0xF1EADB, roughness: 1.0, side: T.BackSide, emissive: 0xF3ECDD, emissiveIntensity: 0.34 }));
     ceil.rotation.x = -Math.PI / 2; ceil.position.y = H;
     scene.add(ceil);
 
