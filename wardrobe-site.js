@@ -2366,7 +2366,7 @@
   /* 책장 앞 플로어 꽃병 — 클리어 글라스 화병 + 풍성한 핑크 피오니/로즈 부케 */
   P._buildBookshelfVase = function () {
     var T = this.T, scene = this.scene;
-    var vx = 4.15, vz = -4.15;   // 책장(우측 백벽) 앞 바닥
+    var vx = 4.85, vz = -4.1;   // 책장(우측 백벽) 앞 바닥
     var g = new T.Group(); g.position.set(vx, 0, vz); scene.add(g); this._regProp('꽃병', g);
     // 클리어 글라스 화병(테이퍼)
     // 프로스트 글라스 — 반투명이지만 또렷하게 보이게(꽃 떠보임 방지)
