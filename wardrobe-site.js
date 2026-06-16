@@ -1987,7 +1987,7 @@
       var fy = Math.pow(Math.sin((y / 63) * Math.PI), 1.4);   // 위/아래 가장자리 페더
       var a = fx * fy;
       var i = (y * 128 + x) * 4;
-      img.data[i] = 255; img.data[i + 1] = 248; img.data[i + 2] = 226; img.data[i + 3] = Math.min(255, a * 255);
+      img.data[i] = 255; img.data[i + 1] = 226; img.data[i + 2] = 158; img.data[i + 3] = Math.min(255, a * 255);   // 골드(밝은 장면에서도 보이게 채도↑)
     }
     g.putImageData(img, 0, 0);
     var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
@@ -1999,7 +1999,7 @@
 
     var L = 7.0;   // 빔 길이(방향/사선은 피벗이 태양에 정렬 — 여기선 폭/오프셋만)
     // 창 너비에 맞춰(벽 위로 안 넘치게) 적층: [수직오프셋, 폭, 기본 불투명도]
-    var beams = [[0.0, 2.2, 0.20], [0.0, 1.7, 0.16], [0.0, 1.2, 0.13], [0.0, 0.8, 0.10]];
+    var beams = [[0.0, 2.2, 0.32], [0.0, 1.7, 0.26], [0.0, 1.2, 0.21], [0.0, 0.8, 0.16]];
     beams.forEach(function (b) {
       var geo = new T.PlaneGeometry(L, b[1]); geo.translate(L / 2, 0, 0);   // 로컬 +X(=태양 방향)로 뻗고, 밝은 끝(u=0)을 피벗(창)에 정렬 → 창→방안
       var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, opacity: b[2], toneMapped: false });
@@ -3179,7 +3179,7 @@
         var mm = this._lsM || (this._lsM = new Tn.Matrix4());
         mm.makeBasis(dd, uu, nn);                                         // 로컬 X=빔방향, Z=법선(카메라)
         ls.quaternion.setFromRotationMatrix(mm);
-        var sh = Math.min(1.3, w.sunInt / 0.70) * (0.88 + 0.12 * Math.sin(t * 0.6));
+        var sh = Math.min(2.4, w.sunInt / 0.70) * (0.88 + 0.12 * Math.sin(t * 0.6));
         ls.visible = this.introDone && w.sunInt > 0.02;
         for (var s = 0; s < ls.children.length; s++) {
           var m = ls.children[s]; m.material.opacity = m.userData.baseOp * sh;
