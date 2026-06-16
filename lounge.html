@@ -71,7 +71,8 @@
   window.MERRYON_WARDROBE_CONFIG = {
     container: '#merryon3d',
     assetBase: CDN + '/assets/garments/',
-    resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); }
+    resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); },
+    verticalDrag: false   // 자사몰: 세로 드래그 상하기울기 비활성(가로 회전만)
   };
 
   var s = document.createElement('script');
