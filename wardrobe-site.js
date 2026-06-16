@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 2.30, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayX: 5.60, rayY: 4.15, rayZ: 0.0, rayStr: 6.0, aimX: 0.35, aimZ: -3.40, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 2.30, temp: 0.58, exposure: 0.50, fog: 0.0, skyBright: 1.60, rayX: 5.60, rayY: 4.15, rayZ: 0.0, rayStr: 6.0, aimX: 0.35, aimZ: -3.40, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -327,7 +327,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 07:13 UTC', note: '모바일 뒤로 30%→10%만(반경 3.74)' };
+  WardrobeScene.BUILD = { time: '06-16 07:25 UTC', note: '모바일 옷 그림자 ON(512 PCF) · god-ray 격프레임 · 노출 0.50' };
 
   var P = WardrobeScene.prototype;
 
@@ -617,17 +617,15 @@
     vm.lookAt(-2.8, 1.1, -2.0);
     scene.add(vm);
 
-    // 옷장 의류 스포트 (의류 그림자를 뒷판에 약하게 드리움)
+    // 옷장 의류 스포트 (의류 그림자를 뒷판에 약하게 드리움) — 모바일도 저비용(512 PCF)으로 그림자 ON
     var sp = new T.SpotLight(0xFFF6EC, 2.6, 8, Math.PI / 3.6, 0.45, 1.1);
     sp.position.set(0, R.H - 0.5, -2.4);
     sp.target.position.set(0, 1.4, -3.3);
-    if (!this.isMobile) {
-      sp.castShadow = true;
-      sp.shadow.mapSize.set(1024, 1024);
-      sp.shadow.camera.near = 0.5; sp.shadow.camera.far = 6;
-      sp.shadow.bias = -0.0006; sp.shadow.radius = 4;            // 소프트 엣지(약한 그림자)
-      if ('intensity' in sp.shadow) sp.shadow.intensity = 0.5;   // 그림자 농도 낮춤(r165+)
-    }
+    sp.castShadow = true;
+    sp.shadow.mapSize.set(this.isMobile ? 512 : 1024, this.isMobile ? 512 : 1024);
+    sp.shadow.camera.near = 0.5; sp.shadow.camera.far = 6;
+    sp.shadow.bias = -0.0006; sp.shadow.radius = 4;            // 소프트 엣지(약한 그림자)
+    if ('intensity' in sp.shadow) sp.shadow.intensity = 0.5;   // 그림자 농도 낮춤(r165+)
     scene.add(sp, sp.target);
     this.armoireSpot = sp;
 
@@ -3242,7 +3240,8 @@
     }
 
     // ---- 갓레이 광원 버퍼: 레이어1(창/정원)만 검정 배경에 렌더 (창을 볼 때만) ----
-    if (this.composer && this.lightRT && this._grActive > 0.002) {
+    // 모바일은 격프레임(블러 입력이라 30fps 갱신 무체감 → 성능 상쇄)
+    if (this.composer && this.lightRT && this._grActive > 0.002 && (!this.isMobile || (this._frame & 1) === 0)) {
       var rn = this.renderer, w2 = this.weather;
       var prevTarget = rn.getRenderTarget();
       var prevAutoClear = rn.autoClear;
