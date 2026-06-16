@@ -781,8 +781,10 @@
     var T = this.T, scene = this.scene;
     var W = this.ROOM.W, H = this.ROOM.H, D = this.ROOM.D;
 
+    // 천장은 아래를 향한 면이라 직사광/헤미스피어를 거의 못 받아 벽보다 어둡고, 그 경계가 '턱'처럼 보임 →
+    // 약한 자체발광(emissive)으로 벽 밝기에 맞춰 경계 단차 제거
     var ceil = new T.Mesh(new T.PlaneGeometry(W, D),
-      new T.MeshStandardMaterial({ color: 0xF1EADB, roughness: 1.0, side: T.BackSide }));
+      new T.MeshStandardMaterial({ color: 0xF1EADB, roughness: 1.0, side: T.BackSide, emissive: 0xF3ECDD, emissiveIntensity: 0.42 }));
     ceil.rotation.x = -Math.PI / 2; ceil.position.y = H;
     scene.add(ceil);
 
