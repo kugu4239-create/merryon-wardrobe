@@ -1958,13 +1958,22 @@
     var back = new T.Mesh(new T.PlaneGeometry(9, 5), new T.MeshBasicMaterial({ map: tex }));
     back.rotation.y = -Math.PI / 2; back.position.set(wx + 3.0, 2.0, cz); scene.add(back);
     this.gardenBack = back; this.gardenBackBase = back.material.color.clone();
-    // 정원 식재(그린 덤불 + 로즈) — 창과 백드롭 사이
+    // 정원 식재(그린 나무 — 갈색 기둥 + 잎) — 창과 백드롭 사이
     var greens = [0x7E9B68, 0x8Cab74, 0x6F8C5C, 0xA3B98A];
+    var trunkMat = new T.MeshStandardMaterial({ color: 0x6B4A2E, roughness: 0.95, metalness: 0.0 });
     // 덤불 높이를 낮춰 창 상단(아치)에는 울퉁불퉁한 잎이 안 비치게 — 사각 창부 위주로 채움
     for (var i = 0; i < 14; i++) {
-      var bush = new T.Mesh(new T.IcosahedronGeometry(0.32 + Math.random() * 0.42, 1),
+      var br = 0.32 + Math.random() * 0.42;
+      var bx = wx + 0.8 + Math.random() * 1.8, bz = cz - 2.6 + Math.random() * 5.2;
+      var by = 0.55 + Math.random() * 0.75;   // 기둥이 보이도록 살짝 띄움(아치 상단 침범 방지 캡)
+      // 갈색 나무 기둥(바닥~잎 아래, 살짝 테이퍼)
+      var th = by;
+      var trunk = new T.Mesh(new T.CylinderGeometry(0.05, 0.08, th, 8), trunkMat);
+      trunk.position.set(bx, th / 2, bz); scene.add(trunk);
+      // 잎(덤불)
+      var bush = new T.Mesh(new T.IcosahedronGeometry(br, 1),
         new T.MeshStandardMaterial({ color: greens[i % greens.length], roughness: 1.0, flatShading: true }));
-      bush.position.set(wx + 0.8 + Math.random() * 1.8, 0.25 + Math.random() * 1.1, cz - 2.6 + Math.random() * 5.2);
+      bush.position.set(bx, by + br * 0.4, bz);
       bush.scale.y = 0.8 + Math.random() * 0.4; scene.add(bush);
     }
     // 흰/핑크 장미 군집(창가 보타닉) — 낮게
@@ -2489,6 +2498,16 @@
     vase.position.set(0, 0.18, 0); g.add(vase);
     var rim = new T.Mesh(new T.TorusGeometry(0.155, 0.008, 8, 28), glass);
     rim.rotation.x = Math.PI / 2; rim.position.set(0, 0.36, 0); g.add(rim);
+    // 초록 꽃대 — 화병 안(y~0.12)에서 부케 아래(y~0.46)로 살짝 부채꼴로 뻗음
+    var stemMat = new T.MeshStandardMaterial({ color: 0x6F8C54, roughness: 0.8, metalness: 0.0 });
+    for (var k = 0; k < 7; k++) {
+      var ang = (k / 7) * Math.PI * 2, rr = 0.045;
+      var topX = Math.cos(ang) * rr, topZ = Math.sin(ang) * rr;
+      var stem = new T.Mesh(new T.CylinderGeometry(0.006, 0.008, 0.36, 6), stemMat);
+      stem.position.set(topX * 0.5, 0.30, topZ * 0.5);
+      stem.rotation.z = -topX * 0.5; stem.rotation.x = topZ * 0.5;   // 부채꼴 기울임
+      g.add(stem);
+    }
     // 핑크 장미 부케만(초록 요소 제거) — 화병 입구까지 내려 틈 없이 채움
     if (this.AD.GLTFLoader) {
       new this.AD.GLTFLoader().load(asset('bouquet.glb'), function (gltf) {
