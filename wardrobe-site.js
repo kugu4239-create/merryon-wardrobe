@@ -419,7 +419,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 16:35 UTC', note: '스툴 셋업 탭 핫스팟(merryon:hotspot 이벤트 + config.hotspots 링크/함수) + 드래그 이동 + DPR2' };
+  WardrobeScene.BUILD = { time: '06-16 16:55 UTC', note: '스툴 위치 고정(1.359,0,-0.065) + 만년필 수직 펜홀더에 꽂힘 + 탭 핫스팟·DPR2' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3006,7 +3006,7 @@
   P._buildWritingStool = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(1.85, 0, 0.85); scene.add(g);
+    g.position.set(1.359, 0, -0.065); scene.add(g);
     this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
     this._registerHotspot('writing', g);    // 탭 핫스팟 — cafe24 에서 링크/함수 연결 가능
 
@@ -3054,20 +3054,35 @@
       m.position.set(0.004 * i, seatTop + 0.006 + i * 0.004, -0.003 * i);
       m.rotation.y = -0.14 + i * 0.025; m.castShadow = true; m.receiveShadow = true; g.add(m);
     }
-    var paperTop = seatTop + 0.006 + 2 * 0.004 + 0.002;
 
-    // 만년필 — 종이 위에 대각선으로
+    // 펜 홀더(작은 컵) + 수직으로 꽂힌 만년필 — 종이 옆 모서리
+    var holderG = new T.Group();
+    var holderX = 0.15, holderZ = -0.06;
+    holderG.position.set(holderX, seatTop, holderZ);
+    holderG.rotation.y = -0.3;
+    g.add(holderG);
+
+    // 컵(크림 세라믹 + 골드 림)
+    var cupMat = new T.MeshStandardMaterial({ color: 0xEDE3CF, roughness: 0.5, metalness: 0.0 });
+    var cupH = 0.062, cupR = 0.026;
+    var cup = new T.Mesh(new T.CylinderGeometry(cupR, cupR * 0.82, cupH, 22), cupMat);
+    cup.position.y = cupH / 2; cup.castShadow = true; cup.receiveShadow = true; holderG.add(cup);
+    var rim = new T.Mesh(new T.TorusGeometry(cupR, 0.0035, 8, 24), gold); rim.rotation.x = Math.PI / 2; rim.position.y = cupH; holderG.add(rim);
+    // 컵 내부 바닥(펜이 떠 보이지 않게)
+    var cupBot = new T.Mesh(new T.CircleGeometry(cupR * 0.82, 20), cupMat); cupBot.rotation.x = -Math.PI / 2; cupBot.position.y = 0.004; holderG.add(cupBot);
+
+    // 만년필 — 수직(닙이 위), 살짝 기울여 꽂힘
     var pen = new T.Group();
     var bodyMat = new T.MeshStandardMaterial({ color: PALETTE.navy, roughness: 0.35, metalness: 0.15 });
-    var barrel = new T.Mesh(new T.CylinderGeometry(0.0075, 0.0072, 0.092, 16), bodyMat); barrel.rotation.z = Math.PI / 2; barrel.position.x = -0.018; pen.add(barrel);
-    var grip = new T.Mesh(new T.CylinderGeometry(0.0072, 0.0052, 0.026, 16), bodyMat); grip.rotation.z = Math.PI / 2; grip.position.x = 0.04; pen.add(grip);
-    var nib = new T.Mesh(new T.ConeGeometry(0.0052, 0.022, 16), gold); nib.rotation.z = -Math.PI / 2; nib.position.x = 0.064; pen.add(nib);
-    var band = new T.Mesh(new T.CylinderGeometry(0.0078, 0.0078, 0.007, 16), gold); band.rotation.z = Math.PI / 2; band.position.x = 0.026; pen.add(band);
-    var capEnd = new T.Mesh(new T.SphereGeometry(0.0078, 12, 10), bodyMat); capEnd.position.x = -0.064; pen.add(capEnd);
-    var clip = new T.Mesh(new T.BoxGeometry(0.032, 0.0025, 0.005), gold); clip.position.set(-0.05, 0.0086, 0); pen.add(clip);
+    var barrel = new T.Mesh(new T.CylinderGeometry(0.0072, 0.0075, 0.10, 16), bodyMat); barrel.position.y = 0.018; pen.add(barrel);   // 아랫부분 컵 안
+    var capEnd = new T.Mesh(new T.SphereGeometry(0.0076, 12, 10), bodyMat); capEnd.position.y = -0.033; pen.add(capEnd);
+    var section = new T.Mesh(new T.CylinderGeometry(0.0062, 0.0072, 0.024, 16), bodyMat); section.position.y = 0.082; pen.add(section);
+    var nib = new T.Mesh(new T.ConeGeometry(0.0055, 0.02, 16), gold); nib.position.y = 0.104; pen.add(nib);          // 닙 위로
+    var band = new T.Mesh(new T.CylinderGeometry(0.0079, 0.0079, 0.007, 16), gold); band.position.y = 0.066; pen.add(band);
+    var clip = new T.Mesh(new T.BoxGeometry(0.005, 0.03, 0.0025), gold); clip.position.set(0, 0.05, 0.0082); pen.add(clip);
     pen.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
-    pen.position.set(0.015, paperTop + 0.009, 0.022); pen.rotation.y = 0.6;
-    g.add(pen);
+    pen.position.set(0.003, 0.035, 0.002); pen.rotation.set(0.12, 0, 0.16);   // 컵에 꽂혀 살짝 기울어짐
+    holderG.add(pen);
   };
 
   /* ----------------------------------------------------------------------- *
