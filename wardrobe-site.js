@@ -2153,7 +2153,7 @@
     var D = this.ROOM.D;
     var g = new T.Group();
     var W = this.ROOM.W;
-    g.position.set(-W / 2 + 0.4, 0, 4.3); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('주얼리 장식장', g);   // 화장대 벽 앞-코너
+    g.position.set(-4.93, 0, 4.828); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('주얼리 장식장', g);   // 화장대 벽 앞-코너
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xF1E9D8, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xF4FAFF, roughness: 0.05, metalness: 0.0, transmission: 0.92, transparent: true, opacity: 0.22, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
@@ -2520,7 +2520,7 @@
   P._buildDisplayCase = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat, D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(-4.85, 0, -1.5); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('잡화 진열장', g);   // 좌벽, 화장대 왼쪽
+    g.position.set(-4.851, 0, -1.515); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('잡화 진열장', g);   // 좌벽, 화장대 왼쪽
     var CW = 1.7, CD = 0.52, CH = 0.82, plinth = 0.12;
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
