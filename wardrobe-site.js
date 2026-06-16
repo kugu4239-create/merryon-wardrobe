@@ -76,7 +76,8 @@
       import('three/addons/postprocessing/OutputPass.js'),
       import('three/addons/loaders/RGBELoader.js'),
       import('three/addons/loaders/GLTFLoader.js'),
-      import('three/addons/loaders/DRACOLoader.js')
+      import('three/addons/loaders/DRACOLoader.js'),
+      import('three/addons/libs/meshopt_decoder.module.js')
     ]).then(function (mods) {
       var T = mods[0];
       var addons = {
@@ -93,8 +94,19 @@
         OutputPass: mods[11].OutputPass,
         RGBELoader: mods[12].RGBELoader,
         GLTFLoader: mods[13].GLTFLoader,
-        DRACOLoader: mods[14].DRACOLoader
+        DRACOLoader: mods[14].DRACOLoader,
+        MeshoptDecoder: mods[15].MeshoptDecoder
       };
+      // 모든 GLTFLoader 생성 지점에 meshopt 디코더를 자동 주입(생성자가 설정된 인스턴스를 반환).
+      // → 코드 전역의 new AD.GLTFLoader() 가 그대로 meshopt 압축 GLB 를 디코드.
+      (function () {
+        var _GLTF = addons.GLTFLoader, _Meshopt = addons.MeshoptDecoder;
+        addons.GLTFLoader = function () {
+          var l = new _GLTF();
+          if (_Meshopt) l.setMeshoptDecoder(_Meshopt);
+          return l;   // 생성자가 객체를 반환 → new 결과로 이 인스턴스가 사용됨
+        };
+      })();
       try {
         new WardrobeScene(T, addons, container);
       } catch (e) {
@@ -326,8 +338,8 @@
     // 그림자 맵을 매 프레임 재생성하지 않고 몇 프레임마다(=FPS↑, 회전 매끄럽게). 외형 동일.
     renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
     this.renderer = renderer;
-    // 텍스처 선명도: 비등방 필터 최대치(보통 16) — 비스듬한 표면(바닥/벽)의 흐림 방지
-    this.maxAniso = renderer.capabilities.getMaxAnisotropy();
+    // 텍스처 선명도: 비등방 필터 — 8 로 캡(16 대비 육안 동일, 샘플링 비용↓)
+    this.maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
     var canvas = renderer.domElement;
     canvas.style.position = 'absolute';
@@ -414,7 +426,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 11:05 UTC', note: '제품 이미지 1280px 캡(VRAM/디코드/CPU 알파처리 약 4×↓·화질 동일) + 화면밖 컨텍스트 완전 해제' };
+  WardrobeScene.BUILD = { time: '06-16 12:35 UTC', note: 'GLB meshopt 압축(10→2.9MB) + 비등방8·메인그림자1024·반사512/3프레임(화질 무손실) + 이미지1280px캡 + 컨텍스트 완전해제' };
 
   var P = WardrobeScene.prototype;
 
@@ -675,7 +687,7 @@
     dir.position.set(9, 5.0, 3.6);
     dir.target.position.set(-1.5, 0.2, -2.6);   // 창(우벽) 밖 위쪽 → 방안 바닥으로 비스듬히 하강(사선 햇살)
     dir.castShadow = true;   // 모바일도 PC와 동일
-    dir.shadow.mapSize.set(2048, 2048);
+    dir.shadow.mapSize.set(1024, 1024);   // 2048→1024(그림자 패스·VRAM 절반, 가장자리만 미세하게 부드러워짐)
     dir.shadow.camera.left = -5; dir.shadow.camera.right = 5;
     dir.shadow.camera.top = 5; dir.shadow.camera.bottom = -5;
     dir.shadow.camera.near = 0.3; dir.shadow.camera.far = 14;
@@ -779,13 +791,13 @@
     var marbleBmp = this._marbleBump(); marbleBmp.repeat.set(4, 4);
     if (!this._lite) {   // 모바일도 PC와 동일(반사 바닥)
       var reflector = new AD.Reflector(new T.PlaneGeometry(W, D), {
-        textureWidth: 640, textureHeight: 640, color: 0x9b968c, clipBias: 0.003
+        textureWidth: 512, textureHeight: 512, color: 0x9b968c, clipBias: 0.003   // 640→512(재렌더 비용↓, 패턴 바닥이라 무체감)
       });
       reflector.rotation.x = -Math.PI / 2; reflector.position.y = 0.0;
-      // 격프레임 갱신 — 반사는 이전 텍스처 재사용(거의 정적 씬이라 무체감), 매프레임 전체 씬 재렌더 비용 절반
+      // 매 3프레임만 갱신 — 반사는 이전 텍스처 재사용(거의 정적 씬이라 무체감), 전체 씬 재렌더 비용↓
       var selfR = this, _obr = reflector.onBeforeRender;
       reflector.onBeforeRender = function (rnd, scn, cam, geo, mat, grp) {
-        if ((selfR._frame & 1) !== 0) return;   // 홀수 프레임 스킵
+        if (selfR._frame % 3 !== 0) return;   // 3프레임마다 1회 갱신
         _obr.call(this, rnd, scn, cam, geo, mat, grp);
       };
       scene.add(reflector); this.reflector = reflector;
