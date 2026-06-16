@@ -320,8 +320,8 @@
   P._makeRenderer = function (container) {
     var T = this.T;
     var renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
-    // 모바일은 픽셀비 3 고정(인앱 웹뷰가 devicePixelRatio 를 낮게 보고해도 풀해상도 강제 — 캔버스 버퍼 슈퍼샘플).
-    renderer.setPixelRatio(this.isMobile ? 3 : Math.min(window.devicePixelRatio || 1, 2));
+    // DPR 2 캡(3 은 iOS 메모리 초과로 크래시). 모바일도 최대 2.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
@@ -418,7 +418,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 15:40 UTC', note: '상하 드래그로 카메라 상하 기울기(phi) 허용 + 모바일 5%축소·픽셀비3' };
+  WardrobeScene.BUILD = { time: '06-16 15:50 UTC', note: 'DPR 2 캡(3 크래시로 복귀) + 상하 드래그 기울기·모바일 5%축소' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3012,7 +3012,7 @@
     var h = Math.max(1, this.container.clientHeight || window.innerHeight);
 
     // MSAA(멀티샘플) 렌더타깃 — 얇은 골드 몰딩/패널 모서리의 계단현상 제거.
-    var pr = this.isMobile ? 3 : Math.min(window.devicePixelRatio || 1, 2);   // 모바일 픽셀비 3 고정(인앱 웹뷰 저보고 대응)
+    var pr = Math.min(window.devicePixelRatio || 1, 2);   // DPR 2 캡(3 은 크래시)
     var samples = this.isMobile ? 0 : 4;   // 모바일 MSAA off(메모리 확보 → DPR 3 가능, 모서리 AA 는 SMAA 가 처리)
     var msaaRT = new T.WebGLRenderTarget(
       Math.max(1, Math.floor(w * pr)), Math.max(1, Math.floor(h * pr)),
