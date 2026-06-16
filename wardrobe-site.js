@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 0.70, sunHeight: 3.4, temp: 0.0, exposure: 0.48, fog: 0.022, skyBright: 1.0, daycycle: true };
+    this.weatherDef = { sunInt: 0.70, sunHeight: 5.0, temp: 0.0, exposure: 0.48, fog: 0.022, skyBright: 1.0, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -581,8 +581,8 @@
     this.windowLight = win;
 
     var dir = new T.DirectionalLight(0xFFF0DC, 0.7);
-    dir.position.set(9, 3.4, 0.4);
-    dir.target.position.set(-2.0, 1.0, -0.3);   // 창(우벽)에서 수평으로 흘러 들어오는 방향
+    dir.position.set(9, 5.0, 3.6);
+    dir.target.position.set(-1.5, 0.2, -2.6);   // 창(우벽) 밖 위쪽 → 방안 바닥으로 비스듬히 하강(사선 햇살)
     if (!this.isMobile) {
       dir.castShadow = true;
       dir.shadow.mapSize.set(2048, 2048);
@@ -3141,7 +3141,7 @@
       var day = w.daycycle ? (t % 60) / 60 : 0.5;
       var ang = -0.5 + day * 1.0;
       // 빛 길이 = 태양 높이(낮을수록 그림자 길어짐 — 골든아워)
-      this.sunLight.position.set(9, w.sunHeight + Math.sin(day * Math.PI) * 1.2, ang * 3.0);
+      this.sunLight.position.set(9, w.sunHeight + Math.sin(day * Math.PI) * 1.0, 3.6 + ang * 1.5);
       this.sunLight.intensity = w.sunInt;
       // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
