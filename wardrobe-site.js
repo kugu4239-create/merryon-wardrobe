@@ -1119,12 +1119,13 @@
       var hmul = (t.h != null) ? t.h : heightDef;
       var hl = (t.hl != null) ? t.hl : hlDef;
       var hr = (t.hr != null) ? t.hr : hrDef;
+      var dyv = (t.dy != null) ? t.dy : 0;   // 상하 위치 오프셋(봉 기준)
       // 기존 제거
       var prev = self._garmentState[i];
       if (prev && prev.pivot) { group.remove(prev.pivot); }
       // 빌드
       var pivot = new T.Group();
-      pivot.position.set(fx, rodY, rodZ);
+      pivot.position.set(fx, rodY + dyv, rodZ);
       pivot.userData.tilt = (i % 2 ? 1 : -1) * (6 * Math.PI / 180);
       group.add(pivot);
       var h = (HBY[type] || H0 / 2) * hmul, w = h * aspect;
@@ -1137,7 +1138,7 @@
       });
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
       plane.position.set(0, topY - h / 2, dz); plane.castShadow = false; pivot.add(plane);
-      self._garmentState[i] = { pivot: pivot, type: type, def: { h: heightDef, hl: hlDef, hr: hrDef }, cur: { h: hmul, hl: hl, hr: hr } };
+      self._garmentState[i] = { pivot: pivot, type: type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: 0 }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
       // 빌보드 목록 재구성
       var bb = []; for (var k = 0; k < n; k++) { if (self._garmentState[k] && self._garmentState[k].pivot) bb.push(self._garmentState[k].pivot); }
       self.billboards = bb;
@@ -1200,8 +1201,8 @@
 
     btn.onclick = function () { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; };
     copyBtn.onclick = function () {
-      var st = self._garmentState || [], lines = ['merryon 옷 편집값 (height / hangerL / hangerR):'];
-      for (var i = 0; i < st.length; i++) { if (!st[i]) continue; var c = st[i].cur; lines.push('#' + (i + 1) + ' ' + (NAMES[i] || st[i].type) + ': height=' + c.h.toFixed(3) + ' hangerL=' + c.hl.toFixed(3) + ' hangerR=' + c.hr.toFixed(3)); }
+      var st = self._garmentState || [], lines = ['merryon 옷 편집값 (height / hangerL / hangerR / posY):'];
+      for (var i = 0; i < st.length; i++) { if (!st[i]) continue; var c = st[i].cur; lines.push('#' + (i + 1) + ' ' + (NAMES[i] || st[i].type) + ': height=' + c.h.toFixed(3) + ' hangerL=' + c.hl.toFixed(3) + ' hangerR=' + c.hr.toFixed(3) + ' posY=' + (c.dy || 0).toFixed(3)); }
       var txt = lines.join('\n');
       if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { copyBtn.textContent = '복사됨!'; setTimeout(function () { copyBtn.textContent = '값 복사'; }, 1200); });
       else { window.prompt('복사:', txt); }
@@ -1221,8 +1222,8 @@
         box.style.cssText = 'padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);';
         var title = document.createElement('div'); title.textContent = '#' + (i + 1) + ' ' + (NAMES[i] || s.type);
         title.style.cssText = 'font-weight:600;margin-bottom:3px;color:#f6e9d8;'; box.appendChild(title);
-        [['h', '높이', 0.4, 1.8, 0.01], ['hl', '옷걸이 ◀', 0.03, 0.42, 0.005], ['hr', '옷걸이 ▶', 0.03, 0.42, 0.005]].forEach(function (sp) {
-          var key = sp[0], cur = s.cur[key];
+        [['h', '높이', 0.4, 1.8, 0.01], ['dy', '상하위치', -0.35, 0.35, 0.005], ['hl', '옷걸이 ◀', 0.03, 0.42, 0.005], ['hr', '옷걸이 ▶', 0.03, 0.42, 0.005]].forEach(function (sp) {
+          var key = sp[0], cur = (s.cur[key] != null) ? s.cur[key] : 0;
           var row = document.createElement('label'); row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:2px 0;';
           var lab = document.createElement('span'); lab.textContent = sp[1]; lab.style.cssText = 'width:54px;color:#cbb;';
           var rng = document.createElement('input'); rng.type = 'range'; rng.min = sp[2]; rng.max = sp[3]; rng.step = sp[4]; rng.value = cur; rng.style.cssText = 'flex:1;';
