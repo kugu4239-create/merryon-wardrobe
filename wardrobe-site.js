@@ -556,10 +556,10 @@
     var amb = new T.AmbientLight(0xFFEFD8, 0.28);   // 웜·약간 낮춰 평면적 밝음↓(코지 무드)
     scene.add(amb);
 
-    // 웜 코브 글로우 — 천장 둘레의 은은한 골든 간접광(레퍼런스 코브 조명 무드)
-    // 풋프린트를 방보다 크게(천장-벽 경계 상단까지 고르게 비춰 '단/띠' 단차 제거)
-    var cove = new T.RectAreaLight(0xFFE6BE, 1.0, R.W * 1.25, R.D * 1.25);
-    cove.position.set(0, R.H - 0.06, 0); cove.lookAt(0, 0, 0); scene.add(cove);
+    // 웜 천장 글로우 — RectAreaLight(근접 falloff로 천장-벽 경계에 밝기 띠/단차 발생) 대신
+    // 단차 없는 부드러운 헤미스피어(하늘=웜 / 바닥=크림)로 교체
+    var hemi = new T.HemisphereLight(0xFFE6C4, 0xEDE2CE, 0.55);
+    scene.add(hemi);
 
     // 샹들리에 포인트 라이트 × 2 (인트로에서 0 → 페이드인)
     this.chandLights = [];
