@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 18:00 UTC', note: '커피바 2배폭·머신 실버골드블랙·메모홀더 2배골드 + 호버off + 세로드래그 config(자사몰 off)' };
+  WardrobeScene.BUILD = { time: '06-16 18:10 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3402,7 +3402,7 @@
 
     var DEG = Math.PI / 180;
     // 좌우(theta) 360° 무제한 = 드래그/스크롤만. 상하(phi) = 기기 틸트만(데스크탑은 초기각 고정).
-    this.LIMIT = { theta: Infinity, hover: 6 * DEG, phiMin: 1.15, phiMax: 1.66 };
+    this.LIMIT = { theta: Infinity, hover: 0, phiMin: 1.15, phiMax: 1.66 };   // hover 0: 클릭(드래그) 없이는 화면 안 움직임(호버 패럴랙스 off)
 
     function rect() { return el.getBoundingClientRect(); }
 
