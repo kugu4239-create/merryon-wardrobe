@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 18:35 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
+  WardrobeScene.BUILD = { time: '06-16 18:55 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -2726,29 +2726,37 @@
       hook.position.set(h * 0.12, railY - 0.018, 0.0); hook.rotation.y = Math.PI / 2; g.add(hook);
     }
 
-    // 드레이프 천(아이보리/핑크) — Blender GLB 여러 장
-    if (this.AD.GLTFLoader) {
-      var cloths = [
-        [-0.22, 0xF2EBDD, 1.0, 0.02],   // [x, color, 높이scale, z] — 천 갯수 3→2(절반)
-        [0.22, 0xE7BFCB, 1.05, -0.005]
-      ];
-      var loader = new this.AD.GLTFLoader();
-      loader.load(asset('cloth.glb'), function (gltf) {
-        cloths.forEach(function (c) {
-          var s = gltf.scene.clone(true);
-          s.traverse(function (o) {
-            if (o.isMesh) {
-              o.castShadow = true; o.receiveShadow = true;
-              o.material = o.material.clone(); o.material.color = new T.Color(c[1]); o.material.side = T.DoubleSide;
-            }
-          });
-          s.position.set(c[0], railY + 0.02, c[3]);          // 상단을 레일에 걸침
-          s.scale.set(0.95 + Math.random() * 0.1, c[2], 1.0);
-          s.rotation.y = (Math.random() - 0.5) * 0.12;
-          g.add(s);
-        });
-      }, undefined, function () { });
+    // 드레이프 천 — 봉(레일) 위에 걸쳐 앞·뒤로 늘어뜨림(절차적, 봉을 감싸 내려옴)
+    function drapedCloth(x0, width, color, hangLen, flare) {
+      var NX = 30, NT = 46, rodR = 0.055, topY = railY;
+      var fA = 0.30, fB = 0.70;   // [앞면 직선][봉 위 반원][뒷면 직선]
+      function path(t) {
+        if (t <= fA) { var f = t / fA; return [(rodR + flare) - f * flare, (topY - hangLen) + f * hangLen]; }   // 앞면(아래→봉)
+        if (t < fB) { var a = ((t - fA) / (fB - fA)) * Math.PI; return [rodR * Math.cos(a), topY + rodR * Math.sin(a)]; }  // 봉 위 반원
+        var g2 = (t - fB) / (1 - fB); return [-(rodR + g2 * flare), topY - g2 * hangLen];   // 뒷면(봉→아래)
+      }
+      var pos = [], idx = [];
+      for (var j = 0; j <= NT; j++) {
+        var t = j / NT, p = path(t), fold = Math.sin(t * Math.PI);   // 양끝에서 주름 약화
+        for (var i = 0; i <= NX; i++) {
+          var u = i / NX, x = x0 + u * width;
+          var dz = (Math.sin(u * Math.PI * 7) * 0.012 + Math.sin(u * Math.PI * 13 + 1.3) * 0.006) * fold;
+          var dx = Math.sin(u * Math.PI * 7) * 0.004 * fold;
+          pos.push(x + dx, p[1], p[0] + dz);
+        }
+      }
+      for (var jj = 0; jj < NT; jj++) for (var ii = 0; ii < NX; ii++) {
+        var a0 = jj * (NX + 1) + ii, b0 = a0 + 1, c0 = a0 + (NX + 1), d0 = c0 + 1;
+        idx.push(a0, c0, b0, b0, c0, d0);
+      }
+      var geo = new T.BufferGeometry();
+      geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+      geo.setIndex(idx); geo.computeVertexNormals();
+      var mat = new T.MeshStandardMaterial({ color: color, roughness: 0.82, metalness: 0.0, side: T.DoubleSide });
+      var m = new T.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m;
     }
+    g.add(drapedCloth(-0.52, 0.42, 0xF2EBDD, 0.95, 0.05));   // 아이보리
+    g.add(drapedCloth(0.10, 0.42, 0xE7BFCB, 1.02, 0.05));    // 핑크
   };
 
   /* 빈티지 모노그램 스팀 트렁크 — 브라운 모노그램 캔버스 + 베이지 라스 스트립 + 브라스 하드웨어 */
@@ -3128,15 +3136,20 @@
     }); });
     var TY = topY + topTh;   // 상판 윗면
 
-    // --- 물병(물 채워짐) — 좌측 ---
+    // --- 물병 3개(물 채워짐, 진한 물색) — 좌측 ---
     var glassMat = new T.MeshPhysicalMaterial({ color: 0xFBFEFF, roughness: 0.05, metalness: 0.0, transmission: 0.95, transparent: true, opacity: 0.32, thickness: 0.08, ior: 1.45, envMapIntensity: 1.0 });
-    var waterMat = new T.MeshPhysicalMaterial({ color: 0xCFE6EE, roughness: 0.08, metalness: 0.0, transmission: 0.85, transparent: true, opacity: 0.6, thickness: 0.1, ior: 1.33 });
-    var carafe = new T.Group(); carafe.position.set(-1.15, TY, 0.02); g.add(carafe);
-    var bH = 0.24, bR = 0.052;
-    var bottle = new T.Mesh(new T.CylinderGeometry(bR * 0.7, bR, bH, 24), glassMat); bottle.position.y = bH / 2; bottle.castShadow = true; carafe.add(bottle);
-    var neck = new T.Mesh(new T.CylinderGeometry(0.022, bR * 0.7, 0.05, 20), glassMat); neck.position.y = bH + 0.02; carafe.add(neck);
-    var water = new T.Mesh(new T.CylinderGeometry(bR * 0.74, bR * 0.94, bH * 0.66, 24), waterMat); water.position.y = bH * 0.33 + 0.006; carafe.add(water);
-    var cork = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.03, 16), cream); cork.position.y = bH + 0.055; carafe.add(cork);
+    var waterMat = new T.MeshPhysicalMaterial({ color: 0x6FB6C8, roughness: 0.1, metalness: 0.0, transmission: 0.6, transparent: true, opacity: 0.86, thickness: 0.14, ior: 1.33 });   // 더 진한 물색
+    function makeCarafe(cx, cz, sc) {
+      var carafe = new T.Group(); carafe.position.set(cx, TY, cz); carafe.scale.setScalar(sc); g.add(carafe);
+      var bH = 0.24, bR = 0.052;
+      var bottle = new T.Mesh(new T.CylinderGeometry(bR * 0.7, bR, bH, 24), glassMat); bottle.position.y = bH / 2; bottle.castShadow = true; carafe.add(bottle);
+      var neck = new T.Mesh(new T.CylinderGeometry(0.022, bR * 0.7, 0.05, 20), glassMat); neck.position.y = bH + 0.02; carafe.add(neck);
+      var water = new T.Mesh(new T.CylinderGeometry(bR * 0.74, bR * 0.94, bH * 0.66, 24), waterMat); water.position.y = bH * 0.33 + 0.006; carafe.add(water);
+      var cork = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.03, 16), cream); cork.position.y = bH + 0.055; carafe.add(cork);
+    }
+    makeCarafe(-1.30, 0.03, 1.0);
+    makeCarafe(-1.08, -0.05, 0.92);
+    makeCarafe(-0.87, 0.06, 1.06);
 
     // --- 접시 + 에스프레소 잔 2개 — 중앙 ---
     var plate = new T.Mesh(new T.CylinderGeometry(0.11, 0.095, 0.018, 28), white); plate.position.set(0.45, TY + 0.009, 0.04); plate.castShadow = true; plate.receiveShadow = true; g.add(plate);
@@ -3149,7 +3162,7 @@
     // --- 커피 머신(실버+골드+블랙, 좌우 크게·듀얼) — 좌중앙 뒤 ---
     var silver = new T.MeshStandardMaterial({ color: 0xCFC9BE, roughness: 0.28, metalness: 0.9, envMapIntensity: 1.1 });
     var black = new T.MeshStandardMaterial({ color: 0x1A1A1E, roughness: 0.4, metalness: 0.35, envMapIntensity: 0.7 });
-    var mc = new T.Group(); mc.position.set(-0.45, TY, -0.06); g.add(mc);
+    var mc = new T.Group(); mc.position.set(-0.45, TY, -0.08); mc.scale.setScalar(1.2); g.add(mc);   // 상하좌우 20%↑
     var MW = 0.5;   // 좌우 크게
     var mBody = new T.Mesh(new T.BoxGeometry(MW, 0.32, 0.24), silver); mBody.position.y = 0.16; mc.add(mBody);
     var mFront = new T.Mesh(new T.BoxGeometry(MW - 0.05, 0.26, 0.012), black); mFront.position.set(0, 0.18, 0.126); mc.add(mFront);   // 블랙 전면 패널
