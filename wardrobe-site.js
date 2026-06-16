@@ -1176,12 +1176,22 @@
         function (tex) {
           var img = tex.image;
           var clipType = (entry[2] === 'skirt' || entry[2] === 'pants');
-          var band = clipType ? topOpaqueFrac(img, 0.0, 0.06) : topOpaqueFrac(img, 0.0, 0.04);
-          var clean = defringe(img, 130, 2);
-          var finalTex;
-          if (clean !== img) { finalTex = new T.CanvasTexture(clean); finalTex.colorSpace = T.SRGBColorSpace; finalTex.anisotropy = 4; tex.dispose(); }
-          else { tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; finalTex = tex; }
-          cache[i] = { tex: finalTex, aspect: clean.width / clean.height, band: band };
+          // 다운스케일(긴 변 ≤ 720) → 디프린지/텍스처 비용 대폭↓(초기 로딩 가속)
+          var MAX = 720, scl = Math.min(1, MAX / Math.max(img.width, img.height));
+          var dw = Math.max(1, Math.round(img.width * scl)), dh = Math.max(1, Math.round(img.height * scl));
+          var dc = document.createElement('canvas'); dc.width = dw; dc.height = dh;
+          var dctx = dc.getContext('2d'); dctx.drawImage(img, 0, 0, dw, dh);
+          var tainted = false; try { dctx.getImageData(0, 0, 1, 1); } catch (e) { tainted = true; }
+          var finalTex, aspect, band = null;
+          if (tainted) {   // 교차출처 → 캔버스 처리 불가, 원본 텍스처로 폴백
+            tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; finalTex = tex; aspect = img.width / img.height;
+          } else {
+            band = clipType ? topOpaqueFrac(dc, 0.0, 0.06) : topOpaqueFrac(dc, 0.0, 0.04);
+            var clean = defringe(dc, 130, 2);
+            finalTex = new T.CanvasTexture(clean); finalTex.colorSpace = T.SRGBColorSpace; finalTex.anisotropy = 4;
+            tex.dispose(); aspect = dw / dh;
+          }
+          cache[i] = { tex: finalTex, aspect: aspect, band: band };
           buildOne(i);
         },
         undefined,
