@@ -325,6 +325,9 @@
     renderer.setAnimationLoop(this._animate);
   }
 
+  // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
+  WardrobeScene.BUILD = { time: '06-16 06:09 UTC', note: '빌드 배지 추가 · 유리 태양원반 제거 · 태양-빛점 연동' };
+
   var P = WardrobeScene.prototype;
 
   /* ----------------------------------------------------------------------- *
@@ -3330,6 +3333,11 @@
     var btn = document.createElement('button'); btn.textContent = '◎ 빛점';
     btn.style.cssText = 'position:fixed;left:84px;top:12px;z-index:99999;padding:8px 12px;border-radius:18px;border:none;background:#5a4a2f;color:#fff;font:13px sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;';
     document.body.appendChild(btn);
+    // 빌드 배지 — 최근 수정 반영 여부 확인용(시각 + 요약). 수정 시 BUILD 상수 갱신.
+    var badge = document.createElement('div');
+    badge.style.cssText = 'position:fixed;left:150px;top:12px;z-index:99999;max-width:260px;background:rgba(20,24,28,.86);color:#cfe3da;border-radius:12px;padding:6px 10px;font:11px/1.35 sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);';
+    badge.innerHTML = '<b style="color:#8fe0c8">build ' + WardrobeScene.BUILD.time + '</b><br>' + WardrobeScene.BUILD.note;
+    document.body.appendChild(badge);
     var hint = document.createElement('div');
     hint.style.cssText = 'position:fixed;left:84px;top:48px;z-index:99999;max-width:200px;background:rgba(40,32,18,.92);color:#f3ecd9;border-radius:10px;padding:8px 10px;font:11px/1.4 sans-serif;display:none;';
     hint.textContent = '창을 바라본 뒤 노란 마커를 드래그해 빛 시작점(높이·좌우)을 옮기세요.';
