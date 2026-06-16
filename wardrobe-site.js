@@ -2152,7 +2152,7 @@
     var T = this.T, AD = this.AD, scene = this.scene;
     // 화장대 앞 대각 — Blender 프렌치 의자(카브리올 다리+카브드 오벌 등받이) GLB
     var W = this.ROOM.W;
-    var g = new T.Group(); g.position.set(-W / 2 + 1.05, 0, 0.05); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('화장대 의자', g);   // 화장대(좌벽) 앞
+    var g = new T.Group(); g.position.set(-3.8, 0, 0.0); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('화장대 의자', g);   // 화장대(좌벽) 앞
     if (AD.GLTFLoader) {
       new AD.GLTFLoader().load(asset('chair.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
