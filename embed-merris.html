@@ -24,12 +24,16 @@
     position: absolute; inset: 0;
     width: 100% !important; height: 100% !important; display: block; z-index: 0;
   }
-  /* 로딩 플레이스홀더(3D 뜨기 전 잠깐) */
+  /* 로딩 플레이스홀더(3D 뜨기 전 잠깐) — 러그에 쓰는 merryon 블랙 심볼 로고 */
   #merryon3d .m3d-load {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font: 500 13px/1 Georgia, serif; letter-spacing: .25em; color: #b9ac95;
-    text-transform: lowercase; background: #F6F0E4; transition: opacity .5s ease; z-index: 1;
+    background: #F6F0E4; transition: opacity .5s ease; z-index: 1;
   }
+  #merryon3d .m3d-load img {
+    width: 132px; height: auto;
+    animation: m3dPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes m3dPulse { 0%, 100% { opacity: .5; } 50% { opacity: .92; } }
   #merryon3d.is-ready .m3d-load { opacity: 0; pointer-events: none; }
   /* 마지막(3D) 섹션에선 상단 띠배너 + Q&A 버튼 숨김(섹션 벗어나면 복귀) */
   body.merris-active #promotionBanner2,
@@ -37,7 +41,7 @@
 </style>
 
 <div id="merryon3d" class="main_image_1_background">
-  <div class="m3d-load">merryon</div>
+  <div class="m3d-load"><img src="https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main/assets/products/%EB%B8%94%EB%9E%99%20%EC%8B%AC%EB%B3%BC.png" alt="merryon"></div>
   <div class="main_image_1_overlay"></div>
 </div>
 
