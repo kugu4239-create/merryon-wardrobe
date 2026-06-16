@@ -339,6 +339,8 @@
     function setLoop(on) {
       if (on === loopOn) return; loopOn = on;
       renderer.setAnimationLoop(on ? self2._animate : null);
+      // 화면 밖이면 캔버스를 컴포지팅에서 제외(GPU 레이어 부담 제거 → 페이지 다시 가벼워짐)
+      renderer.domElement.style.display = on ? 'block' : 'none';
       if (on && self2.clock) self2.clock.getDelta();   // 재개 시 누적 dt 점프 방지
     }
     if ('IntersectionObserver' in window) {
@@ -356,7 +358,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:19 UTC', note: '그림자 4프레임 스로틀(회전 매끄럽게) · 마지막섹션 띠배너/Q&A 숨김' };
+  WardrobeScene.BUILD = { time: '06-16 08:24 UTC', note: '화면밖 캔버스 display:none(나갔다오면 다시 가볍게) · 그림자 스로틀' };
 
   var P = WardrobeScene.prototype;
 
