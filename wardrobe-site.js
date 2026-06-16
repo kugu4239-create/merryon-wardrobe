@@ -418,7 +418,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 15:25 UTC', note: '모바일 카메라 5% 뒤로(화면 축소) + 픽셀비3 고정·MSAA off' };
+  WardrobeScene.BUILD = { time: '06-16 15:40 UTC', note: '상하 드래그로 카메라 상하 기울기(phi) 허용 + 모바일 5%축소·픽셀비3' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3167,7 +3167,7 @@
     var _th0 = this.isMobile ? 0.38 : 0;   // 모바일 초기 시점을 merryon 로고 커튼(좌-뒤) 쪽 사선으로
     this.cam = { theta: _th0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 3.93 : 3.4, targetTheta: _th0, targetPhi: _phi0 };   // 초기 상하각, 모바일 뒤로(전경↑) — 추가 5% 더 축소
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스, 좌우만)
-    this.drag = { active: false, lastX: 0, lastY: 0, theta: _th0 };
+    this.drag = { active: false, lastX: 0, lastY: 0, theta: _th0, phi: 0 };   // phi: 세로 드래그 상하 기울기 오프셋
     this.lastInteract = -10;
     this.gyro = { active: false, tilt: 0, betaNeutral: null };   // 상하(phi)는 기기 틸트로만
 
@@ -3186,8 +3186,11 @@
         var dx = e.clientX - self.drag.lastX;
         var dy = e.clientY - self.drag.lastY;
         self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
-        self.drag.theta += dx * 0.0044;   // 좌우(theta)만 — 세로 드래그는 상하에 영향 없음(감도 약간↓)
+        self.drag.theta += dx * 0.0044;   // 좌우(theta)
         self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, self.drag.theta));
+        // 세로 드래그 = 상하 기울기(phi). 아래로 끌면 위(천장), 위로 끌면 아래(바닥). windup 방지로 범위 클램프.
+        self.drag.phi += dy * 0.0035;
+        self.drag.phi = Math.max(self.LIMIT.phiMin - self.cam.phiInit, Math.min(self.LIMIT.phiMax - self.cam.phiInit, self.drag.phi));
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 5) dragMoved = true;
         self.lastInteract = self.elapsed;
       } else {
@@ -3207,17 +3210,21 @@
     el.addEventListener('pointercancel', endDrag);
     el.addEventListener('pointerleave', function () { if (!self.drag.active) { self.pointer.x = 0; self.pointer.y = 0; } });
 
-    /* 모바일: 터치 스와이프 = 가로 오빗 */
-    var tStartX = 0, tTheta = 0;
+    /* 모바일: 터치 스와이프 = 가로 오빗 + 세로 상하 기울기 */
+    var tStartX = 0, tTheta = 0, tStartY = 0, tPhi = 0;
     el.addEventListener('touchstart', function (e) {
       if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       tStartX = e.touches[0].clientX; tTheta = self.drag.theta;
+      tStartY = e.touches[0].clientY; tPhi = self.drag.phi;
       self.lastInteract = self.elapsed;
     }, { passive: true });
     el.addEventListener('touchmove', function (e) {
       if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
-      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.0066));   // 모바일 회전 감도(약간↓)
+      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.0066));   // 모바일 회전 감도
+      // 세로 스와이프 = 상하 기울기(phi). 범위 클램프(windup 방지).
+      var dyT = e.touches[0].clientY - tStartY;
+      self.drag.phi = Math.max(self.LIMIT.phiMin - self.cam.phiInit, Math.min(self.LIMIT.phiMax - self.cam.phiInit, tPhi + dyT * 0.0050));
       self.lastInteract = self.elapsed;
     }, { passive: true });
 
@@ -3393,8 +3400,8 @@
     var base = this.drag.theta;
     var hover = this.pointer.x * this.LIMIT.hover;
     this.cam.targetTheta = Math.max(-this.LIMIT.theta, Math.min(this.LIMIT.theta, base + hover));
-    // 상하(phi): 기기 틸트(자이로)로만 — 자이로 없으면 초기각 고정
-    var phi = this.cam.phiInit + (this.gyro.active ? this.gyro.tilt : 0);
+    // 상하(phi): 세로 드래그 오프셋 + 기기 틸트(자이로)
+    var phi = this.cam.phiInit + this.drag.phi + (this.gyro.active ? this.gyro.tilt : 0);
     this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, phi));
 
     // radius 살짝 호흡
