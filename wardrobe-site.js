@@ -417,7 +417,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 14:05 UTC', note: 'ASSET_VER v12 — 캐시된 압축 GLB 강제 무효화(소파/화병/꽃 복구) / 무한로딩 수정·@main·모바일 발열완화 유지' };
+  WardrobeScene.BUILD = { time: '06-16 14:20 UTC', note: 'ASSET_VER v12 + 회전 감도 약간↓(PC 0.005→0.0044, 모바일 0.0075→0.0066)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3185,7 +3185,7 @@
         var dx = e.clientX - self.drag.lastX;
         var dy = e.clientY - self.drag.lastY;
         self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
-        self.drag.theta += dx * 0.005;   // 좌우(theta)만 — 세로 드래그는 상하에 영향 없음
+        self.drag.theta += dx * 0.0044;   // 좌우(theta)만 — 세로 드래그는 상하에 영향 없음(감도 약간↓)
         self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, self.drag.theta));
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 5) dragMoved = true;
         self.lastInteract = self.elapsed;
@@ -3216,7 +3216,7 @@
     el.addEventListener('touchmove', function (e) {
       if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
-      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.0075));   // 모바일 회전 감도(체감↑)
+      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.0066));   // 모바일 회전 감도(약간↓)
       self.lastInteract = self.elapsed;
     }, { passive: true });
 
