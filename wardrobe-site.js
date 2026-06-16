@@ -204,7 +204,7 @@
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = isMobile ? T.PCFShadowMap : T.PCFSoftShadowMap;
+    renderer.shadowMap.type = T.PCFSoftShadowMap;   // 모바일도 PC와 동일
     this.renderer = renderer;
     // 텍스처 선명도: 비등방 필터 최대치(보통 16) — 비스듬한 표면(바닥/벽)의 흐림 방지
     this.maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -327,7 +327,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 07:25 UTC', note: '모바일 옷 그림자 ON(512 PCF) · god-ray 격프레임 · 노출 0.50' };
+  WardrobeScene.BUILD = { time: '06-16 07:36 UTC', note: '모바일 렌더링 PC와 동일화(그림자/반사/MSAA/블룸/갓레이 전부) · 회전속도 동일' };
 
   var P = WardrobeScene.prototype;
 
@@ -571,11 +571,9 @@
     // 천장에서 더 떨어뜨려(풀 확산·부드럽게) 천장의 '빛그림자' 단 완화
     var p1 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p1.position.set(-0.25, R.H - 1.35, -0.6);
     var p2 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p2.position.set(0.25, R.H - 1.35, -0.6);
-    if (!this.isMobile) {
-      p1.castShadow = p2.castShadow = true;
-      p1.shadow.mapSize.set(1024, 1024); p2.shadow.mapSize.set(1024, 1024);
-      p1.shadow.bias = p2.shadow.bias = -0.0006;
-    }
+    p1.castShadow = p2.castShadow = true;   // 모바일도 PC와 동일
+    p1.shadow.mapSize.set(1024, 1024); p2.shadow.mapSize.set(1024, 1024);
+    p1.shadow.bias = p2.shadow.bias = -0.0006;
     scene.add(p1, p2);
     this.chandLights.push(p1, p2);
 
@@ -589,14 +587,12 @@
     var dir = new T.DirectionalLight(0xFFF0DC, 0.7);
     dir.position.set(9, 5.0, 3.6);
     dir.target.position.set(-1.5, 0.2, -2.6);   // 창(우벽) 밖 위쪽 → 방안 바닥으로 비스듬히 하강(사선 햇살)
-    if (!this.isMobile) {
-      dir.castShadow = true;
-      dir.shadow.mapSize.set(2048, 2048);
-      dir.shadow.camera.left = -5; dir.shadow.camera.right = 5;
-      dir.shadow.camera.top = 5; dir.shadow.camera.bottom = -5;
-      dir.shadow.camera.near = 0.3; dir.shadow.camera.far = 14;
-      dir.shadow.bias = -0.0004;
-    }
+    dir.castShadow = true;   // 모바일도 PC와 동일
+    dir.shadow.mapSize.set(2048, 2048);
+    dir.shadow.camera.left = -5; dir.shadow.camera.right = 5;
+    dir.shadow.camera.top = 5; dir.shadow.camera.bottom = -5;
+    dir.shadow.camera.near = 0.3; dir.shadow.camera.far = 14;
+    dir.shadow.bias = -0.0004;
     scene.add(dir, dir.target);
     this.sunLight = dir;
 
@@ -622,7 +618,7 @@
     sp.position.set(0, R.H - 0.5, -2.4);
     sp.target.position.set(0, 1.4, -3.3);
     sp.castShadow = true;
-    sp.shadow.mapSize.set(this.isMobile ? 512 : 1024, this.isMobile ? 512 : 1024);
+    sp.shadow.mapSize.set(1024, 1024);   // 모바일도 PC와 동일
     sp.shadow.camera.near = 0.5; sp.shadow.camera.far = 6;
     sp.shadow.bias = -0.0006; sp.shadow.radius = 4;            // 소프트 엣지(약한 그림자)
     if ('intensity' in sp.shadow) sp.shadow.intensity = 0.5;   // 그림자 농도 낮춤(r165+)
@@ -666,12 +662,10 @@
     var proj = new T.SpotLight(0xFFF0DC, 0.0, 34, 0.82, 0.35, 0.8);
     proj.map = this._windowMapTex();
     proj.position.set(7, 3.2, 0); proj.target.position.set(1.0, 0.2, 0);
-    if (!this.isMobile) {
-      proj.castShadow = true;                          // 맵 투영 보장(투영 행렬) + 방 오브젝트 그림자
-      proj.shadow.mapSize.set(1024, 1024);
-      proj.shadow.camera.near = 1; proj.shadow.camera.far = 24;
-      proj.shadow.bias = -0.0006;
-    }
+    proj.castShadow = true;                          // 모바일도 PC와 동일(맵 투영 보장 + 방 오브젝트 그림자)
+    proj.shadow.mapSize.set(1024, 1024);
+    proj.shadow.camera.near = 1; proj.shadow.camera.far = 24;
+    proj.shadow.bias = -0.0006;
     scene.add(proj, proj.target);
     this.windowProjector = proj;
   };
@@ -696,7 +690,7 @@
     var marbleTex = this._marbleTex();
     marbleTex.wrapS = marbleTex.wrapT = T.RepeatWrapping; marbleTex.repeat.set(4, 4);
     var marbleBmp = this._marbleBump(); marbleBmp.repeat.set(4, 4);
-    if (!this.isMobile && !this._lite) {
+    if (!this._lite) {   // 모바일도 PC와 동일(반사 바닥)
       var reflector = new AD.Reflector(new T.PlaneGeometry(W, D), {
         textureWidth: 640, textureHeight: 640, color: 0x9b968c, clipBias: 0.003
       });
@@ -2926,7 +2920,7 @@
 
     // MSAA(멀티샘플) 렌더타깃 — 얇은 골드 몰딩/패널 모서리의 계단현상 제거.
     var pr = Math.min(window.devicePixelRatio || 1, 2);
-    var samples = this.isMobile ? 0 : 4;
+    var samples = 4;   // 모바일도 PC와 동일(MSAA)
     var msaaRT = new T.WebGLRenderTarget(
       Math.max(1, Math.floor(w * pr)), Math.max(1, Math.floor(h * pr)),
       { type: T.HalfFloatType, samples: samples }
@@ -2941,7 +2935,7 @@
     // if (!this.isMobile) { var ssao = new AD.SSAOPass(...); ssao.kernelRadius=0.12; ...; composer.addPass(ssao); }
 
     var bloom = new AD.UnrealBloomPass(new T.Vector2(w, h), 0.7, 0.6, 0.9);
-    bloom.threshold = 0.92; bloom.strength = this.isMobile ? 0.15 : 0.2; bloom.radius = 0.5;
+    bloom.threshold = 0.92; bloom.strength = 0.2; bloom.radius = 0.5;   // 모바일도 PC와 동일
     composer.addPass(bloom);
     this.bloom = bloom;
 
@@ -2995,7 +2989,7 @@
     composer.addPass(new AD.OutputPass());
 
     // ── 갓레이 광원 버퍼(저해상도) — 레이어1(창/정원)만 검정 배경에 렌더 ──
-    var gf = this.isMobile ? 0.25 : 0.5;
+    var gf = 0.5;   // 모바일도 PC와 동일(god-ray 광원 버퍼 해상도)
     this.lightRT = new T.WebGLRenderTarget(
       Math.max(1, Math.floor(w * gf)), Math.max(1, Math.floor(h * gf)),
       { type: T.HalfFloatType, depthBuffer: true }
@@ -3019,7 +3013,7 @@
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: [
-        '#define STEPS ' + (this.isMobile ? '24' : '40'),
+        '#define STEPS 40',
         'uniform sampler2D tDiffuse; uniform sampler2D tLight;',
         'uniform vec2 uSun; uniform float uStrength, uDecay, uDensity, uWeight, uExposure, uActive, uAspect;',
         'varying vec2 vUv;',
@@ -3129,7 +3123,7 @@
     el.addEventListener('touchmove', function (e) {
       if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
-      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.006));
+      self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.005));   // PC와 동일 회전속도
       self.lastInteract = self.elapsed;
     }, { passive: true });
 
@@ -3171,7 +3165,7 @@
     this.camera.updateProjectionMatrix();
     if (this.composer) this.composer.setSize(w, h);
     if (this.gradePass) this.gradePass.uniforms.uRes.value.set(w, h);
-    if (this.lightRT) { var gf = this.isMobile ? 0.25 : 0.5; this.lightRT.setSize(Math.max(1, Math.floor(w * gf)), Math.max(1, Math.floor(h * gf))); }
+    if (this.lightRT) { var gf = 0.5; this.lightRT.setSize(Math.max(1, Math.floor(w * gf)), Math.max(1, Math.floor(h * gf))); }
     if (this.godRayPass) this.godRayPass.uniforms.uAspect.value = this.camera.aspect;
   };
 
@@ -3229,7 +3223,7 @@
     this._updateAmbient(t);
 
     /* ---- CubeCamera 반사 (프레임 분산) ---- */
-    if (!this.isMobile && !this._lite && this.cubeMirrors.length) {
+    if (!this._lite && this.cubeMirrors.length) {   // 모바일도 PC와 동일
       var idx = this._frame % (this.cubeMirrors.length * 3);
       if (idx < this.cubeMirrors.length) {
         var cm = this.cubeMirrors[idx];
@@ -3240,8 +3234,7 @@
     }
 
     // ---- 갓레이 광원 버퍼: 레이어1(창/정원)만 검정 배경에 렌더 (창을 볼 때만) ----
-    // 모바일은 격프레임(블러 입력이라 30fps 갱신 무체감 → 성능 상쇄)
-    if (this.composer && this.lightRT && this._grActive > 0.002 && (!this.isMobile || (this._frame & 1) === 0)) {
+    if (this.composer && this.lightRT && this._grActive > 0.002) {
       var rn = this.renderer, w2 = this.weather;
       var prevTarget = rn.getRenderTarget();
       var prevAutoClear = rn.autoClear;
