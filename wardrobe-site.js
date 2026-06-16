@@ -293,6 +293,7 @@
     this.elapsed = 0;
     this.introDone = false;
     this._frame = 0;
+    this._paused = true;   // 시작은 정지 상태 → 초기 _wake() 가 루프를 시작(루프 미시작 방지)
 
     this._animate = this._animate.bind(this);
     // 화면 밖: 즉시 렌더 정지(스크롤·다른 섹션에 영향 0), 잠시 뒤 sleep(VRAM 해제)
@@ -312,6 +313,8 @@
       this._wake();
     }
   }
+
+  var P = WardrobeScene.prototype;
 
   /* 렌더러 생성(최초 + 재진입 재생성 공용). 캔버스 스타일/속성까지 세팅 후 컨테이너에 부착. */
   P._makeRenderer = function (container) {
@@ -414,9 +417,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 13:35 UTC', note: 'meshopt import/래퍼 제거(무한로딩 원인) → 로더 원복·비압축 GLB / 모바일 발열완화 + 이미지1280캡 + 렌더조정 유지' };
-
-  var P = WardrobeScene.prototype;
+  WardrobeScene.BUILD = { time: '06-16 13:50 UTC', note: 'var P 선언 위치 수정(메서드 할당 전으로) → 무한로딩 해결 / 비압축 GLB·모바일 발열완화 유지' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
