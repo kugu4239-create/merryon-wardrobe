@@ -1,0 +1,61 @@
+<!-- =====================================================================
+     MERRYON 3D 씬 — cafe24 메인 "Merris"(마지막) 섹션에 지연 로드 임베드
+     ---------------------------------------------------------------------
+     · 기존 Merris(.main06) 내용은 가리고, 그 섹션을 3D 씬으로 대체.
+     · three.js / GLB / 이미지(약 18MB) 는 사용자가 마지막 섹션에 도달할 때만
+       로드 → 페이지 초기 로드에는 전혀 영향 없음(IntersectionObserver lazy).
+     · 에셋은 GitHub 레포를 jsDelivr CDN 으로 그대로 서빙(별도 업로드 불필요).
+     · 사용처: cafe24 [디자인 > 화면 검색]에서 main06(Merris) 모듈 또는
+       메인 템플릿 </body> 직전 어디든 1회 붙여넣기.
+     ===================================================================== -->
+<style>
+  /* 기존 Merris 내용 숨김 + 섹션을 3D 컨테이너로 */
+  .main06 { position: relative !important; }
+  .main06 > *:not(#merryon3d) { display: none !important; }
+  #merryon3d.main_image_1_background {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; min-height: 0;
+    background: #F6F0E4; overflow: hidden;
+  }
+  #merryon3d > canvas {
+    position: absolute; inset: 0;
+    width: 100% !important; height: 100% !important; display: block; z-index: 0;
+  }
+</style>
+
+<div id="merryon3d" class="main_image_1_background"><div class="main_image_1_overlay"></div></div>
+
+<script>
+(function () {
+  var REPO = 'kugu4239-create/merryon-wardrobe@main';   // ← 즉시반영 필요하면 @커밋해시 또는 @태그
+  var CDN  = 'https://cdn.jsdelivr.net/gh/' + REPO;
+
+  var sec = document.querySelector('.main06');
+  var box = document.getElementById('merryon3d');
+  if (!sec || !box) return;
+  if (box.parentElement !== sec) sec.appendChild(box);   // 컨테이너를 Merris 섹션 안으로
+
+  var loaded = false;
+  function load() {
+    if (loaded) return; loaded = true;
+    window.MERRYON_WARDROBE_CONFIG = {
+      container: '#merryon3d',
+      assetBase: CDN + '/assets/garments/',
+      resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); }
+    };
+    var s = document.createElement('script');
+    s.src = CDN + '/wardrobe-site.js';
+    s.async = true;
+    document.body.appendChild(s);
+  }
+
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (ents) {
+      ents.forEach(function (e) { if (e.isIntersecting) { load(); io.disconnect(); } });
+    }, { rootMargin: '300px' });   // 섹션 도달 300px 전 미리 준비
+    io.observe(sec);
+  } else {
+    load();   // 폴백
+  }
+})();
+</script>
