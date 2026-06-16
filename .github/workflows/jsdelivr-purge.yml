@@ -46,13 +46,23 @@ jobs:
                       or f in ('index.html', 'demo.html', 'embed-merris.html', 'lounge.html', 'snippet.html'))
 
           files = []
-          # 직전 커밋이 존재하면 변경분만, 아니면(첫 푸시/강제푸시) JS 만 폴백
+          full = False
+          # 직전 커밋이 존재하면 변경분만, 아니면(첫 푸시/강제푸시/수동실행) 전체 배포파일 purge
           if before and not set(before) <= {'0'}:
               try:
                   out = subprocess.check_output(['git', 'diff', '--name-only', before, after], text=True)
                   files = [x for x in out.splitlines() if x]
               except Exception as e:
-                  print('diff 실패, JS 만 purge:', e)
+                  print('diff 실패, 전체 purge:', e); full = True
+          else:
+              full = True   # 수동 실행(workflow_dispatch) 등 → 전체 배포파일 purge
+
+          if full:
+              try:
+                  out = subprocess.check_output(['git', 'ls-files'], text=True)
+                  files = [x for x in out.splitlines() if x]
+              except Exception as e:
+                  print('ls-files 실패:', e)
 
           files = [f for f in files if deployable(f)]
           if 'wardrobe-site.js' not in files:
