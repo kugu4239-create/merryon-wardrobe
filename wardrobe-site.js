@@ -981,12 +981,12 @@
       ['up', 'daae53f5360161f404852168cfa80303.png', 'top', '블랙 가디건', { h: 1.280, hl: 0.050, hr: 0.045, dy: -0.010 }],
       ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', '블랙 플리츠 원피스', { h: 0.850, hl: 0.055, hr: 0.055, dy: 0.035 }],
       ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', '핑크 스커트', { h: 0.800, hl: 0.144, hr: 0.144, dy: 0.000 }],
-      ['up', '벨리나 스커트.png', 'skirt', '벨리나 스커트'],
-      ['up', '이븐 레이스.png', 'top', '이븐 레이스'],
-      ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스'],
-      ['up', '노에아 벨트 스커트.png', 'skirt', '노에아 벨트 스커트'],
-      ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스'],
-      ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스']
+      ['up', '벨리나 스커트.png', 'skirt', '벨리나 스커트', { h: 2.0 }],
+      ['up', '이븐 레이스.png', 'top', '이븐 레이스', { h: 2.0 }],
+      ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스', { h: 2.0 }],
+      ['up', '노에아 벨트 스커트.png', 'skirt', '노에아 벨트 스커트', { h: 2.0 }],
+      ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스', { h: 2.0 }],
+      ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스', { h: 2.0, tint: 0xC7BEAF }]   // 색감 블로우아웃 보정
     ];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
@@ -1144,7 +1144,7 @@
       topY += 0.022;
       var mat = new T.MeshStandardMaterial({
         map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide,
-        roughness: 0.82, metalness: 0.0, color: 0xffffff
+        roughness: 0.82, metalness: 0.0, color: (bk.tint != null) ? bk.tint : 0xffffff   // 틴트=색감 보정(블로우아웃 완화)
       });
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
       plane.position.set(0, topY - h / 2 + dyv, dz); plane.castShadow = false; pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
