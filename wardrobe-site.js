@@ -332,11 +332,29 @@
     this._frame = 0;
 
     this._animate = this._animate.bind(this);
-    renderer.setAnimationLoop(this._animate);
+    // 화면에 보일 때만 렌더 루프 가동(다른 섹션/스크롤 중엔 정지 → 토글 스냅 방해 안 함, 배터리 절약)
+    var self2 = this, loopOn = false;
+    function setLoop(on) {
+      if (on === loopOn) return; loopOn = on;
+      renderer.setAnimationLoop(on ? self2._animate : null);
+      if (on && self2.clock) self2.clock.getDelta();   // 재개 시 누적 dt 점프 방지
+    }
+    if ('IntersectionObserver' in window) {
+      var vio = new IntersectionObserver(function (es) {
+        setLoop(!!(es[0] && es[0].isIntersecting));
+      }, { rootMargin: '60px' });
+      vio.observe(container);
+      this._visObserver = vio;
+      // 마운트 시 이미 보이면 즉시 가동, 아니면 대기
+      var r0 = container.getBoundingClientRect();
+      setLoop(r0.bottom > -60 && r0.top < (window.innerHeight || 0) + 60);
+    } else {
+      setLoop(true);
+    }
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:00 UTC', note: '에디터 ?edit 게이팅(기본숨김) · 마운트 컨테이너 설정가능 · 모바일=PC 렌더' };
+  WardrobeScene.BUILD = { time: '06-16 08:08 UTC', note: '화면 보일때만 렌더(스냅 방해X) · 섹션 도착후 로드 · 스피커 merryon' };
 
   var P = WardrobeScene.prototype;
 
@@ -2536,12 +2554,12 @@
       [[0, fh / 2, fw, ft], [0, -fh / 2, fw, ft], [-fw / 2, 0, ft, fh], [fw / 2, 0, ft, fh]].forEach(function (b) {
         var bar = new T.Mesh(new T.BoxGeometry(b[2], b[3], 0.014), brass); bar.position.set(b[0], SH / 2 + b[1], SD / 2 - 0.002); sg.add(bar);
       });
-      // 화이트 'Marshall' 스크립트 로고(그릴 상단)
+      // 화이트 'merryon' 워드마크 로고(그릴 상단) — 브랜드 소문자 세리프
       var lc = document.createElement('canvas'); lc.width = 512; lc.height = 140;
       var lg = lc.getContext('2d'); lg.clearRect(0, 0, 512, 140);
       lg.fillStyle = '#F3F0E8'; lg.textAlign = 'center'; lg.textBaseline = 'middle';
-      lg.font = 'italic 900 92px Georgia, "Times New Roman", serif';
-      lg.fillText('Marshall', 256, 78);
+      lg.font = '500 78px Georgia, "Times New Roman", serif';
+      lg.fillText('merryon', 256, 80);
       var lt = new T.CanvasTexture(lc); lt.colorSpace = T.SRGBColorSpace; lt.anisotropy = 4;
       var logo = new T.Mesh(new T.PlaneGeometry(SW - 0.10, (SW - 0.10) * 140 / 512),
         new T.MeshBasicMaterial({ map: lt, transparent: true, depthWrite: false }));   // z-파이팅(깜빡임) 방지
