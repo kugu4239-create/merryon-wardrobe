@@ -7,7 +7,13 @@
      · 화면에서 벗어나면 렌더 루프 자동 정지(씬 내장) → 다른 섹션 스크롤 매끄럽게.
      ===================================================================== -->
 <style>
-  .main06 { position: relative !important; }
+  /* 섹션을 풀뷰포트 높이로 강제(모바일 주소창 대응 dvh) → 3D가 화면 100% 채움 */
+  .main06 {
+    position: relative !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
   .main06 > *:not(#merryon3d) { display: none !important; }
   #merryon3d.main_image_1_background {
     position: absolute; inset: 0;
