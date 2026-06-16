@@ -1976,12 +1976,19 @@
       bush.position.set(bx, by + br * 0.4, bz);
       bush.scale.y = 0.8 + Math.random() * 0.4; scene.add(bush);
     }
-    // 흰/핑크 장미 군집(창가 보타닉) — 낮게
-    var rose = [0xF3D9DE, 0xF7EFE6, 0xEBC3CE];
-    for (var r = 0; r < 18; r++) {
-      var fl = new T.Mesh(new T.SphereGeometry(0.06 + Math.random() * 0.05, 8, 6),
-        new T.MeshStandardMaterial({ color: rose[r % rose.length], roughness: 0.7 }));
-      fl.position.set(wx + 0.5 + Math.random() * 1.0, 0.25 + Math.random() * 1.2, cz - 1.5 + Math.random() * 3.0); scene.add(fl);
+    // 디테일 정원 꽃 — 화병과 동일한 bouquet.glb를 작게 클론해 덤불 사이 배치(GLB 디테일)
+    if (this.AD.GLTFLoader) {
+      new this.AD.GLTFLoader().load(asset('bouquet.glb'), function (gltf) {
+        var proto = gltf.scene;
+        proto.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        for (var r = 0; r < 12; r++) {
+          var fc = proto.clone(true);
+          fc.scale.setScalar(0.8 + Math.random() * 0.8);
+          fc.rotation.y = Math.random() * Math.PI * 2;
+          fc.position.set(wx + 0.5 + Math.random() * 1.5, 0.12 + Math.random() * 0.95, cz - 2.2 + Math.random() * 4.4);
+          scene.add(fc);
+        }
+      }, undefined, function () { });
     }
   };
 
@@ -2177,6 +2184,9 @@
     screen.rotation.x = -Math.PI / 2; screen.position.y = 0.013; phoneG.add(screen);
     this._regProp('아이폰', phoneG);
     this._regProp('핸드백', bagG);
+    // 초기화면 등장 순서: 쇼파 → 가방 → 핸드폰 (세 개 내 순서만 스케일 인 스태거)
+    this.bagProp = bagG; this.phoneProp = phoneG;
+    bagG.scale.setScalar(0.001); phoneG.scale.setScalar(0.001);
   };
 
   /* 소품 편집 등록 — 드래그 이동 + 위치 저장(localStorage) 대상. */
@@ -2498,24 +2508,26 @@
     vase.position.set(0, 0.18, 0); g.add(vase);
     var rim = new T.Mesh(new T.TorusGeometry(0.155, 0.008, 8, 28), glass);
     rim.rotation.x = Math.PI / 2; rim.position.set(0, 0.36, 0); g.add(rim);
-    // 초록 꽃대 — 화병 안(y~0.12)에서 부케 아래(y~0.46)로 살짝 부채꼴로 뻗음
-    var stemMat = new T.MeshStandardMaterial({ color: 0x6F8C54, roughness: 0.8, metalness: 0.0 });
-    for (var k = 0; k < 7; k++) {
-      var ang = (k / 7) * Math.PI * 2, rr = 0.045;
-      var topX = Math.cos(ang) * rr, topZ = Math.sin(ang) * rr;
-      var stem = new T.Mesh(new T.CylinderGeometry(0.006, 0.008, 0.36, 6), stemMat);
-      stem.position.set(topX * 0.5, 0.30, topZ * 0.5);
-      stem.rotation.z = -topX * 0.5; stem.rotation.x = topZ * 0.5;   // 부채꼴 기울임
-      g.add(stem);
-    }
-    // 핑크 장미 부케만(초록 요소 제거) — 화병 입구까지 내려 틈 없이 채움
+    // 초록 꽃대(부케와 동시 등장하도록 GLB 로드 콜백에서 함께 추가)
+    var addStems = function (parent) {
+      var stemMat = new T.MeshStandardMaterial({ color: 0x6F8C54, roughness: 0.8, metalness: 0.0 });
+      for (var k = 0; k < 7; k++) {
+        var ang = (k / 7) * Math.PI * 2, rr = 0.045;
+        var topX = Math.cos(ang) * rr, topZ = Math.sin(ang) * rr;
+        var stem = new T.Mesh(new T.CylinderGeometry(0.006, 0.008, 0.36, 6), stemMat);
+        stem.position.set(topX * 0.5, 0.30, topZ * 0.5);
+        stem.rotation.z = -topX * 0.5; stem.rotation.x = topZ * 0.5;   // 부채꼴 기울임
+        parent.add(stem);
+      }
+    };
+    // 핑크 장미 부케(GLB) — 꽃 + 꽃대 동시 등장(꽃대가 먼저 보이던 문제 해결)
     if (this.AD.GLTFLoader) {
       new this.AD.GLTFLoader().load(asset('bouquet.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
         s.position.set(0, 0.31, 0); s.scale.setScalar(1.0);   // 하단 꽃이 화병 림에 걸치게(떠보임 방지)
-        g.add(s);
-      }, undefined, function () { });
-    }
+        g.add(s); addStems(g);
+      }, undefined, function () { addStems(g); });
+    } else { addStems(g); }
   };
 
   /* 앤틱 골드 행거 랙 + 드레이프 천(아이보리/핑크) — 레퍼런스 빈티지 가먼트 랙
@@ -3128,6 +3140,12 @@
         bb.rotation.y = yaw + (bb.userData.tilt || 0);
       }
     }
+
+    /* ---- 초기 등장 스태거: 쇼파 → 가방 → 핸드폰 (스케일 인) ---- */
+    var eRev = this.elapsed;
+    if (this.sofaGroup) this.sofaGroup.scale.setScalar(Math.max(0.001, this._ss(0.3, 0.9, eRev)));
+    if (this.bagProp) this.bagProp.scale.setScalar(Math.max(0.001, this._ss(0.9, 1.4, eRev)));
+    if (this.phoneProp) this.phoneProp.scale.setScalar(Math.max(0.001, this._ss(1.4, 1.9, eRev)));
 
     /* ---- 루프 앰비언트 ---- */
     this._updateAmbient(t);
