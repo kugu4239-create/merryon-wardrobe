@@ -1594,6 +1594,10 @@
     var ng = new T.CircleGeometry(orx - 0.06, 40); ng.scale(1, (ory - 0.06) / (orx - 0.06), 1);
     var nx = Math.sin(ry) * 0.04, nz = Math.cos(ry) * 0.04;
     this._addCubeMirror(mx + nx, cy, mz + nz, 0, 0, ry, 1, ng);
+    // 뒷판(백킹) — 반사면이 단면이라 뒤에서 뚫려 보이는 것 방지
+    var bg = new T.CircleGeometry(orx - 0.05, 40); bg.scale(1, (ory - 0.05) / (orx - 0.05), 1);
+    var back = new T.Mesh(bg, new T.MeshStandardMaterial({ color: 0xE6DCC8, roughness: 0.6, metalness: 0.0, side: T.DoubleSide }));
+    back.position.set(0, cy, 0.0); g.add(back);
   };
 
   /* ----------------------------------------------------------------------- *
