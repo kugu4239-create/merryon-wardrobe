@@ -297,7 +297,7 @@
     // this._buildMannequin();   // 사람 목업 삭제(요청)
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
-    this._buildLightShafts();   // 창밖에서 사선으로 들어오는 가시 광선(갓레이)
+    this._buildGodRaySource();   // 스크린스페이스 갓레이 광원(창/정원 레이어1)
 
     this._setupComposer();
     this._setupInteraction();
@@ -1975,38 +1975,27 @@
 
   /* 창밖에서 사선으로 들어오는 가시 광선(god ray) — 창 안쪽에 앵커한 애디티브 빔 평면.
    * 매 프레임 카메라를 향해 yaw(빌보드)하고, 날씨(sunInt)에 따라 밝기 변동. */
-  P._buildLightShafts = function () {
+  /* 스크린스페이스 갓레이 광원 — 아치 창 실루엣 카드를 레이어1 전용으로 두고,
+   * 정원 백드롭도 레이어1에 추가. 매 프레임 레이어1만 검정 배경에 렌더(this.lightRT)해
+   * 방사형 블러의 광원으로 사용(창/정원만 밝고 나머지는 검정 → 벽 번짐 없음). */
+  P._buildGodRaySource = function () {
     var T = this.T, scene = this.scene, R = this.ROOM;
-    // 길이 방향 밝기(창쪽에서 시작→안쪽으로 부드럽게 사라짐, 하드 핫스팟 없음) + 폭 페더
-    var c = document.createElement('canvas'); c.width = 128; c.height = 64; var g = c.getContext('2d');
-    var img = g.createImageData(128, 64);
-    for (var y = 0; y < 64; y++) for (var x = 0; x < 128; x++) {
-      var u = x / 127;                                  // u=0: 창쪽(밝음) → u=1: 방안쪽(사라짐)
-      var near = 1.0 - u;                               // 창쪽에서 1
-      var fx = Math.pow(near, 0.7);                     // 창쪽 밝고 방안으로 부드럽게 감쇠(점광원처럼 안 보이게)
-      var fy = Math.pow(Math.sin((y / 63) * Math.PI), 1.4);   // 위/아래 가장자리 페더
-      var a = fx * fy;
-      var i = (y * 128 + x) * 4;
-      img.data[i] = 255; img.data[i + 1] = 226; img.data[i + 2] = 158; img.data[i + 3] = Math.min(255, a * 255);   // 골드(밝은 장면에서도 보이게 채도↑)
-    }
-    g.putImageData(img, 0, 0);
-    var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
-
-    // 창 정확 좌표: 평면 x=W/2-0.05, z중심 0, 개구부 y[0.5(sill)~2.8(arch top)] → 중심 y≈1.65
-    var pivot = new T.Group();
-    pivot.position.set(R.W / 2 - 0.05, 1.65, 0.0);   // 창 유리 중앙(밝은 시작점이 창에서 정확히 출발)
-    scene.add(pivot); this.lightShafts = pivot;
-
-    var L = 7.0;   // 빔 길이(방향/사선은 피벗이 태양에 정렬 — 여기선 폭/오프셋만)
-    // 창 너비에 맞춰(벽 위로 안 넘치게) 적층: [수직오프셋, 폭, 기본 불투명도]
-    var beams = [[0.0, 2.2, 0.32], [0.0, 1.7, 0.26], [0.0, 1.2, 0.21], [0.0, 0.8, 0.16]];
-    beams.forEach(function (b) {
-      var geo = new T.PlaneGeometry(L, b[1]); geo.translate(L / 2, 0, 0);   // 로컬 +X(=태양 방향)로 뻗고, 밝은 끝(u=0)을 피벗(창)에 정렬 → 창→방안
-      var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, opacity: b[2], toneMapped: false });
-      var pl = new T.Mesh(geo, mat);
-      pl.position.set(0, b[0], 0);   // 로컬 수직 오프셋만(방향은 피벗 회전이 담당)
-      pl.userData.baseOp = b[2]; pivot.add(pl);
-    });
+    // 아치형 개구부 실루엣: 사각(z∈[-1.2,1.2], y∈[0.5,1.6]) + 반경 1.2 반원(중심 y=1.6)
+    var woZ = 1.2, sill = 0.5, springY = 1.6, archR = 1.2;
+    var sp = new T.Shape();
+    sp.moveTo(-woZ, sill); sp.lineTo(woZ, sill); sp.lineTo(woZ, springY);
+    sp.absarc(0, springY, archR, 0, Math.PI, false);   // z=woZ(=archR)에서 반원 → z=-woZ
+    sp.lineTo(-woZ, sill);
+    var geo = new T.ShapeGeometry(sp, 48);
+    var mat = new T.MeshBasicMaterial({ color: 0xFFF1D8, transparent: true, depthWrite: false, toneMapped: false, side: T.DoubleSide });
+    var card = new T.Mesh(geo, mat);
+    // Shape는 (x→z, y→y) 평면. 우벽(+X)에서 방안(-X)을 향하도록 회전/배치
+    card.rotation.y = -Math.PI / 2;
+    card.position.set(R.W / 2 - 0.08, 0.0, 0.0);   // 창 평면 약간 방쪽(레이어1 전용이라 메인엔 안 보임)
+    card.layers.set(1);                            // 레이어1 전용(광원 버퍼에만)
+    scene.add(card); this.godRayCard = card;
+    // 정원 백드롭은 레이어1에 넣지 않음 — 레이어1 렌더엔 벽이 없어 개구부 밖으로 새기 때문.
+    // 아치 카드만 광원으로 → 광선이 정확히 창 실루엣에서만 방사.
   };
 
   /* 보타닉 — 화분(트리/토피어리) + 책장+책 + 플로어 화병 */
@@ -2897,6 +2886,59 @@
     // OutputPass(톤매핑+sRGB) 먼저 → 그 다음 그레이드(디스플레이 공간 0..1에서 안전하게 적용)
     composer.addPass(new AD.OutputPass());
 
+    // ── 갓레이 광원 버퍼(저해상도) — 레이어1(창/정원)만 검정 배경에 렌더 ──
+    var gf = this.isMobile ? 0.25 : 0.5;
+    this.lightRT = new T.WebGLRenderTarget(
+      Math.max(1, Math.floor(w * gf)), Math.max(1, Math.floor(h * gf)),
+      { type: T.HalfFloatType, depthBuffer: true }
+    );
+    this.lightRT.texture.minFilter = T.LinearFilter;
+    this.lightRT.texture.magFilter = T.LinearFilter;
+
+    // ── 방사형 블러 갓레이 — uSun(창 중심 화면UV)에서 방사하는 광선을 장면에 ADD ──
+    var GodRayShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        tLight: { value: this.lightRT.texture },
+        uSun: { value: new T.Vector2(0.5, 0.5) },
+        uStrength: { value: 0.0 },
+        uDecay: { value: 0.96 },
+        uDensity: { value: 0.85 },
+        uWeight: { value: 0.45 },
+        uExposure: { value: 0.5 },
+        uActive: { value: 0.0 },
+        uAspect: { value: w / h }
+      },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: [
+        '#define STEPS ' + (this.isMobile ? '24' : '40'),
+        'uniform sampler2D tDiffuse; uniform sampler2D tLight;',
+        'uniform vec2 uSun; uniform float uStrength, uDecay, uDensity, uWeight, uExposure, uActive, uAspect;',
+        'varying vec2 vUv;',
+        'void main(){',
+        '  vec3 scene = texture2D(tDiffuse, vUv).rgb;',
+        '  if (uActive <= 0.001) { gl_FragColor = vec4(scene, 1.0); return; }',
+        '  vec2 delta = (vUv - uSun) * (uDensity / float(STEPS));',   // 현재 픽셀 → 창(uSun) 방향
+        '  vec2 uv = vUv;',
+        '  float illum = 1.0;',
+        '  vec3 accum = vec3(0.0);',
+        '  for (int i = 0; i < STEPS; i++) {',
+        '    uv -= delta;',
+        '    accum += texture2D(tLight, uv).rgb * illum * uWeight;',   // 광원 버퍼만(창/정원=밝음, 나머지=검정)
+        '    illum *= uDecay;',
+        '  }',
+        '  accum /= float(STEPS);',
+        '  vec2 dd = (vUv - uSun); dd.x *= uAspect;',                  // 창 주변 방사형 게이트(종횡비 보정)
+        '  float rad = smoothstep(1.25, 0.0, length(dd));',
+        '  accum *= uExposure * uStrength * uActive * (0.35 + 0.65 * rad);',
+        '  gl_FragColor = vec4(scene + max(accum, 0.0), 1.0);',
+        '}'
+      ].join('\n')
+    };
+    var godRay = new AD.ShaderPass(GodRayShader);
+    composer.addPass(godRay);
+    this.godRayPass = godRay;
+
     var grade = new AD.ShaderPass(GradeShader);
     composer.addPass(grade);
     this.gradePass = grade;
@@ -3018,6 +3060,8 @@
     this.camera.updateProjectionMatrix();
     if (this.composer) this.composer.setSize(w, h);
     if (this.gradePass) this.gradePass.uniforms.uRes.value.set(w, h);
+    if (this.lightRT) { var gf = this.isMobile ? 0.25 : 0.5; this.lightRT.setSize(Math.max(1, Math.floor(w * gf)), Math.max(1, Math.floor(h * gf))); }
+    if (this.godRayPass) this.godRayPass.uniforms.uAspect.value = this.camera.aspect;
   };
 
   /* ----------------------------------------------------------------------- *
@@ -3076,6 +3120,26 @@
         cm.cam.update(this.renderer, this.scene);
         cm.mesh.visible = true;
       }
+    }
+
+    // ---- 갓레이 광원 버퍼: 레이어1(창/정원)만 검정 배경에 렌더 (창을 볼 때만) ----
+    if (this.composer && this.lightRT && this._grActive > 0.002) {
+      var rn = this.renderer, w2 = this.weather;
+      var prevTarget = rn.getRenderTarget();
+      var prevAutoClear = rn.autoClear;
+      var prevClear = rn.getClearColor(this._grClr || (this._grClr = new this.T.Color()));
+      var prevClearA = rn.getClearAlpha();
+      if (this.godRayCard) {
+        if (this.sunLight) this.godRayCard.material.color.copy(this.sunLight.color);
+        this.godRayCard.material.opacity = Math.min(1.0, (w2 ? w2.sunInt : 0.7) / 0.5);
+      }
+      this.camera.layers.set(1);
+      rn.setRenderTarget(this.lightRT);
+      rn.setClearColor(0x000000, 1); rn.autoClear = true; rn.clear(true, true, false);
+      rn.render(this.scene, this.camera);
+      rn.setRenderTarget(prevTarget);
+      rn.setClearColor(prevClear, prevClearA); rn.autoClear = prevAutoClear;
+      this.camera.layers.set(0);
     }
 
     if (this.gradePass) this.gradePass.uniforms.uTime.value = this.elapsed;
@@ -3162,28 +3226,25 @@
       }
       // 창밖 하늘 밝기
       if (this.gardenBack) this.gardenBack.material.color.copy(this.gardenBackBase).multiplyScalar(w.skyBright);
-      // 가시 광선(갓레이) — 빔을 실제 태양 방향(창→방안)에 정렬하고, 빔 축 둘레로만 카메라를 향하게(가시성)
-      if (this.lightShafts && this.sunLight) {
-        var Tn = this.T, ls = this.lightShafts;
-        var sp = this.sunLight.position, tg = this.sunLight.target.position;
-        var dd = this._lsD || (this._lsD = new Tn.Vector3());
-        dd.set(tg.x - sp.x, tg.y - sp.y, tg.z - sp.z).normalize();        // 태양→방안(빔 진행 방향)
-        var tc = this._lsC || (this._lsC = new Tn.Vector3());
-        tc.copy(this.camera.position).sub(ls.position).normalize();       // 빔→카메라
-        var nn = this._lsN || (this._lsN = new Tn.Vector3());
-        nn.copy(tc).addScaledVector(dd, -tc.dot(dd));                     // dd에 수직이며 카메라 향하는 법선
-        if (nn.lengthSq() < 1e-4) { nn.set(0, 1, 0).addScaledVector(dd, -dd.y); }   // 폴백(빔을 정면으로 볼 때)
-        nn.normalize();
-        var uu = this._lsU || (this._lsU = new Tn.Vector3());
-        uu.crossVectors(nn, dd).normalize();
-        var mm = this._lsM || (this._lsM = new Tn.Matrix4());
-        mm.makeBasis(dd, uu, nn);                                         // 로컬 X=빔방향, Z=법선(카메라)
-        ls.quaternion.setFromRotationMatrix(mm);
-        var sh = Math.min(2.4, w.sunInt / 0.70) * (0.88 + 0.12 * Math.sin(t * 0.6));
-        ls.visible = this.introDone && w.sunInt > 0.02;
-        for (var s = 0; s < ls.children.length; s++) {
-          var m = ls.children[s]; m.material.opacity = m.userData.baseOp * sh;
-        }
+      // 스크린스페이스 갓레이 uniform — 창 중심을 화면에 투영해 광선 원점(uSun) 갱신
+      if (this.godRayPass) {
+        var Tn = this.T, sx = this.ROOM.W / 2 - 0.05, sy = 1.6;
+        var vc = this._grSunV || (this._grSunV = new Tn.Vector3());
+        vc.set(sx, sy, 0).applyMatrix4(this.camera.matrixWorldInverse);   // 뷰공간
+        var inFront = vc.z < 0 ? 1.0 : 0.0;                               // 카메라 앞이면 1
+        var wc = this._grSun || (this._grSun = new Tn.Vector3());
+        wc.set(sx, sy, 0).project(this.camera);                           // NDC
+        var su = wc.x * 0.5 + 0.5, sv = wc.y * 0.5 + 0.5;
+        this.godRayPass.uniforms.uSun.value.set(su, sv);
+        var ox = Math.max(0, Math.max(-su, su - 1)), oy = Math.max(0, Math.max(-sv, sv - 1));
+        var outside = Math.sqrt(ox * ox + oy * oy);
+        var onScreen = 1.0 - this._ss(0.0, 0.6, outside);                 // 화면 밖이면 페이드
+        var sunFade = this._ss(0.02, 0.25, w.sunInt);
+        var active = (this.introDone ? 1.0 : 0.0) * inFront * onScreen * sunFade;
+        this._grActive = (this._grActive || 0) + (active - (this._grActive || 0)) * 0.18;   // 팝 방지 스무딩
+        this.godRayPass.uniforms.uActive.value = this._grActive;
+        this.godRayPass.uniforms.uStrength.value = Math.min(2.2, w.sunInt / 0.5);
+        this.godRayPass.uniforms.uAspect.value = this.camera.aspect;
       }
     }
     // 창 유리 은은한 밝기 변화
@@ -3194,5 +3255,7 @@
   };
 
   P._ease = function (x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
+
+  P._ss = function (a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 })();
