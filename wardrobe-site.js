@@ -973,30 +973,21 @@
   P._hangCutoutGarments = function (group, rodY, rodZ, spanW) {
     var T = this.T, self = this, gold = this.goldMat;
     this.billboards = this.billboards || [];
-    // 실제 merryon 의류 컷아웃 8벌 [폴더, 파일, 종류]
-    // 사이즈 규칙: 원피스(dress)=H0, 상의(top)=H0/2, 스커트(skirt)=H0/2, 하의(pants)=H0*2/3
-    // [폴더, 파일, 종류, 개별스케일]
+    // 실제 merryon 의류 컷아웃 [폴더, 파일, 종류, 이름, 베이크값?{h,hl,hr,dy}]
+    // 종류: dress/top/skirt/pants (skirt·pants = 집게(바지)걸이). 베이크 없으면 자동(밴드 감지)
     var CUTS = [
-      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', 1.035, 0.085, 0.045],  // 블루 셔츠 원피스(#1 옷걸이 좌우 더 좁게 0.11→0.085)
-      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', 0.82, 0.15],   // 크림 블라우스(#2 높이 살짝↓ + 옷걸이 좁게)
-      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', 1.28, 0.12],  // 블랙 카라 가디건(#3: 옷걸이 더 좁게)
-      ['st', '176f3746d22b9417edeb41366727ba2c.png', 'skirt', 0.8],  // 민트 트위드 스커트(20%↓)
-      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', 0.85, null, 0.045], // 블랙 플리츠 원피스(#5 15%↓ + 더 올림)
-      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', 0.8],  // 핑크 러플 스커트(20%↓)
-      ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants', 1.2],  // 네이비 와이드 팬츠(7번째 20%↑)
-      ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.86, 0.30, 0, 0.08]  // 블랙 오프숄더 롬퍼(마지막) — 옷걸이 왼쪽만 연장(옷에 닿게)
+      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', '블루 원피스', { h: 1.150, hl: 0.030, hr: 0.030, dy: 0.045 }],
+      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', '크림 블라우스', { h: 0.720, hl: 0.065, hr: 0.075, dy: -0.075 }],
+      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', '블랙 가디건', { h: 1.280, hl: 0.050, hr: 0.045, dy: -0.010 }],
+      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', '블랙 플리츠 원피스', { h: 0.850, hl: 0.055, hr: 0.055, dy: 0.035 }],
+      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', '핑크 스커트', { h: 0.800, hl: 0.144, hr: 0.144, dy: 0.000 }],
+      ['up', '벨리나 스커트.png', 'skirt', '벨리나 스커트'],
+      ['up', '이븐 레이스.png', 'top', '이븐 레이스'],
+      ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스'],
+      ['up', '노에아 벨트 스커트.png', 'skirt', '노에아 벨트 스커트'],
+      ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스'],
+      ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스']
     ];
-    // 편집 패널에서 확정한 옷별 베이크값 {height, hangerL, hangerR, posY}
-    var BAKED = {
-      0: { h: 1.150, hl: 0.030, hr: 0.030, dy: 0.000 },
-      1: { h: 0.720, hl: 0.065, hr: 0.075, dy: -0.075 },
-      2: { h: 1.280, hl: 0.050, hr: 0.045, dy: -0.010 },
-      3: { h: 0.800, hl: 0.158, hr: 0.158, dy: 0.000 },
-      4: { h: 0.850, hl: 0.055, hr: 0.055, dy: -0.010 },
-      5: { h: 0.800, hl: 0.144, hr: 0.144, dy: 0.000 },
-      6: { h: 1.200, hl: 0.125, hr: 0.125, dy: 0.000 },
-      7: { h: 0.860, hl: 0.230, hr: 0.150, dy: 0.000 }
-    };
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
     var loader = new T.TextureLoader(); loader.setCrossOrigin('anonymous');
@@ -1106,25 +1097,32 @@
       return by - 0.006;
     }
 
-    // 런타임 트윅(높이/옷걸이 좌·우) — localStorage 저장(새로고침 유지) + 편집 패널에서 조정
-    function getTweaks() { try { return JSON.parse(localStorage.getItem('MERRYON_GARMENT_TWEAKS') || '{}'); } catch (e) { return {}; } }
+    // 런타임 트윅(높이/옷걸이/상하/순서) — localStorage 저장(새로고침 유지) + 편집 패널에서 조정
+    function getTweaks() { try { return JSON.parse(localStorage.getItem('MERRYON_GARMENT_TWEAKS2') || '{}'); } catch (e) { return {}; } }
+    function getOrder() {
+      var o; try { o = JSON.parse(localStorage.getItem('MERRYON_GARMENT_ORDER2') || 'null'); } catch (e) { o = null; }
+      if (!o || o.length !== n) { o = []; for (var k = 0; k < n; k++) o.push(k); }
+      return o;
+    }
+    function saveOrder(o) { try { localStorage.setItem('MERRYON_GARMENT_ORDER2', JSON.stringify(o)); } catch (e) {} }
+    self._garmentOrder = getOrder;
     var cache = [];
     self._garmentState = [];
 
     function buildOne(i) {
       var entry = CUTS[i], cc = cache[i]; if (!cc) return;
-      var type = entry[2], clipType = (type === 'skirt' || type === 'pants');
-      var fx = n > 1 ? (-spanW / 2 + spanW * (i / (n - 1))) : 0;
-      var dz = ((type === 'dress') ? 0.10 : (type === 'top') ? 0.0 : -0.10) + (i % 2 ? 0.05 : -0.05);
-      // 기본값(디폴트) — 베이크값(BAKED)이 있으면 우선, 없으면 자동계산
-      var aspect = cc.aspect, band = cc.band, bk = BAKED[i] || {};
-      var heightDef = (bk.h != null) ? bk.h : (entry[3] || 1);
+      var type = entry[2], clipType = (type === 'skirt' || type === 'pants'), bk = entry[4] || {};
+      var pos = getOrder().indexOf(i); if (pos < 0) pos = i;            // 표시 순서(편집 가능)
+      var fx = n > 1 ? (-spanW / 2 + spanW * (pos / (n - 1))) : 0;
+      var dz = ((type === 'dress') ? 0.10 : (type === 'top') ? 0.0 : -0.10) + (pos % 2 ? 0.05 : -0.05);
+      // 기본값(디폴트) — 베이크값(entry[4])이 있으면 우선, 없으면 자동(밴드 감지)
+      var aspect = cc.aspect, band = cc.band;
+      var heightDef = (bk.h != null) ? bk.h : 1;
       var w0 = (HBY[type] || H0 / 2) * heightDef * aspect;
-      var swDef = (entry[4] != null) ? entry[4]
-                : (band != null ? band * w0 * (clipType ? 0.82 : 0.74) : (clipType ? w0 * 0.6 : w0 * 0.28));
+      var swDef = band != null ? band * w0 * (clipType ? 0.82 : 0.74) : (clipType ? w0 * 0.6 : w0 * 0.28);
       swDef = Math.max(clipType ? 0.12 : 0.07, Math.min(0.42, swDef));
-      var hlDef = (bk.hl != null) ? bk.hl : (swDef / 2 + (clipType ? 0 : (entry[6] || 0)));
-      var hrDef = (bk.hr != null) ? bk.hr : (swDef / 2);
+      var hlDef = (bk.hl != null) ? bk.hl : swDef / 2;
+      var hrDef = (bk.hr != null) ? bk.hr : swDef / 2;
       var dyDef = (bk.dy != null) ? bk.dy : 0;
       // 트윅 적용(라이브 편집이 베이크값보다 우선)
       var t = getTweaks()[i] || {};
@@ -1138,19 +1136,19 @@
       // 빌드
       var pivot = new T.Group();
       pivot.position.set(fx, rodY, rodZ);   // 옷걸이(피벗)는 봉에 고정
-      pivot.userData.tilt = (i % 2 ? 1 : -1) * (6 * Math.PI / 180);
+      pivot.userData.tilt = (pos % 2 ? 1 : -1) * (6 * Math.PI / 180);
       group.add(pivot);
       var h = (HBY[type] || H0 / 2) * hmul, w = h * aspect;
       var topY = clipType ? clipHanger(pivot, hl, hr, dz) : shoulderHanger(pivot, hl, hr, dz);
       if (type === 'top') topY += 0.045;
-      topY += 0.022 + (entry[5] || 0);
+      topY += 0.022;
       var mat = new T.MeshStandardMaterial({
         map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide,
         roughness: 0.82, metalness: 0.0, color: 0xffffff
       });
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
       plane.position.set(0, topY - h / 2 + dyv, dz); plane.castShadow = false; pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
-      self._garmentState[i] = { pivot: pivot, type: type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: dyDef }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
+      self._garmentState[i] = { pivot: pivot, type: type, name: entry[3] || type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: dyDef }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
       // 빌보드 목록 재구성
       var bb = []; for (var k = 0; k < n; k++) { if (self._garmentState[k] && self._garmentState[k].pivot) bb.push(self._garmentState[k].pivot); }
       self.billboards = bb;
@@ -1158,6 +1156,17 @@
       if (self._refreshGarmentEditor) self._refreshGarmentEditor();
     }
     self._rebuildGarment = buildOne;
+    // 로드된 모든 옷 재빌드(순서 변경 시 fx 재계산)
+    function rebuildAll() { for (var k = 0; k < n; k++) if (cache[k]) buildOne(k); }
+    // 순서 변경: 표시 순서에서 옷 i 를 dir(-1 앞/+1 뒤)로 이동
+    self._moveGarment = function (i, dir) {
+      var o = getOrder(), p = o.indexOf(i), q = p + dir;
+      if (p < 0 || q < 0 || q >= o.length) return;
+      var tmp = o[p]; o[p] = o[q]; o[q] = tmp; saveOrder(o);
+      rebuildAll();
+      if (self._ed) self._ed.built = -1;
+      if (self._refreshGarmentEditor) self._refreshGarmentEditor();
+    };
 
     CUTS.forEach(function (entry, i) {
       loader.load(cut(entry[0], entry[1]),
@@ -1186,7 +1195,6 @@
     var on = true; // /[?&]edit/i.test(location.search) || localStorage.getItem('MERRYON_EDIT') === '1';
     if (!on) return;
     try { localStorage.setItem('MERRYON_EDIT', '1'); } catch (e) {}
-    var NAMES = ['블루 원피스', '크림 블라우스', '블랙 가디건', '민트 스커트', '블랙 플리츠 원피스', '핑크 스커트', '네이비 팬츠', '오프숄더 롬퍼'];
 
     var btn = document.createElement('button');
     btn.textContent = '✎ 옷 편집';
@@ -1205,16 +1213,17 @@
     [copyBtn, resetBtn].forEach(function (b) { b.style.cssText = 'flex:1;padding:7px;border:none;border-radius:8px;background:#d9b8a0;color:#241;font:12px sans-serif;cursor:pointer;'; });
     var hint = document.createElement('div');
     hint.style.cssText = 'margin-top:6px;color:#b8ada0;font-size:11px;';
-    hint.textContent = '슬라이더로 조정 → 라이브 반영(새로고침해도 유지). [값 복사] 후 채팅에 붙여주시면 영구 반영해 드려요.';
+    hint.textContent = '슬라이더=크기/위치/옷걸이, ▲▼=순서. 라이브 반영+저장. [값 복사] 후 채팅에 붙여주시면 영구 반영해 드려요.';
     panel.appendChild(rows); foot.appendChild(copyBtn); foot.appendChild(resetBtn); panel.appendChild(foot); panel.appendChild(hint);
 
-    function tw() { try { return JSON.parse(localStorage.getItem('MERRYON_GARMENT_TWEAKS') || '{}'); } catch (e) { return {}; } }
-    function saveTw(o) { try { localStorage.setItem('MERRYON_GARMENT_TWEAKS', JSON.stringify(o)); } catch (e) {} }
+    function tw() { try { return JSON.parse(localStorage.getItem('MERRYON_GARMENT_TWEAKS2') || '{}'); } catch (e) { return {}; } }
+    function saveTw(o) { try { localStorage.setItem('MERRYON_GARMENT_TWEAKS2', JSON.stringify(o)); } catch (e) {} }
 
     btn.onclick = function () { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; };
     copyBtn.onclick = function () {
-      var st = self._garmentState || [], lines = ['merryon 옷 편집값 (height / hangerL / hangerR / posY):'];
-      for (var i = 0; i < st.length; i++) { if (!st[i]) continue; var c = st[i].cur; lines.push('#' + (i + 1) + ' ' + (NAMES[i] || st[i].type) + ': height=' + c.h.toFixed(3) + ' hangerL=' + c.hl.toFixed(3) + ' hangerR=' + c.hr.toFixed(3) + ' posY=' + (c.dy || 0).toFixed(3)); }
+      var st = self._garmentState || [], order = self._garmentOrder ? self._garmentOrder() : [];
+      var lines = ['merryon 옷 편집값 (표시 순서대로 name: height/hangerL/hangerR/posY):'];
+      order.forEach(function (i, pos) { var s = st[i]; if (!s) return; var c = s.cur; lines.push((pos + 1) + '. ' + s.name + ': height=' + c.h.toFixed(3) + ' hangerL=' + c.hl.toFixed(3) + ' hangerR=' + c.hr.toFixed(3) + ' posY=' + (c.dy || 0).toFixed(3)); });
       var txt = lines.join('\n');
       if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { copyBtn.textContent = '복사됨!'; setTimeout(function () { copyBtn.textContent = '값 복사'; }, 1200); });
       else { window.prompt('복사:', txt); }
@@ -1228,12 +1237,18 @@
       if (cnt === self._ed.built) return;   // 슬라이더 드래그 중 재생성 방지(개수 변화시만)
       self._ed.built = cnt;
       rows.innerHTML = '';
-      st.forEach(function (s, i) {
-        if (!s) return;
+      var order = self._garmentOrder ? self._garmentOrder() : [];
+      order.forEach(function (i, pos) {
+        var s = st[i]; if (!s) return;
         var box = document.createElement('div');
         box.style.cssText = 'padding:6px 0;border-bottom:1px solid rgba(255,255,255,.08);';
-        var title = document.createElement('div'); title.textContent = '#' + (i + 1) + ' ' + (NAMES[i] || s.type);
-        title.style.cssText = 'font-weight:600;margin-bottom:3px;color:#f6e9d8;'; box.appendChild(title);
+        var title = document.createElement('div');
+        title.style.cssText = 'display:flex;align-items:center;gap:4px;font-weight:600;margin-bottom:3px;color:#f6e9d8;';
+        var nm = document.createElement('span'); nm.textContent = (pos + 1) + '. ' + s.name; nm.style.cssText = 'flex:1;';
+        var up = document.createElement('button'); up.textContent = '▲'; var dn = document.createElement('button'); dn.textContent = '▼';
+        [up, dn].forEach(function (b) { b.style.cssText = 'width:24px;padding:2px;border:none;border-radius:5px;background:#4a4640;color:#f3ece0;cursor:pointer;font-size:11px;'; });
+        up.onclick = function () { self._moveGarment(i, -1); }; dn.onclick = function () { self._moveGarment(i, 1); };
+        title.appendChild(nm); title.appendChild(up); title.appendChild(dn); box.appendChild(title);
         [['h', '높이', 0.4, 1.8, 0.01], ['dy', '상하위치', -0.35, 0.35, 0.005], ['hl', '옷걸이 ◀', 0.03, 0.42, 0.005], ['hr', '옷걸이 ▶', 0.03, 0.42, 0.005]].forEach(function (sp) {
           var key = sp[0], cur = (s.cur[key] != null) ? s.cur[key] : 0;
           var row = document.createElement('label'); row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:2px 0;';
