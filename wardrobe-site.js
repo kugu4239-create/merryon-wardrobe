@@ -1992,8 +1992,9 @@
     g.putImageData(img, 0, 0);
     var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
 
+    // 창 정확 좌표: 평면 x=W/2-0.05, z중심 0, 개구부 y[0.5(sill)~2.8(arch top)] → 중심 y≈1.65
     var pivot = new T.Group();
-    pivot.position.set(R.W / 2 - 0.12, 1.45, 0.0);   // 창 유리 중앙(밝은 시작점이 창에서 출발)
+    pivot.position.set(R.W / 2 - 0.05, 1.65, 0.0);   // 창 유리 중앙(밝은 시작점이 창에서 정확히 출발)
     scene.add(pivot); this.lightShafts = pivot;
 
     var L = 7.0;   // 빔 길이(방향/사선은 피벗이 태양에 정렬 — 여기선 폭/오프셋만)
