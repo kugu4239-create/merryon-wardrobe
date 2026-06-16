@@ -326,7 +326,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 06:09 UTC', note: '빌드 배지 추가 · 유리 태양원반 제거 · 태양-빛점 연동' };
+  WardrobeScene.BUILD = { time: '06-16 06:16 UTC', note: '광원 오브=빛점 일치(드래그 이동) · 바닥 반사풀↓ · 옷 그림자' };
 
   var P = WardrobeScene.prototype;
 
@@ -665,7 +665,7 @@
       scene.add(reflector); this.reflector = reflector;
       var overlay = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
         map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.03, color: 0xFFFFFF,
-        roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.18,
+        roughness: 0.42, metalness: 0.0, clearcoat: 0.32, clearcoatRoughness: 0.5,   // 광택↓: 태양 반사 풀(광원과 경쟁) 확산
         transparent: true, opacity: 0.82, envMapIntensity: 0.9
       }));
       overlay.rotation.x = -Math.PI / 2; overlay.position.y = 0.012; overlay.receiveShadow = true;
@@ -2031,6 +2031,20 @@
     scene.add(card); this.godRayCard = card;
     // 정원 백드롭은 레이어1에 넣지 않음 — 레이어1 렌더엔 벽이 없어 개구부 밖으로 새기 때문.
     // 아치 카드만 광원으로 → 광선이 정확히 창 실루엣에서만 방사.
+
+    // 가시 광원 오브 — 빛점(rayY/rayZ) 자리에 항상 보이는 발광 sprite. 갓레이도 같은 점에서 방사 → 광원=빛점 일치.
+    var gc = document.createElement('canvas'); gc.width = gc.height = 128;
+    var gg = gc.getContext('2d');
+    var grd = gg.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grd.addColorStop(0, 'rgba(255,247,220,1)');
+    grd.addColorStop(0.30, 'rgba(255,226,150,0.7)');
+    grd.addColorStop(1, 'rgba(255,210,120,0)');
+    gg.fillStyle = grd; gg.fillRect(0, 0, 128, 128);
+    var gtex = new T.CanvasTexture(gc); gtex.colorSpace = T.SRGBColorSpace;
+    var orb = new T.Sprite(new T.SpriteMaterial({ map: gtex, color: 0xFFE8B4, transparent: true, blending: T.AdditiveBlending, depthWrite: false, depthTest: true, toneMapped: false, opacity: 0.95 }));
+    orb.scale.set(0.8, 0.8, 1);
+    orb.position.set(R.W / 2 - 0.05, this.weather.rayY, this.weather.rayZ);
+    scene.add(orb); this.sunOrb = orb;
   };
 
   /* 보타닉 — 화분(트리/토피어리) + 책장+책 + 플로어 화병 */
@@ -3278,6 +3292,13 @@
       this.sunLight.target.position.copy(sp).addScaledVector(sd, 6);  // 타깃: 방안 바닥쪽
       this.sunLight.target.updateMatrixWorld();
       this.sunLight.intensity = w.sunInt;
+      // 가시 광원 오브 — 빛점과 항상 일치(같은 점), 색/크기 햇빛 강도 반영
+      if (this.sunOrb) {
+        this.sunOrb.position.copy(sp);
+        this.sunOrb.material.color.copy(this.sunLight.color);
+        this.sunOrb.material.opacity = Math.min(1.0, 0.45 + w.sunInt * 0.35);
+        var os = 0.45 + w.sunInt * 0.32; this.sunOrb.scale.set(os, os, 1);
+      }
       // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
       if (w.temp >= 0) warm.lerp(new this.T.Color(0xFFD09A), w.temp);
