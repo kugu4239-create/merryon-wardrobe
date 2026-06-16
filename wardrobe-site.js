@@ -2905,7 +2905,7 @@
         uDecay: { value: 0.96 },
         uDensity: { value: 0.85 },
         uWeight: { value: 0.45 },
-        uExposure: { value: 0.5 },
+        uExposure: { value: 0.05 },
         uActive: { value: 0.0 },
         uAspect: { value: w / h }
       },
@@ -2927,7 +2927,6 @@
         '    accum += texture2D(tLight, uv).rgb * illum * uWeight;',   // 광원 버퍼만(창/정원=밝음, 나머지=검정)
         '    illum *= uDecay;',
         '  }',
-        '  accum /= float(STEPS);',
         '  vec2 dd = (vUv - uSun); dd.x *= uAspect;',                  // 창 주변 방사형 게이트(종횡비 보정)
         '  float rad = smoothstep(1.25, 0.0, length(dd));',
         '  accum *= uExposure * uStrength * uActive * (0.35 + 0.65 * rad);',
