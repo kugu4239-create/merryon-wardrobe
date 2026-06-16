@@ -414,7 +414,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 10:40 UTC', note: '화면밖 WebGL 컨텍스트 완전 해제(재진입 재로드)·다른 섹션 GPU/메모리 영향 0' };
+  WardrobeScene.BUILD = { time: '06-16 11:05 UTC', note: '제품 이미지 1280px 캡(VRAM/디코드/CPU 알파처리 약 4×↓·화질 동일) + 화면밖 컨텍스트 완전 해제' };
 
   var P = WardrobeScene.prototype;
 
