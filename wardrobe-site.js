@@ -267,6 +267,11 @@
     // 방 치수(사람 비율, 1 unit ≈ 1m) — 천장 2.9m 의 현실적 고급 침실
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
+    // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
+    this.weatherDef = { sunInt: 0.70, sunHeight: 6.0, temp: 0.0, exposure: 0.48, fog: 0.022, skyBright: 1.0, daycycle: true };
+    this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
+    try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
+
     this._buildLights();
     this._buildRoom();
     this._buildCeilingAndChandelier();
@@ -297,6 +302,7 @@
     this._setupInteraction();
     this._buildGarmentEditor();   // 옷 편집 패널(?edit 또는 localStorage.MERRYON_EDIT='1')
     this._buildPropEditor();      // 소품(아이폰/가방/목업) 드래그 편집
+    this._buildWeatherEditor();   // 창밖 날씨/조명 컨트롤
     this._resize();
     try { window.__MERRYON_SCENE__ = this; } catch (e) {}
 
@@ -570,6 +576,7 @@
     win.position.set(R.W / 2 - 0.15, 1.7, 0.0);
     win.lookAt(0, 1.5, 0);
     scene.add(win);
+    this.windowLight = win;
 
     var dir = new T.DirectionalLight(0xFFF0DC, 0.7);
     dir.position.set(3.2, 3.0, 2.2);
@@ -1371,6 +1378,74 @@
     resetB.onclick = function () { try { localStorage.removeItem('MERRYON_PROP_POS'); } catch (e) {} props.forEach(function (p) { p.obj.position.copy(p.def); }); sel = null; selLbl.textContent = '선택: 없음'; showBox(); };
   };
 
+  /* 창밖 날씨/조명 컨트롤 — 햇빛 강도·빛 길이(각도)·색온도·밝기·안개·하늘 밝기 + 자동 하루주기.
+   * 값은 this.weather 에 즉시 반영(렌더 루프가 매 프레임 적용), localStorage 영속. */
+  P._buildWeatherEditor = function () {
+    var self = this, w = this.weather, def = this.weatherDef;
+    function save() { try { localStorage.setItem('MERRYON_WEATHER', JSON.stringify(w)); } catch (e) {} }
+
+    var btn = document.createElement('button'); btn.textContent = '☀ 날씨';
+    btn.style.cssText = 'position:fixed;left:12px;top:12px;z-index:99999;padding:8px 12px;border-radius:18px;border:none;background:#2f4a55;color:#fff;font:13px sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;';
+    document.body.appendChild(btn);
+    var panel = document.createElement('div');
+    panel.style.cssText = 'position:fixed;left:12px;top:48px;z-index:99999;width:248px;background:rgba(20,24,28,.95);color:#eef3f0;border-radius:12px;padding:10px 12px;font:12px/1.4 sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);display:none;';
+    document.body.appendChild(panel);
+
+    var rows = [
+      ['sunInt', '햇빛 강도', 0.0, 1.6, 0.01],
+      ['sunHeight', '빛 길이(낮을수록 김)', 2.0, 9.0, 0.1],
+      ['temp', '색온도(쿨↔웜)', -1.0, 1.0, 0.02],
+      ['exposure', '전체 밝기', 0.25, 0.85, 0.01],
+      ['fog', '안개(흐림)', 0.0, 0.12, 0.002],
+      ['skyBright', '하늘 밝기', 0.4, 1.6, 0.02]
+    ];
+    var valEls = {};
+    rows.forEach(function (r) {
+      var key = r[0];
+      var wrap = document.createElement('div'); wrap.style.cssText = 'margin-bottom:8px;';
+      var head = document.createElement('div'); head.style.cssText = 'display:flex;justify-content:space-between;margin-bottom:2px;';
+      var lab = document.createElement('span'); lab.textContent = r[1]; lab.style.color = '#b9cdd0';
+      var val = document.createElement('span'); val.style.color = '#8fe0c8'; val.textContent = (+w[key]).toFixed(3);
+      valEls[key] = val; head.appendChild(lab); head.appendChild(val);
+      var sl = document.createElement('input'); sl.type = 'range'; sl.min = r[2]; sl.max = r[3]; sl.step = r[4]; sl.value = w[key];
+      sl.style.cssText = 'width:100%;accent-color:#7fc7b0;';
+      sl.oninput = function () { w[key] = parseFloat(sl.value); val.textContent = w[key].toFixed(3); save(); };
+      valEls[key + '_sl'] = sl;
+      wrap.appendChild(head); wrap.appendChild(sl); panel.appendChild(wrap);
+    });
+
+    // 자동 하루주기 토글
+    var dcRow = document.createElement('label'); dcRow.style.cssText = 'display:flex;align-items:center;gap:6px;margin:2px 0 8px;cursor:pointer;color:#b9cdd0;';
+    var dc = document.createElement('input'); dc.type = 'checkbox'; dc.checked = !!w.daycycle;
+    dc.onchange = function () { w.daycycle = dc.checked; save(); };
+    dcRow.appendChild(dc); dcRow.appendChild(document.createTextNode('자동 하루주기(태양 이동)')); panel.appendChild(dcRow);
+
+    var foot = document.createElement('div'); foot.style.cssText = 'display:flex;gap:6px;';
+    var copyB = document.createElement('button'), resetB = document.createElement('button');
+    copyB.textContent = '값 복사'; resetB.textContent = '초기화';
+    [copyB, resetB].forEach(function (b) { b.style.cssText = 'flex:1;padding:7px;border:none;border-radius:8px;background:#9fd0c0;color:#122;cursor:pointer;'; });
+    foot.appendChild(copyB); foot.appendChild(resetB); panel.appendChild(foot);
+
+    btn.onclick = function () {
+      var open = panel.style.display === 'none';
+      panel.style.display = open ? 'block' : 'none';
+      btn.style.background = open ? '#5f93a6' : '#2f4a55';
+    };
+    copyB.onclick = function () {
+      var lines = ['merryon 날씨/조명 값:'];
+      rows.forEach(function (r) { lines.push(r[1] + '(' + r[0] + '): ' + (+w[r[0]]).toFixed(3)); });
+      lines.push('자동 하루주기: ' + (w.daycycle ? 'ON' : 'OFF'));
+      var txt = lines.join('\n');
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { copyB.textContent = '복사됨!'; setTimeout(function () { copyB.textContent = '값 복사'; }, 1200); });
+      else window.prompt('복사:', txt);
+    };
+    resetB.onclick = function () {
+      for (var k in def) w[k] = def[k];
+      rows.forEach(function (r) { valEls[r[0] + '_sl'].value = w[r[0]]; valEls[r[0]].textContent = (+w[r[0]]).toFixed(3); });
+      dc.checked = !!w.daycycle; save();
+    };
+  };
+
   /* GLB 의류 로딩 — 그룹별 GLB 를 불러와 오브젝트를 x 좌표로 옷별 클러스터링하고,
    * 내장된 넓은 봉(rod)은 제외, 각 옷을 후크가 원점에 오도록 정규화한 뒤 봉에 균등 분배. */
   P._loadGarmentGLBs = function (group, rodY, rodZ, spanW) {
@@ -1873,6 +1948,7 @@
     var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
     var back = new T.Mesh(new T.PlaneGeometry(9, 5), new T.MeshBasicMaterial({ map: tex }));
     back.rotation.y = -Math.PI / 2; back.position.set(wx + 3.0, 2.0, cz); scene.add(back);
+    this.gardenBack = back; this.gardenBackBase = back.material.color.clone();
     // 정원 식재(그린 덤불 + 로즈) — 창과 백드롭 사이
     var greens = [0x7E9B68, 0x8Cab74, 0x6F8C5C, 0xA3B98A];
     // 덤불 높이를 낮춰 창 상단(아치)에는 울퉁불퉁한 잎이 안 비치게 — 사각 창부 위주로 채움
@@ -3020,13 +3096,27 @@
       fl.obj.position.x = fl.base.x + Math.sin(t * 1.3 + fl.phase) * fl.amp;
       fl.obj.rotation.z = Math.sin(t * 0.9 + fl.phase) * 0.05;
     }
-    // 자연광 서서히 이동 (60초 주기 하루 빛 변화)
-    if (this.sunLight) {
-      var day = (t % 60) / 60;
+    // 자연광 + 창밖 날씨/조명 (편집 패널 값 반영) — 60초 주기 하루 빛 변화
+    var w = this.weather;
+    if (this.sunLight && w) {
+      var day = w.daycycle ? (t % 60) / 60 : 0.5;
       var ang = -0.5 + day * 1.0;
-      this.sunLight.position.set(9, 6 + Math.sin(day * Math.PI) * 2, 4 + ang * 3);
+      // 빛 길이 = 태양 높이(낮을수록 그림자 길어짐 — 골든아워)
+      this.sunLight.position.set(9, w.sunHeight + Math.sin(day * Math.PI) * 1.5, 4 + ang * 3);
+      this.sunLight.intensity = w.sunInt;
+      // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
+      if (w.temp >= 0) warm.lerp(new this.T.Color(0xFFD09A), w.temp);
+      else warm.lerp(new this.T.Color(0xC7D8F4), -w.temp);
       this.sunLight.color.copy(warm);
+      if (this.windowLight) this.windowLight.intensity = 1.7 * (w.sunInt / 0.70);
+      // 전체 밝기(노출) + 안개(흐림) — 인트로 리빌 후에만(리빌 페이드 보존)
+      if (this.introDone) {
+        this.renderer.toneMappingExposure = w.exposure;
+        if (this.scene.fog) this.scene.fog.density = w.fog;
+      }
+      // 창밖 하늘 밝기
+      if (this.gardenBack) this.gardenBack.material.color.copy(this.gardenBackBase).multiplyScalar(w.skyBright);
     }
     // 창 유리 은은한 밝기 변화
     if (this.windowGlass) {
