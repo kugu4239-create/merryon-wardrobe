@@ -358,7 +358,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:24 UTC', note: '화면밖 캔버스 display:none(나갔다오면 다시 가볍게) · 그림자 스로틀' };
+  WardrobeScene.BUILD = { time: '06-16 08:32 UTC', note: '반사/갓레이 격프레임(경량) · 모바일 초기 사선(커튼쪽) · 자이로 첫터치 견고화' };
 
   var P = WardrobeScene.prototype;
 
@@ -726,6 +726,12 @@
         textureWidth: 640, textureHeight: 640, color: 0x9b968c, clipBias: 0.003
       });
       reflector.rotation.x = -Math.PI / 2; reflector.position.y = 0.0;
+      // 격프레임 갱신 — 반사는 이전 텍스처 재사용(거의 정적 씬이라 무체감), 매프레임 전체 씬 재렌더 비용 절반
+      var selfR = this, _obr = reflector.onBeforeRender;
+      reflector.onBeforeRender = function (rnd, scn, cam, geo, mat, grp) {
+        if ((selfR._frame & 1) !== 0) return;   // 홀수 프레임 스킵
+        _obr.call(this, rnd, scn, cam, geo, mat, grp);
+      };
       scene.add(reflector); this.reflector = reflector;
       var overlay = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
         map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.03, color: 0xFFFFFF,
@@ -3099,9 +3105,10 @@
 
     // 카메라 구면 파라미터
     var _phi0 = this.isMobile ? 1.450 : 1.373;   // 모바일은 약간 더 정면(수평)으로 ~7%
-    this.cam = { theta: 0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 3.74 : 3.4, targetTheta: 0, targetPhi: _phi0 };   // 초기 상하각, 모바일은 뒤로(전경↑)+10% 확대
+    var _th0 = this.isMobile ? 0.38 : 0;   // 모바일 초기 시점을 merryon 로고 커튼(좌-뒤) 쪽 사선으로
+    this.cam = { theta: _th0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 3.74 : 3.4, targetTheta: _th0, targetPhi: _phi0 };   // 초기 상하각, 모바일은 뒤로(전경↑)+10% 확대
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스, 좌우만)
-    this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
+    this.drag = { active: false, lastX: 0, lastY: 0, theta: _th0 };
     this.lastInteract = -10;
     this.gyro = { active: false, tilt: 0, betaNeutral: null };   // 상하(phi)는 기기 틸트로만
 
@@ -3176,9 +3183,16 @@
       }
     };
     if (this.isMobile) {
-      // iOS 권한은 제스처 필요 → 첫 터치에서 요청
-      var once = function () { self._enableGyro(); el.removeEventListener('touchend', once); };
+      // iOS 권한은 제스처 필요 → 페이지 어디든 첫 터치에서 요청(앱 웹뷰 대응)
+      var once = function () {
+        self._enableGyro();
+        document.removeEventListener('touchend', once, true);
+        document.removeEventListener('pointerdown', once, true);
+        el.removeEventListener('touchend', once);
+      };
       el.addEventListener('touchend', once);
+      document.addEventListener('touchend', once, true);
+      document.addEventListener('pointerdown', once, true);
     }
   };
 
@@ -3264,7 +3278,7 @@
     }
 
     // ---- 갓레이 광원 버퍼: 레이어1(창/정원)만 검정 배경에 렌더 (창을 볼 때만) ----
-    if (this.composer && this.lightRT && this._grActive > 0.002) {
+    if (this.composer && this.lightRT && this._grActive > 0.002 && (this._frame & 1) === 0) {   // 격프레임(블러 입력, 무체감)
       var rn = this.renderer, w2 = this.weather;
       var prevTarget = rn.getRenderTarget();
       var prevAutoClear = rn.autoClear;
