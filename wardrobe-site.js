@@ -2034,7 +2034,7 @@
       }, undefined, function () { });
     }
     // 아이폰(로즈골드) — 좌석 표면(가방과 동일 높이)에 그룹으로
-    var phoneG = new T.Group(); phoneG.position.set(0.42, 0.6, 0.4); phoneG.rotation.y = -0.6; scene.add(phoneG);
+    var phoneG = new T.Group(); phoneG.position.set(0.42, 0.54, 0.4); phoneG.rotation.y = -0.6; scene.add(phoneG);
     var phone = new T.Mesh(new T.BoxGeometry(0.075, 0.012, 0.155),
       new T.MeshStandardMaterial({ color: 0xE7B7A6, roughness: 0.28, metalness: 0.85 }));   // 로즈골드
     phone.position.y = 0.006; phone.castShadow = true; phoneG.add(phone);
