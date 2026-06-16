@@ -376,7 +376,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 09:13 UTC', note: '모바일 관성 절반(lerp 0.12, pos 0.7) → 떠보임/버벅 완화' };
+  WardrobeScene.BUILD = { time: '06-16 09:15 UTC', note: '모바일 관성 1/4(lerp 0.24, pos 0.88) → 거의 직접' };
 
   var P = WardrobeScene.prototype;
 
@@ -3345,13 +3345,13 @@
     // radius 살짝 호흡
     this.cam.radius = (this.isMobile ? 3.74 : 3.4) + Math.sin(t * 0.3) * 0.05;   // 모바일 뒤로(전경↑)+10% 확대
 
-    // 스무딩(관성) — 모바일은 관성 절반(더 직접적, 떠보임/버벅 완화)
-    var sm = this.isMobile ? 0.12 : 0.06;
+    // 스무딩(관성) — 모바일은 관성 원래의 1/4(거의 직접적, 떠보임/버벅 최소화)
+    var sm = this.isMobile ? 0.24 : 0.06;
     this.cam.theta += (this.cam.targetTheta - this.cam.theta) * sm;
     this.cam.phi += (this.cam.targetPhi - this.cam.phi) * sm;
 
     var pos = this._spherical(this.cam.theta, this.cam.phi, this.cam.radius);
-    this.camera.position.lerp(pos, this.isMobile ? 0.7 : 0.5);
+    this.camera.position.lerp(pos, this.isMobile ? 0.88 : 0.5);
     this.camera.lookAt(this.target);
   };
 
