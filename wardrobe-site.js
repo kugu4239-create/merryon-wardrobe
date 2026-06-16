@@ -1990,12 +1990,12 @@
     var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
 
     var pivot = new T.Group();
-    pivot.position.set(R.W / 2 - 0.35, 1.55, 0.0);   // 창 안쪽 중앙
+    pivot.position.set(R.W / 2 - 0.35, 1.7, 0.0);   // 창 안쪽 중앙(창 높이쯤)
     scene.add(pivot); this.lightShafts = pivot;
 
-    var L = 6.5;   // 빔 길이(방향/사선은 피벗이 태양에 정렬 — 여기선 폭/오프셋만)
-    // 겹쳐서 하나의 단일 샤프트로 보이게: [수직오프셋, 폭, 기본 불투명도]
-    var beams = [[0.0, 2.0, 0.30], [0.18, 1.3, 0.22], [-0.18, 1.3, 0.22]];
+    var L = 7.2;   // 빔 길이(방향/사선은 피벗이 태양에 정렬 — 여기선 폭/오프셋만)
+    // 창 전체를 덮는 넓은 빛 커튼이 쏟아지도록 폭↑ + 레이어 적층: [수직오프셋, 폭, 기본 불투명도]
+    var beams = [[0.0, 3.4, 0.20], [0.0, 2.6, 0.16], [0.0, 1.9, 0.13], [0.55, 1.8, 0.11], [-0.55, 1.8, 0.11]];
     beams.forEach(function (b) {
       var geo = new T.PlaneGeometry(L, b[1]); geo.translate(L / 2, 0, 0);   // 로컬 +X(=태양 방향)로 뻗고, 밝은 끝(u=0)을 피벗(창)에 정렬 → 창→방안
       var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, opacity: b[2], toneMapped: false });
