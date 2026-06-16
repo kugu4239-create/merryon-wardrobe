@@ -326,7 +326,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 06:09 UTC', note: '빌드 배지 추가 · 유리 태양원반 제거 · 태양-빛점 연동' };
+  WardrobeScene.BUILD = { time: '06-16 06:16 UTC', note: '광원 오브=빛점 일치(드래그 이동) · 바닥 반사풀↓ · 옷 그림자' };
 
   var P = WardrobeScene.prototype;
 
@@ -616,10 +616,17 @@
     vm.lookAt(-2.8, 1.1, -2.0);
     scene.add(vm);
 
-    // 옷장 의류 스포트
+    // 옷장 의류 스포트 (의류 그림자를 뒷판에 약하게 드리움)
     var sp = new T.SpotLight(0xFFF6EC, 2.6, 8, Math.PI / 3.6, 0.45, 1.1);
     sp.position.set(0, R.H - 0.5, -2.4);
     sp.target.position.set(0, 1.4, -3.3);
+    if (!this.isMobile) {
+      sp.castShadow = true;
+      sp.shadow.mapSize.set(1024, 1024);
+      sp.shadow.camera.near = 0.5; sp.shadow.camera.far = 6;
+      sp.shadow.bias = -0.0006; sp.shadow.radius = 4;            // 소프트 엣지(약한 그림자)
+      if ('intensity' in sp.shadow) sp.shadow.intensity = 0.5;   // 그림자 농도 낮춤(r165+)
+    }
     scene.add(sp, sp.target);
     this.armoireSpot = sp;
 
@@ -658,7 +665,7 @@
       scene.add(reflector); this.reflector = reflector;
       var overlay = new T.Mesh(new T.PlaneGeometry(W, D), new T.MeshPhysicalMaterial({
         map: marbleTex, bumpMap: marbleBmp, bumpScale: 0.03, color: 0xFFFFFF,
-        roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.18,
+        roughness: 0.42, metalness: 0.0, clearcoat: 0.32, clearcoatRoughness: 0.5,   // 광택↓: 태양 반사 풀(광원과 경쟁) 확산
         transparent: true, opacity: 0.82, envMapIntensity: 0.9
       }));
       overlay.rotation.x = -Math.PI / 2; overlay.position.y = 0.012; overlay.receiveShadow = true;
@@ -930,7 +937,7 @@
 
     // 내부 후면 패널 — 빌트인 아이보리(살짝 그림자감), 의류가 도드라지게
     var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.85 }));
-    back.position.set(0, AH / 2, 0.02); arm.add(back);
+    back.position.set(0, AH / 2, 0.02); back.receiveShadow = true; arm.add(back);   // 의류 그림자 받음
     // 측면 안쪽 — 아이보리
     var inSide = new T.MeshStandardMaterial({ color: 0xDED3BE, roughness: 0.85 });
     var inL = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
@@ -1168,13 +1175,12 @@
         map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide,
         roughness: 0.82, metalness: 0.0, color: (bk.tint != null) ? bk.tint : 0xffffff   // 틴트=색감 보정(블로우아웃 완화)
       });
-      // 약한 드롭 그림자 — 같은 실루엣을 어둡게, 살짝 뒤(+우하단) 오프셋(빌보드 동반)
-      var shMat = new T.MeshBasicMaterial({ map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide, color: 0x000000, opacity: 0.16, depthWrite: false, toneMapped: false });
-      var shadow = new T.Mesh(new T.PlaneGeometry(w, h), shMat);
-      shadow.position.set(0.028, topY - h / 2 + dyv - 0.03, dz - 0.06); shadow.scale.set(1.02, 1.0, 1.0); shadow.renderOrder = -1;
-      pivot.add(shadow);
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
-      plane.position.set(0, topY - h / 2 + dyv, dz); plane.castShadow = false; pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
+      plane.position.set(0, topY - h / 2 + dyv, dz);
+      // 실제 광원 그림자 — 옷 실루엣(알파)을 인식하는 customDepthMaterial로 뒷판에 그림자 드리움
+      plane.castShadow = true;
+      plane.customDepthMaterial = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking, map: cc.tex, alphaTest: 0.5 });
+      pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
       self._garmentState[i] = { pivot: pivot, type: type, name: entry[3] || type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: dyDef }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
       // 빌보드 목록 재구성
       var bb = []; for (var k = 0; k < n; k++) { if (self._garmentState[k] && self._garmentState[k].pivot) bb.push(self._garmentState[k].pivot); }
@@ -2025,6 +2031,20 @@
     scene.add(card); this.godRayCard = card;
     // 정원 백드롭은 레이어1에 넣지 않음 — 레이어1 렌더엔 벽이 없어 개구부 밖으로 새기 때문.
     // 아치 카드만 광원으로 → 광선이 정확히 창 실루엣에서만 방사.
+
+    // 가시 광원 오브 — 빛점(rayY/rayZ) 자리에 항상 보이는 발광 sprite. 갓레이도 같은 점에서 방사 → 광원=빛점 일치.
+    var gc = document.createElement('canvas'); gc.width = gc.height = 128;
+    var gg = gc.getContext('2d');
+    var grd = gg.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grd.addColorStop(0, 'rgba(255,247,220,1)');
+    grd.addColorStop(0.30, 'rgba(255,226,150,0.7)');
+    grd.addColorStop(1, 'rgba(255,210,120,0)');
+    gg.fillStyle = grd; gg.fillRect(0, 0, 128, 128);
+    var gtex = new T.CanvasTexture(gc); gtex.colorSpace = T.SRGBColorSpace;
+    var orb = new T.Sprite(new T.SpriteMaterial({ map: gtex, color: 0xFFE8B4, transparent: true, blending: T.AdditiveBlending, depthWrite: false, depthTest: true, toneMapped: false, opacity: 0.95 }));
+    orb.scale.set(0.8, 0.8, 1);
+    orb.position.set(R.W / 2 - 0.05, this.weather.rayY, this.weather.rayZ);
+    scene.add(orb); this.sunOrb = orb;
   };
 
   /* 보타닉 — 화분(트리/토피어리) + 책장+책 + 플로어 화병 */
@@ -3272,6 +3292,13 @@
       this.sunLight.target.position.copy(sp).addScaledVector(sd, 6);  // 타깃: 방안 바닥쪽
       this.sunLight.target.updateMatrixWorld();
       this.sunLight.intensity = w.sunInt;
+      // 가시 광원 오브 — 빛점과 항상 일치(같은 점), 색/크기 햇빛 강도 반영
+      if (this.sunOrb) {
+        this.sunOrb.position.copy(sp);
+        this.sunOrb.material.color.copy(this.sunLight.color);
+        this.sunOrb.material.opacity = Math.min(1.0, 0.45 + w.sunInt * 0.35);
+        var os = 0.45 + w.sunInt * 0.32; this.sunOrb.scale.set(os, os, 1);
+      }
       // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
       if (w.temp >= 0) warm.lerp(new this.T.Color(0xFFD09A), w.temp);
