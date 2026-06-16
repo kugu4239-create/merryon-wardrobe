@@ -1,0 +1,69 @@
+name: jsDelivr purge (main 반영)
+
+# main 에 변경이 머지되면 jsDelivr 의 @main 캐시를 자동 purge → 운영(cafe24) 임베드는
+# @main 그대로 두고도 수 초 내 최신본 반영. 태그/버전 수정 불필요, cafe24 수정 불필요.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'wardrobe-site.js'
+      - 'assets/**'
+      - 'index.html'
+      - 'demo.html'
+      - 'embed-merris.html'
+      - 'snippet.html'
+  workflow_dispatch:
+
+concurrency:
+  group: jsdelivr-purge
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # diff 위해 전체 히스토리
+
+      - name: Purge changed deployable files on jsDelivr
+        env:
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os, subprocess, urllib.parse, urllib.request
+          repo = os.environ['REPO']
+          before = os.environ.get('BEFORE') or ''
+          after = os.environ.get('AFTER') or 'HEAD'
+
+          def deployable(f):
+              return (f == 'wardrobe-site.js'
+                      or f.startswith('assets/')
+                      or f in ('index.html', 'demo.html', 'embed-merris.html', 'snippet.html'))
+
+          files = []
+          # 직전 커밋이 존재하면 변경분만, 아니면(첫 푸시/강제푸시) JS 만 폴백
+          if before and not set(before) <= {'0'}:
+              try:
+                  out = subprocess.check_output(['git', 'diff', '--name-only', before, after], text=True)
+                  files = [x for x in out.splitlines() if x]
+              except Exception as e:
+                  print('diff 실패, JS 만 purge:', e)
+
+          files = [f for f in files if deployable(f)]
+          if 'wardrobe-site.js' not in files:
+              files.append('wardrobe-site.js')   # JS 는 항상
+
+          for f in sorted(set(files)):
+              enc = '/'.join(urllib.parse.quote(seg) for seg in f.split('/'))
+              url = 'https://purge.jsdelivr.net/gh/%s@main/%s' % (repo, enc)
+              try:
+                  urllib.request.urlopen(url, timeout=40).read()
+                  print('purged:', f)
+              except Exception as e:
+                  print('warn(purge 실패, 무시):', f, e)
+          print('done. count =', len(set(files)))
+          PY
