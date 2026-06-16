@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayY: 1.60, rayZ: 0.0, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -1403,7 +1403,9 @@
       ['temp', '색온도(쿨↔웜)', -1.0, 1.0, 0.02],
       ['exposure', '전체 밝기', 0.25, 0.85, 0.01],
       ['fog', '안개(흐림)', 0.0, 0.12, 0.002],
-      ['skyBright', '하늘 밝기', 0.4, 1.6, 0.02]
+      ['skyBright', '하늘 밝기', 0.4, 1.6, 0.02],
+      ['rayY', '빛 시작 높이', 0.3, 2.8, 0.02],
+      ['rayZ', '빛 시작 좌우', -1.2, 1.2, 0.02]
     ];
     var valEls = {};
     rows.forEach(function (r) {
@@ -3227,12 +3229,12 @@
       if (this.gardenBack) this.gardenBack.material.color.copy(this.gardenBackBase).multiplyScalar(w.skyBright);
       // 스크린스페이스 갓레이 uniform — 창 중심을 화면에 투영해 광선 원점(uSun) 갱신
       if (this.godRayPass) {
-        var Tn = this.T, sx = this.ROOM.W / 2 - 0.05, sy = 1.6;
+        var Tn = this.T, sx = this.ROOM.W / 2 - 0.05, sy = w.rayY, sz = w.rayZ;   // 빛 시작점(툴 조정)
         var vc = this._grSunV || (this._grSunV = new Tn.Vector3());
-        vc.set(sx, sy, 0).applyMatrix4(this.camera.matrixWorldInverse);   // 뷰공간
+        vc.set(sx, sy, sz).applyMatrix4(this.camera.matrixWorldInverse);   // 뷰공간
         var inFront = vc.z < 0 ? 1.0 : 0.0;                               // 카메라 앞이면 1
         var wc = this._grSun || (this._grSun = new Tn.Vector3());
-        wc.set(sx, sy, 0).project(this.camera);                           // NDC
+        wc.set(sx, sy, sz).project(this.camera);                           // NDC
         var su = wc.x * 0.5 + 0.5, sv = wc.y * 0.5 + 0.5;
         this.godRayPass.uniforms.uSun.value.set(su, sv);
         var ox = Math.max(0, Math.max(-su, su - 1)), oy = Math.max(0, Math.max(-sv, sv - 1));
