@@ -419,7 +419,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 16:15 UTC', note: '소파 옆 둥글린 사각 스툴+종이+만년필 추가(스툴 셋업, 드래그 이동) + DPR2 안정' };
+  WardrobeScene.BUILD = { time: '06-16 16:35 UTC', note: '스툴 셋업 탭 핫스팟(merryon:hotspot 이벤트 + config.hotspots 링크/함수) + 드래그 이동 + DPR2' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3006,7 +3006,9 @@
   P._buildWritingStool = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(1.85, 0, 0.85); scene.add(g); this._regProp('스툴 셋업', g);
+    g.position.set(1.85, 0, 0.85); scene.add(g);
+    this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
+    this._registerHotspot('writing', g);    // 탭 핫스팟 — cafe24 에서 링크/함수 연결 가능
 
     // 둥글린 사각 라운드렉트 Shape
     function roundRect(w, h, r) {
@@ -3211,6 +3213,53 @@
   };
 
   /* ----------------------------------------------------------------------- *
+   * 핫스팟 — 특정 오브젝트를 탭/클릭하면 동작(추후 cafe24 에서 링크/함수 연결)
+   *   MERRYON_WARDROBE_CONFIG.hotspots = { writing: 'https://...url' | function }
+   *   또는 컨테이너의 'merryon:hotspot' 커스텀이벤트(detail.name) 청취
+   * ----------------------------------------------------------------------- */
+  P._registerHotspot = function (name, obj) {
+    this.hotspots = this.hotspots || [];
+    this.hotspots.push({ name: name, obj: obj });
+  };
+  P._hotspotAt = function (cx, cy) {
+    if (!this.hotspots || !this.hotspots.length || !this.camera) return null;
+    var r = this.container.getBoundingClientRect();
+    if (!this._rcTap) { this._rcTap = new this.T.Raycaster(); this._ndcTap = new this.T.Vector2(); }
+    this._ndcTap.set(((cx - r.left) / r.width) * 2 - 1, -(((cy - r.top) / r.height) * 2 - 1));
+    this._rcTap.setFromCamera(this._ndcTap, this.camera);
+    var objs = this.hotspots.map(function (h) { return h.obj; });
+    var hits = this._rcTap.intersectObjects(objs, true);
+    if (!hits.length) return null;
+    var o = hits[0].object;
+    while (o) { for (var i = 0; i < this.hotspots.length; i++) if (this.hotspots[i].obj === o) return this.hotspots[i]; o = o.parent; }
+    return null;
+  };
+  P._handleTap = function (cx, cy) {
+    var h = this._hotspotAt(cx, cy);
+    if (h) this._triggerHotspot(h.name);
+  };
+  P._triggerHotspot = function (name) {
+    // 1) 커스텀 이벤트(자사몰에서 addEventListener('merryon:hotspot', ...) 로 자유 처리)
+    try { this.container.dispatchEvent(new CustomEvent('merryon:hotspot', { detail: { name: name }, bubbles: true })); } catch (e) {}
+    // 2) 설정 매핑(문자열=URL 이동 / 함수=호출)
+    var cfg = window.MERRYON_WARDROBE_CONFIG || {};
+    var h = cfg.hotspots && cfg.hotspots[name];
+    if (typeof h === 'function') { try { h(name); } catch (e) {} }
+    else if (typeof h === 'string' && h) {
+      var tgt = cfg.hotspotTarget || '_self';
+      try { window.open(h, tgt); } catch (e) { location.href = h; }
+    }
+  };
+  P._hoverHotspot = function (cx, cy) {
+    var h = this._hotspotAt(cx, cy);
+    if (h === this._hoverHs) return;
+    if (this._hoverHs) this._hoverHs.obj.scale.setScalar(1.0);
+    this._hoverHs = h;
+    if (h) h.obj.scale.setScalar(1.04);          // 살짝 커져 '탭 가능' 표시(자기 그룹만 — 공유재질 영향 없음)
+    this.container.style.cursor = h ? 'pointer' : '';
+  };
+
+  /* ----------------------------------------------------------------------- *
    * 인터랙션 (마우스 호버 패럴랙스 / 드래그 오빗 / 터치 / 자이로)
    * ----------------------------------------------------------------------- */
   P._setupInteraction = function () {
@@ -3262,6 +3311,7 @@
         self.lastInteract = self.elapsed;
       } else {
         self.lastInteract = self.elapsed;
+        if (!self.isMobile) self._hoverHotspot(e.clientX, e.clientY);   // 데스크탑 호버: 핫스팟 커서/하이라이트
       }
     });
     el.addEventListener('pointerdown', function (e) {
@@ -3272,10 +3322,17 @@
       self.lastInteract = self.elapsed;
       if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {}
     });
-    function endDrag() { self.drag.active = false; self.lastInteract = self.elapsed; }
+    function endDrag(e) {
+      var wasTap = self.drag.active && !dragMoved && !self._propEdit && !self._raySourceEdit;
+      self.drag.active = false; self.lastInteract = self.elapsed;
+      if (wasTap && e && typeof e.clientX === 'number') self._handleTap(e.clientX, e.clientY);   // 탭 → 핫스팟
+    }
     el.addEventListener('pointerup', endDrag);
-    el.addEventListener('pointercancel', endDrag);
-    el.addEventListener('pointerleave', function () { if (!self.drag.active) { self.pointer.x = 0; self.pointer.y = 0; } });
+    el.addEventListener('pointercancel', function () { self.drag.active = false; });
+    el.addEventListener('pointerleave', function () {
+      if (!self.drag.active) { self.pointer.x = 0; self.pointer.y = 0; }
+      if (self._hoverHs) { self._hoverHs.obj.scale.setScalar(1.0); self._hoverHs = null; el.style.cursor = ''; }   // 핫스팟 호버 해제
+    });
 
     /* 모바일: 터치 스와이프 = 가로 오빗 + 세로 상하 기울기 */
     var tStartX = 0, tTheta = 0, tStartY = 0, tPhi = 0;
