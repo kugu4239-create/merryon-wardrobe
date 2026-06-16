@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 18:20 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
+  WardrobeScene.BUILD = { time: '06-16 18:35 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3007,7 +3007,7 @@
   P._buildWritingStool = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(1.359, 0, -0.065); scene.add(g);
+    g.position.set(1.262, 0, 0.146); scene.add(g);
     this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
     this._registerHotspot('writing', g);    // 탭 핫스팟 — cafe24 에서 링크/함수 연결 가능
 
@@ -3101,8 +3101,8 @@
     var chrome = new T.MeshStandardMaterial({ color: 0xD9D4CB, roughness: 0.3, metalness: 0.85, envMapIntensity: 1.0 });
     var white = new T.MeshStandardMaterial({ color: 0xF6F1E8, roughness: 0.45, metalness: 0.0 });
 
-    // --- 콘솔(바) ---  좌우 2배 폭
-    var BW = 3.0, BD = 0.46, legH = 0.10, bodyH = 0.74, topTh = 0.045;
+    // --- 콘솔(바) ---  좌우 2배 폭, 높이는 2단 수납장과 동일(legH0.16+body0.80+상판)
+    var BW = 3.0, BD = 0.46, legH = 0.16, bodyH = 0.80, topTh = 0.03;
     var bodyYc = legH + bodyH / 2, topY = legH + bodyH, topYc = topY + topTh / 2;
     // 캐비닛 바디(크림)
     var body = new T.Mesh(new T.BoxGeometry(BW - 0.06, bodyH, BD - 0.05), cream);
@@ -3123,7 +3123,7 @@
     topEdge.position.set(0, topY + 0.001, 0); g.add(topEdge);
     // 골드 다리 4개
     [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) {
-      var leg = new T.Mesh(new T.CylinderGeometry(0.02, 0.014, legH, 12), gold);
+      var leg = new T.Mesh(new T.CylinderGeometry(0.026, 0.018, legH, 12), gold);
       leg.position.set(sx * (BW / 2 - 0.08), legH / 2, sz * (BD / 2 - 0.07)); leg.castShadow = true; g.add(leg);
     }); });
     var TY = topY + topTh;   // 상판 윗면
@@ -3170,19 +3170,28 @@
     var steam = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.11, 12), silver); steam.position.set(MW / 2 - 0.01, 0.13, 0.12); steam.rotation.z = 0.5; mc.add(steam);   // 스팀완드
     mc.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
 
-    // --- 메모 홀더 + 메모(우측 끝 위, 2배 크게·골드 홀더) — 추후 cafe24 터치 지점 ---
-    var memo = new T.Group(); memo.position.set(1.28, TY, -0.02); memo.rotation.y = -0.25; g.add(memo);
-    var mbase = new T.Mesh(new T.CylinderGeometry(0.07, 0.08, 0.04, 24), gold); mbase.position.y = 0.02; mbase.castShadow = true; memo.add(mbase);   // 골드 베이스
-    var post = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.20, 12), gold); post.position.set(-0.024, 0.12, 0); memo.add(post);
-    var clip = new T.Mesh(new T.TorusGeometry(0.024, 0.006, 8, 18), gold); clip.position.set(-0.024, 0.21, 0); clip.rotation.x = Math.PI / 2; memo.add(clip);
-    // 메모 카드(연한 줄, 글자 없음) — 2배
-    var cardTex = this._canvas(128, function (c, S) {
-      c.fillStyle = '#FCF8EF'; c.fillRect(0, 0, S, S);
-      c.strokeStyle = 'rgba(120,110,90,0.18)'; c.lineWidth = 1;
-      for (var y = S * 0.28; y < S * 0.85; y += S * 0.12) { c.beginPath(); c.moveTo(S * 0.16, y); c.lineTo(S * 0.84, y); c.stroke(); }
+    // --- 메모 홀더 + 메모(우측 끝 위, 골드 홀더, 정면·크게 = 잘 보이게) — 추후 cafe24 터치 지점 ---
+    var memo = new T.Group(); memo.position.set(1.28, TY, 0.04); memo.rotation.y = 0.18; g.add(memo);   // 정면(방쪽) 향하게
+    var mbase = new T.Mesh(new T.CylinderGeometry(0.075, 0.085, 0.04, 24), gold); mbase.position.y = 0.02; mbase.castShadow = true; memo.add(mbase);   // 골드 베이스
+    [-0.06, 0.06].forEach(function (px) {   // 양쪽 골드 포스트(카드를 끼움)
+      var post = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.24, 12), gold); post.position.set(px, 0.16, -0.012); memo.add(post);
     });
-    var card = new T.Mesh(new T.BoxGeometry(0.15, 0.19, 0.005), new T.MeshStandardMaterial({ map: cardTex, roughness: 0.9 }));
-    card.position.set(0.024, 0.17, 0); card.rotation.set(-0.12, 0, 0.04); card.castShadow = true; memo.add(card);
+    var clip = new T.Mesh(new T.TorusGeometry(0.03, 0.006, 8, 20), gold); clip.position.set(0, 0.27, -0.008); clip.rotation.x = Math.PI / 2; memo.add(clip);
+    // 메모 카드 — 블러시 헤더 밴드 + 골드 테두리 + 진한 줄 + 하트(글자 없음)
+    var cardTex = this._canvas(256, function (c, S) {
+      c.fillStyle = '#FFFDF7'; c.fillRect(0, 0, S, S);
+      c.fillStyle = '#E7C9C7'; c.fillRect(0, 0, S, S * 0.2);                 // 블러시 헤더
+      c.strokeStyle = '#C9A96E'; c.lineWidth = 4; c.strokeRect(S * 0.05, S * 0.05, S * 0.9, S * 0.9);   // 골드 테두리
+      c.strokeStyle = 'rgba(80,72,55,0.32)'; c.lineWidth = 2.5;            // 진한 줄
+      for (var y = S * 0.36; y < S * 0.86; y += S * 0.13) { c.beginPath(); c.moveTo(S * 0.15, y); c.lineTo(S * 0.85, y); c.stroke(); }
+      // 헤더 중앙 하트(브랜드 모티프)
+      c.fillStyle = '#B0566A'; var hx = S * 0.5, hy = S * 0.10, r = S * 0.028;
+      c.beginPath(); c.arc(hx - r, hy, r, Math.PI, 0); c.arc(hx + r, hy, r, Math.PI, 0);
+      c.lineTo(hx, hy + r * 1.9); c.closePath(); c.fill();
+    });
+    var card = new T.Mesh(new T.BoxGeometry(0.20, 0.25, 0.006),
+      new T.MeshStandardMaterial({ map: cardTex, roughness: 0.82, emissive: 0xffffff, emissiveMap: cardTex, emissiveIntensity: 0.12 }));   // 살짝 발광 → 그늘에서도 또렷
+    card.position.set(0, 0.21, 0); card.rotation.set(-0.22, 0, 0); card.castShadow = true; memo.add(card);
   };
 
   /* ----------------------------------------------------------------------- *
