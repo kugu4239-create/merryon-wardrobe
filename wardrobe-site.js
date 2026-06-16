@@ -153,7 +153,7 @@
   }
   /* 3D 에셋(.glb) 경로 — 기본은 스크립트 옆 assets/garments/.
    * 운영(Cafe24)에서는 window.MERRYON_WARDROBE_CONFIG.assetBase 로 CDN 경로 치환 가능. */
-  var ASSET_VER = 'v11-20260616';   // GLB 캐시 무효화(에셋 갱신 시 증가)
+  var ASSET_VER = 'v12-20260616b';   // GLB 캐시 무효화(에셋 갱신 시 증가) — v12: 압축→비압축 복원본 강제 재수신
   function asset(path) {
     var cfg = window.MERRYON_WARDROBE_CONFIG || {};
     var base;
@@ -417,7 +417,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 13:50 UTC', note: 'var P 선언 위치 수정(메서드 할당 전으로) → 무한로딩 해결 / 비압축 GLB·모바일 발열완화 유지' };
+  WardrobeScene.BUILD = { time: '06-16 14:05 UTC', note: 'ASSET_VER v12 — 캐시된 압축 GLB 강제 무효화(소파/화병/꽃 복구) / 무한로딩 수정·@main·모바일 발열완화 유지' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
