@@ -203,7 +203,7 @@
 
     /* --- 렌더러 --------------------------------------------------------- */
     var renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.75 : 2));   // 모바일 DPR 캡(거의 무체감, 픽셀 −23%)
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
@@ -376,7 +376,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:46 UTC', note: '유휴 시 30fps 캡(회전중엔 60fps) → GPU 부하 절반, 무체감' };
+  WardrobeScene.BUILD = { time: '06-16 08:58 UTC', note: '모바일 DPR 1.75 + MSAA 2(가벼움, 거의 무체감) · 유휴 30fps · sleep' };
 
   var P = WardrobeScene.prototype;
 
@@ -2971,8 +2971,8 @@
     var h = Math.max(1, this.container.clientHeight || window.innerHeight);
 
     // MSAA(멀티샘플) 렌더타깃 — 얇은 골드 몰딩/패널 모서리의 계단현상 제거.
-    var pr = Math.min(window.devicePixelRatio || 1, 2);
-    var samples = 4;   // 모바일도 PC와 동일(MSAA)
+    var pr = Math.min(window.devicePixelRatio || 1, this.isMobile ? 1.75 : 2);   // 모바일 DPR 캡
+    var samples = this.isMobile ? 2 : 4;   // 모바일 MSAA 2(가장자리만 미세, 대역폭↓)
     var msaaRT = new T.WebGLRenderTarget(
       Math.max(1, Math.floor(w * pr)), Math.max(1, Math.floor(h * pr)),
       { type: T.HalfFloatType, samples: samples }
