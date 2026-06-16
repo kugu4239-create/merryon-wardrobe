@@ -268,11 +268,12 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayY: 1.60, rayZ: 0.0, rayStr: 2.5, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayX: 7.0, rayY: 3.2, rayZ: 0.0, rayStr: 2.5, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
     this._buildLights();
+    this._buildWindowProjector();   // 창 밖 태양 → 창 패턴 투영 SpotLight
     this._buildRoom();
     this._buildCeilingAndChandelier();
     this._buildWindowAndCurtain();
@@ -326,7 +327,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 06:23 UTC', note: '빛 세기↑·범위↑(노출0.11·감쇠0.985·게이트2.4·세기범위0~6) · 오브↑' };
+  WardrobeScene.BUILD = { time: '06-16 06:34 UTC', note: '창 밖 태양→창 패턴 투영(SpotLight gobo) · 빛점=밖 태양(거리/높이/좌우 드래그·슬라이더)' };
 
   var P = WardrobeScene.prototype;
 
@@ -635,6 +636,46 @@
     fill.position.set(0, 1.7, -2.2);
     fill.lookAt(0, 1.7, -3.4);
     scene.add(fill);
+  };
+
+  /* 창 패턴 텍스처(고보/쿠키) — 아치 개구부=밝음(빛 통과), 멀리언/밖=어두움.
+   * SpotLight.map 으로 투영하면 방 바닥/벽에 아치+격자 창 빛이 맺힌다. */
+  P._windowMapTex = function () {
+    var T = this.T;
+    var c = document.createElement('canvas'); c.width = c.height = 256;
+    var g = c.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, 256, 256);
+    var PX = 62, R = 1.2;
+    function X(z) { return 128 + z * PX; }
+    function Y(y) { return 34 + (2.8 - y) * PX; }
+    // 아치 개구부(흰=빛 통과)
+    g.fillStyle = '#fff'; g.beginPath();
+    g.moveTo(X(-1.2), Y(0.5)); g.lineTo(X(1.2), Y(0.5)); g.lineTo(X(1.2), Y(1.6));
+    g.arc(X(0), Y(1.6), R * PX, 0, Math.PI, true);
+    g.lineTo(X(-1.2), Y(0.5)); g.closePath(); g.fill();
+    // 멀리언(격자) — 어두움
+    g.strokeStyle = '#0a0a0a'; g.lineWidth = 5; g.lineCap = 'round';
+    [-0.4, 0, 0.4].forEach(function (z) { g.beginPath(); g.moveTo(X(z), Y(1.6)); g.lineTo(X(z), Y(0.5)); g.stroke(); });
+    g.beginPath(); g.moveTo(X(-1.2), Y(1.05)); g.lineTo(X(1.2), Y(1.05)); g.stroke();
+    g.beginPath(); g.moveTo(X(-1.2), Y(1.6)); g.lineTo(X(1.2), Y(1.6)); g.stroke();
+    [0.25, 0.5, 0.75].forEach(function (f) { var a = Math.PI * f; g.beginPath(); g.moveTo(X(0), Y(1.6)); g.lineTo(X(-R * Math.cos(a)), Y(1.6 + R * Math.sin(a))); g.stroke(); });
+    var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t;
+  };
+
+  /* 창 밖 태양(빛점) → 창 패턴을 방안에 투영하는 SpotLight. 위치/타깃/세기는 매 프레임 빛점에서 파생. */
+  P._buildWindowProjector = function () {
+    var T = this.T, scene = this.scene;
+    var proj = new T.SpotLight(0xFFF0DC, 0.0, 30, 0.62, 0.4, 0.85);
+    proj.map = this._windowMapTex();
+    proj.position.set(7, 3.2, 0); proj.target.position.set(1.0, 0.2, 0);
+    if (!this.isMobile) {
+      proj.castShadow = true;                          // 맵 투영 보장(투영 행렬) + 방 오브젝트 그림자
+      proj.shadow.mapSize.set(1024, 1024);
+      proj.shadow.camera.near = 1; proj.shadow.camera.far = 24;
+      proj.shadow.bias = -0.0006;
+    }
+    scene.add(proj, proj.target);
+    this.windowProjector = proj;
   };
 
   /* ----------------------------------------------------------------------- *
@@ -1420,8 +1461,9 @@
       ['exposure', '전체 밝기', 0.25, 0.85, 0.01],
       ['fog', '안개(흐림)', 0.0, 0.12, 0.002],
       ['skyBright', '하늘 밝기', 0.4, 1.6, 0.02],
-      ['rayY', '빛 시작 높이', 0.3, 2.8, 0.02],
-      ['rayZ', '빛 시작 좌우', -1.2, 1.2, 0.02],
+      ['rayX', '빛 거리(밖)', 5.5, 8.0, 0.05],
+      ['rayY', '빛 높이(밖)', 0.5, 8.0, 0.05],
+      ['rayZ', '빛 좌우(밖)', -5.0, 5.0, 0.05],
       ['rayStr', '빛 세기', 0.0, 6.0, 0.05]
     ];
     var valEls = {};
@@ -2969,7 +3011,7 @@
         uDecay: { value: 0.985 },
         uDensity: { value: 1.0 },
         uWeight: { value: 0.45 },
-        uExposure: { value: 0.11 },
+        uExposure: { value: 0.05 },
         uActive: { value: 0.0 },
         uAspect: { value: w / h }
       },
@@ -3282,28 +3324,36 @@
     if (this.sunLight && w) {
       var day = w.daycycle ? (t % 60) / 60 : 0.5;
       var ang = -0.5 + day * 1.0;
-      // 태양광을 '빛점'(창 평면 위 rayY/rayZ)에서 파생 → 태양·창 광선·바닥 빛풀이 같은 점에 강력 연동
+      // 빛점 = 창 밖 태양 위치(rayX,rayY,rayZ). 방안 조준점(roomTgt)으로 쏨 → 창 패턴을 방에 투영.
       var sp = this._sunSrc || (this._sunSrc = new this.T.Vector3());
-      var sd = this._sunDir || (this._sunDir = new this.T.Vector3());
-      sp.set(this.ROOM.W / 2 - 0.05, w.rayY, w.rayZ);                 // 빛점(창 통과 지점)
-      var down = 0.3 + w.sunHeight * 0.07;                            // sunHeight로 하강 경사(빛 길이)
-      sd.set(-1.0, -down, -0.32 + (w.daycycle ? ang * 0.3 : 0)).normalize();   // 창→방안 하강 방향
-      this.sunLight.position.copy(sp).addScaledVector(sd, -8);        // 태양: 창 밖(빛점 뒤쪽)
-      this.sunLight.target.position.copy(sp).addScaledVector(sd, 6);  // 타깃: 방안 바닥쪽
-      this.sunLight.target.updateMatrixWorld();
-      this.sunLight.intensity = w.sunInt;
-      // 가시 광원 오브 — 빛점과 항상 일치(같은 점), 색/크기 햇빛 강도 반영
+      var rt = this._sunTgt || (this._sunTgt = new this.T.Vector3());
+      var rx = (w.rayX != null) ? w.rayX : 9.0;
+      sp.set(rx, w.rayY, w.rayZ);                                     // 창 밖 태양(빛점)
+      // 조준점: 태양→창 중심(5.25,1.55,rayZ)을 지나 방안으로 연장 → 입사각이 태양 위치에 따라 변함
+      var wcx = this.ROOM.W / 2 - 0.05;
+      rt.set(wcx - (rx - wcx) * 1.6, 1.55 - (w.rayY - 1.55) * 1.6, w.rayZ - w.rayZ * 0.4);
+      this.sunLight.position.copy(sp);
+      this.sunLight.target.position.copy(rt); this.sunLight.target.updateMatrixWorld();
+      this.sunLight.intensity = w.sunInt * 0.5;                       // 직사 디퓨즈는 약하게(투영이 메인)
+      // 창 패턴 투영 SpotLight — 같은 태양 위치/조준
+      if (this.windowProjector) {
+        this.windowProjector.position.copy(sp);
+        this.windowProjector.target.position.copy(rt); this.windowProjector.target.updateMatrixWorld();
+        this.windowProjector.intensity = w.sunInt * (w.rayStr != null ? w.rayStr : 1.0) * 1.3;
+      }
+      // 가시 태양 오브 — 빛점(창 밖)과 항상 일치
       if (this.sunOrb) {
         this.sunOrb.position.copy(sp);
         this.sunOrb.material.color.copy(this.sunLight.color);
         this.sunOrb.material.opacity = Math.min(1.0, 0.45 + w.sunInt * 0.35);
-        var os = (0.8 + w.sunInt * 0.6) * (1.0 + (w.rayStr != null ? w.rayStr : 1.0) * 0.25); this.sunOrb.scale.set(os, os, 1);
+        var os = (0.9 + w.sunInt * 0.7) * (1.0 + (w.rayStr != null ? w.rayStr : 1.0) * 0.2); this.sunOrb.scale.set(os, os, 1);
       }
       // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
       if (w.temp >= 0) warm.lerp(new this.T.Color(0xFFD09A), w.temp);
       else warm.lerp(new this.T.Color(0xC7D8F4), -w.temp);
       this.sunLight.color.copy(warm);
+      if (this.windowProjector) this.windowProjector.color.copy(warm);
       if (this.windowLight) this.windowLight.intensity = 1.7 * (w.sunInt / 0.70);
       // 전체 밝기(노출) + 안개(흐림) — 인트로 리빌 후에만(리빌 페이드 보존)
       if (this.introDone) {
@@ -3314,7 +3364,7 @@
       if (this.gardenBack) this.gardenBack.material.color.copy(this.gardenBackBase).multiplyScalar(w.skyBright);
       // 스크린스페이스 갓레이 uniform — 창 중심을 화면에 투영해 광선 원점(uSun) 갱신
       if (this.godRayPass) {
-        var Tn = this.T, sx = this.ROOM.W / 2 - 0.05, sy = w.rayY, sz = w.rayZ;   // 빛 시작점(툴 조정)
+        var Tn = this.T, sx = this.ROOM.W / 2 - 0.05, sy = 1.55, sz = w.rayZ;   // 갓레이 헤이즈는 창 중심에서 방사
         // 투영 전에 카메라 행렬 강제 갱신(렌더 전이라 matrixWorldInverse가 stale → inFront/uSun 오류 방지)
         this.camera.updateMatrixWorld();
         this.camera.matrixWorldInverse.copy(this.camera.matrixWorld).invert();
@@ -3354,7 +3404,7 @@
       new T.MeshBasicMaterial({ color: 0xFFE9B0, transparent: true, opacity: 0.28, depthTest: false, toneMapped: false }));
     marker.add(halo); marker.add(core); marker.renderOrder = 999; marker.visible = false;
     this.scene.add(marker); this.raySourceMarker = marker;
-    function syncMarker() { marker.position.set(SX, self.weather.rayY, self.weather.rayZ); }
+    function syncMarker() { marker.position.set((self.weather.rayX != null ? self.weather.rayX : 9.0), self.weather.rayY, self.weather.rayZ); }
     syncMarker();
 
     var btn = document.createElement('button'); btn.textContent = '◎ 빛점';
@@ -3367,7 +3417,7 @@
     document.body.appendChild(badge);
     var hint = document.createElement('div');
     hint.style.cssText = 'position:fixed;left:84px;top:48px;z-index:99999;max-width:200px;background:rgba(40,32,18,.92);color:#f3ecd9;border-radius:10px;padding:8px 10px;font:11px/1.4 sans-serif;display:none;';
-    hint.textContent = '창을 바라본 뒤 노란 마커를 드래그해 빛 시작점(높이·좌우)을 옮기세요.';
+    hint.textContent = '창 밖 태양(노란 마커)을 드래그해 높이·좌우를 옮기세요. 거리는 날씨 패널 "빛 거리(밖)" 슬라이더.';
     document.body.appendChild(hint);
 
     btn.onclick = function () {
@@ -3377,14 +3427,15 @@
       syncMarker();
     };
 
-    var rc = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(1, 0, 0), -SX), hit = new T.Vector3();
+    var rc = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(1, 0, 0), 0), hit = new T.Vector3();
     var dragging = false;
     function setNdc(e) { var r = el.getBoundingClientRect(), cx = e.touches ? e.touches[0].clientX : e.clientX, cy = e.touches ? e.touches[0].clientY : e.clientY; ndc.x = (cx - r.left) / r.width * 2 - 1; ndc.y = -((cy - r.top) / r.height * 2 - 1); }
     function apply(e) {
       setNdc(e); rc.setFromCamera(ndc, self.camera);
+      plane.constant = -(self.weather.rayX != null ? self.weather.rayX : 9.0);   // 태양 깊이(밖) 평면에서 y/z 드래그
       if (rc.ray.intersectPlane(plane, hit)) {
-        self.weather.rayY = Math.max(0.3, Math.min(2.8, hit.y));
-        self.weather.rayZ = Math.max(-1.2, Math.min(1.2, hit.z));
+        self.weather.rayY = Math.max(0.5, Math.min(8.0, hit.y));
+        self.weather.rayZ = Math.max(-5.0, Math.min(5.0, hit.z));
         syncMarker();
         try { localStorage.setItem('MERRYON_WEATHER', JSON.stringify(self.weather)); } catch (x) {}
       }
