@@ -616,10 +616,17 @@
     vm.lookAt(-2.8, 1.1, -2.0);
     scene.add(vm);
 
-    // 옷장 의류 스포트
+    // 옷장 의류 스포트 (의류 그림자를 뒷판에 약하게 드리움)
     var sp = new T.SpotLight(0xFFF6EC, 2.6, 8, Math.PI / 3.6, 0.45, 1.1);
     sp.position.set(0, R.H - 0.5, -2.4);
     sp.target.position.set(0, 1.4, -3.3);
+    if (!this.isMobile) {
+      sp.castShadow = true;
+      sp.shadow.mapSize.set(1024, 1024);
+      sp.shadow.camera.near = 0.5; sp.shadow.camera.far = 6;
+      sp.shadow.bias = -0.0006; sp.shadow.radius = 4;            // 소프트 엣지(약한 그림자)
+      if ('intensity' in sp.shadow) sp.shadow.intensity = 0.5;   // 그림자 농도 낮춤(r165+)
+    }
     scene.add(sp, sp.target);
     this.armoireSpot = sp;
 
@@ -930,7 +937,7 @@
 
     // 내부 후면 패널 — 빌트인 아이보리(살짝 그림자감), 의류가 도드라지게
     var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.85 }));
-    back.position.set(0, AH / 2, 0.02); arm.add(back);
+    back.position.set(0, AH / 2, 0.02); back.receiveShadow = true; arm.add(back);   // 의류 그림자 받음
     // 측면 안쪽 — 아이보리
     var inSide = new T.MeshStandardMaterial({ color: 0xDED3BE, roughness: 0.85 });
     var inL = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
@@ -1168,13 +1175,12 @@
         map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide,
         roughness: 0.82, metalness: 0.0, color: (bk.tint != null) ? bk.tint : 0xffffff   // 틴트=색감 보정(블로우아웃 완화)
       });
-      // 약한 드롭 그림자 — 같은 실루엣을 어둡게, 살짝 뒤(+우하단) 오프셋(빌보드 동반)
-      var shMat = new T.MeshBasicMaterial({ map: cc.tex, transparent: true, alphaTest: 0.5, side: T.DoubleSide, color: 0x000000, opacity: 0.16, depthWrite: false, toneMapped: false });
-      var shadow = new T.Mesh(new T.PlaneGeometry(w, h), shMat);
-      shadow.position.set(0.028, topY - h / 2 + dyv - 0.03, dz - 0.06); shadow.scale.set(1.02, 1.0, 1.0); shadow.renderOrder = -1;
-      pivot.add(shadow);
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
-      plane.position.set(0, topY - h / 2 + dyv, dz); plane.castShadow = false; pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
+      plane.position.set(0, topY - h / 2 + dyv, dz);
+      // 실제 광원 그림자 — 옷 실루엣(알파)을 인식하는 customDepthMaterial로 뒷판에 그림자 드리움
+      plane.castShadow = true;
+      plane.customDepthMaterial = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking, map: cc.tex, alphaTest: 0.5 });
+      pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
       self._garmentState[i] = { pivot: pivot, type: type, name: entry[3] || type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: dyDef }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
       // 빌보드 목록 재구성
       var bb = []; for (var k = 0; k < n; k++) { if (self._garmentState[k] && self._garmentState[k].pivot) bb.push(self._garmentState[k].pivot); }
