@@ -557,8 +557,9 @@
     scene.add(amb);
 
     // 웜 코브 글로우 — 천장 둘레의 은은한 골든 간접광(레퍼런스 코브 조명 무드)
-    var cove = new T.RectAreaLight(0xFFE6BE, 1.4, R.W * 0.8, R.D * 0.8);
-    cove.position.set(0, R.H - 0.12, 0); cove.lookAt(0, 0, 0); scene.add(cove);
+    // 풋프린트를 방보다 크게(천장-벽 경계 상단까지 고르게 비춰 '단/띠' 단차 제거)
+    var cove = new T.RectAreaLight(0xFFE6BE, 1.0, R.W * 1.25, R.D * 1.25);
+    cove.position.set(0, R.H - 0.06, 0); cove.lookAt(0, 0, 0); scene.add(cove);
 
     // 샹들리에 포인트 라이트 × 2 (인트로에서 0 → 페이드인)
     this.chandLights = [];
@@ -1972,32 +1973,33 @@
    * 매 프레임 카메라를 향해 yaw(빌보드)하고, 날씨(sunInt)에 따라 밝기 변동. */
   P._buildLightShafts = function () {
     var T = this.T, scene = this.scene, R = this.ROOM;
-    // 길이 방향 밝기(창쪽 밝고 안쪽으로 사라짐) + 폭 방향 페더 그라데이션
+    // 길이 방향 밝기(창쪽에서 시작→안쪽으로 부드럽게 사라짐, 하드 핫스팟 없음) + 폭 페더
     var c = document.createElement('canvas'); c.width = 128; c.height = 64; var g = c.getContext('2d');
     var img = g.createImageData(128, 64);
     for (var y = 0; y < 64; y++) for (var x = 0; x < 128; x++) {
-      var fx = x / 127;                          // u=1(+X, 창쪽) 밝음
-      var fy = Math.sin((y / 63) * Math.PI);     // 위/아래 가장자리 페더
-      var a = Math.pow(fx, 1.7) * Math.pow(fy, 1.3);
+      var u = x / 127;                                  // u=1(+X, 창쪽)
+      var fx = Math.sin(Math.min(1.0, u * 1.15) * Math.PI * 0.5);   // 창쪽 부드럽게 차오름(점광원처럼 안 보이게)
+      var fy = Math.pow(Math.sin((y / 63) * Math.PI), 1.4);   // 위/아래 가장자리 페더
+      var a = fx * fy * (0.55 + 0.45 * (1.0 - u));      // 창쪽 0.55~1.0, 안쪽으로 감쇠
       var i = (y * 128 + x) * 4;
-      img.data[i] = 255; img.data[i + 1] = 247; img.data[i + 2] = 222; img.data[i + 3] = Math.min(255, a * 255);
+      img.data[i] = 255; img.data[i + 1] = 248; img.data[i + 2] = 226; img.data[i + 3] = Math.min(255, a * 255);
     }
     g.putImageData(img, 0, 0);
     var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
 
     var pivot = new T.Group();
-    pivot.position.set(R.W / 2 - 0.3, 1.55, 0.0);   // 창 안쪽 중앙
+    pivot.position.set(R.W / 2 - 0.35, 1.55, 0.0);   // 창 안쪽 중앙
     scene.add(pivot); this.lightShafts = pivot;
 
-    var L = 6.0, slope = 0.5;   // 빔 길이 / 하향 사선 각(라디안)
-    // [dz(슬랫 오프셋), dy, 폭, 기본 불투명도]
-    var beams = [[0.0, 0.05, 1.7, 0.50], [-0.55, 0.30, 1.1, 0.34], [0.55, -0.25, 1.1, 0.34], [-1.1, 0.55, 0.8, 0.22], [1.1, -0.5, 0.8, 0.22]];
+    var L = 6.5;   // 빔 길이(방향/사선은 피벗이 태양에 정렬 — 여기선 폭/오프셋만)
+    // 겹쳐서 하나의 단일 샤프트로 보이게: [수직오프셋, 폭, 기본 불투명도]
+    var beams = [[0.0, 2.0, 0.30], [0.18, 1.3, 0.22], [-0.18, 1.3, 0.22]];
     beams.forEach(function (b) {
-      var geo = new T.PlaneGeometry(L, b[2]); geo.translate(-L / 2, 0, 0);   // +X 끝(밝은 쪽)을 피벗(창)에 정렬
-      var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, opacity: b[3], toneMapped: false });
+      var geo = new T.PlaneGeometry(L, b[1]); geo.translate(-L / 2, 0, 0);   // +X 끝(밝은 쪽)을 피벗(창)에 정렬
+      var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, opacity: b[2], toneMapped: false });
       var pl = new T.Mesh(geo, mat);
-      pl.position.set(0, b[1], b[0]); pl.rotation.z = slope;   // 안쪽 끝이 아래로 → 사선 하강
-      pl.userData.baseOp = b[3]; pivot.add(pl);
+      pl.position.set(0, b[0], 0);   // 로컬 수직 오프셋만(방향은 피벗 회전이 담당)
+      pl.userData.baseOp = b[2]; pivot.add(pl);
     });
   };
 
@@ -2879,6 +2881,9 @@
         '  c *= mix(uVig, 1.0, vig);',                              // 비네팅
         '  float g = fract(sin(dot(vUv*uRes + uTime, vec2(12.9898,78.233))) * 43758.5453);',
         '  c += (g - 0.5) * uGrain;',                               // 필름 그레인
+        '  float d1 = fract(sin(dot(vUv*uRes, vec2(41.317,289.71))) * 17231.13);',
+        '  float d2 = fract(sin(dot(vUv*uRes, vec2(97.13,131.70))) * 21942.07);',
+        '  c += (d1 + d2 - 1.0) * (1.7/255.0);',                    // 트라이앵글 디더(천장 그라데이션 밴딩 제거)
         '  gl_FragColor = vec4(max(c, 0.0), 1.0);',
         '}'
       ].join('\n')
@@ -3151,14 +3156,27 @@
       }
       // 창밖 하늘 밝기
       if (this.gardenBack) this.gardenBack.material.color.copy(this.gardenBackBase).multiplyScalar(w.skyBright);
-      // 가시 광선(갓레이) — 카메라 향해 빌보드 + 햇빛 강도/미세 셔머
-      if (this.lightShafts) {
-        var cp = this.camera.position, lp = this.lightShafts.position;
-        this.lightShafts.rotation.y = Math.atan2(cp.x - lp.x, cp.z - lp.z);
-        var sh = Math.min(1.4, w.sunInt / 0.70) * (0.86 + 0.14 * Math.sin(t * 0.7));
-        this.lightShafts.visible = this.introDone && w.sunInt > 0.02;
-        for (var s = 0; s < this.lightShafts.children.length; s++) {
-          var m = this.lightShafts.children[s]; m.material.opacity = m.userData.baseOp * sh;
+      // 가시 광선(갓레이) — 빔을 실제 태양 방향(창→방안)에 정렬하고, 빔 축 둘레로만 카메라를 향하게(가시성)
+      if (this.lightShafts && this.sunLight) {
+        var Tn = this.T, ls = this.lightShafts;
+        var sp = this.sunLight.position, tg = this.sunLight.target.position;
+        var dd = this._lsD || (this._lsD = new Tn.Vector3());
+        dd.set(tg.x - sp.x, tg.y - sp.y, tg.z - sp.z).normalize();        // 태양→방안(빔 진행 방향)
+        var tc = this._lsC || (this._lsC = new Tn.Vector3());
+        tc.copy(this.camera.position).sub(ls.position).normalize();       // 빔→카메라
+        var nn = this._lsN || (this._lsN = new Tn.Vector3());
+        nn.copy(tc).addScaledVector(dd, -tc.dot(dd));                     // dd에 수직이며 카메라 향하는 법선
+        if (nn.lengthSq() < 1e-4) { nn.set(0, 1, 0).addScaledVector(dd, -dd.y); }   // 폴백(빔을 정면으로 볼 때)
+        nn.normalize();
+        var uu = this._lsU || (this._lsU = new Tn.Vector3());
+        uu.crossVectors(nn, dd).normalize();
+        var mm = this._lsM || (this._lsM = new Tn.Matrix4());
+        mm.makeBasis(dd, uu, nn);                                         // 로컬 X=빔방향, Z=법선(카메라)
+        ls.quaternion.setFromRotationMatrix(mm);
+        var sh = Math.min(1.3, w.sunInt / 0.70) * (0.88 + 0.12 * Math.sin(t * 0.6));
+        ls.visible = this.introDone && w.sunInt > 0.02;
+        for (var s = 0; s < ls.children.length; s++) {
+          var m = ls.children[s]; m.material.opacity = m.userData.baseOp * sh;
         }
       }
     }
