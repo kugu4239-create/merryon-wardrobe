@@ -304,6 +304,7 @@
     this._buildGarmentEditor();   // 옷 편집 패널(?edit 또는 localStorage.MERRYON_EDIT='1')
     this._buildPropEditor();      // 소품(아이폰/가방/목업) 드래그 편집
     this._buildWeatherEditor();   // 창밖 날씨/조명 컨트롤
+    this._buildRaySourceEditor(); // X레이 빛점 드래그(갓레이 시작점)
     this._resize();
     try { window.__MERRYON_SCENE__ = this; } catch (e) {}
 
@@ -3015,7 +3016,7 @@
     function rect() { return el.getBoundingClientRect(); }
 
     el.addEventListener('pointermove', function (e) {
-      if (self._propEdit) return;   // 소품 편집 모드: 오빗 정지
+      if (self._propEdit || self._raySourceEdit) return;   // 소품/빛점 편집 모드: 오빗 정지
       var r = rect();
       self.pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
       self.pointer.y = ((e.clientY - r.top) / r.height) * 2 - 1;
@@ -3032,7 +3033,7 @@
       }
     });
     el.addEventListener('pointerdown', function (e) {
-      if (self._propEdit) return;   // 소품 편집 모드: 오빗 비활성(소품 드래그가 처리)
+      if (self._propEdit || self._raySourceEdit) return;   // 소품/빛점 편집 모드: 오빗 비활성
       e.preventDefault();
       self.drag.active = true; self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
       dragMoved = false; downX = e.clientX; downY = e.clientY;
@@ -3047,12 +3048,12 @@
     /* 모바일: 터치 스와이프 = 가로 오빗 */
     var tStartX = 0, tTheta = 0;
     el.addEventListener('touchstart', function (e) {
-      if (self._propEdit || !e.touches.length) return;
+      if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       tStartX = e.touches[0].clientX; tTheta = self.drag.theta;
       self.lastInteract = self.elapsed;
     }, { passive: true });
     el.addEventListener('touchmove', function (e) {
-      if (self._propEdit || !e.touches.length) return;
+      if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
       self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.006));
       self.lastInteract = self.elapsed;
@@ -3297,6 +3298,57 @@
       var b = 0.9 + Math.sin(t * 0.2) * 0.1;
       this.windowGlass.material.color.setRGB(0.92 * b, 0.96 * b, 1.0 * b);
     }
+  };
+
+  /* X레이 빛점 모드 — 갓레이 시작점(창 평면 x=5.25 위의 rayY/rayZ)을 마커로 표시하고 드래그 이동 */
+  P._buildRaySourceEditor = function () {
+    var self = this, T = this.T, el = this.container, R = this.ROOM, SX = R.W / 2 - 0.05;
+    // 마커(반투명 글로우 구 + 외곽 링)
+    var marker = new T.Group();
+    var core = new T.Mesh(new T.SphereGeometry(0.09, 16, 12),
+      new T.MeshBasicMaterial({ color: 0xFFD27A, transparent: true, opacity: 0.92, depthTest: false, toneMapped: false }));
+    var halo = new T.Mesh(new T.SphereGeometry(0.16, 16, 12),
+      new T.MeshBasicMaterial({ color: 0xFFE9B0, transparent: true, opacity: 0.28, depthTest: false, toneMapped: false }));
+    marker.add(halo); marker.add(core); marker.renderOrder = 999; marker.visible = false;
+    this.scene.add(marker); this.raySourceMarker = marker;
+    function syncMarker() { marker.position.set(SX, self.weather.rayY, self.weather.rayZ); }
+    syncMarker();
+
+    var btn = document.createElement('button'); btn.textContent = '◎ 빛점';
+    btn.style.cssText = 'position:fixed;left:84px;top:12px;z-index:99999;padding:8px 12px;border-radius:18px;border:none;background:#5a4a2f;color:#fff;font:13px sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;';
+    document.body.appendChild(btn);
+    var hint = document.createElement('div');
+    hint.style.cssText = 'position:fixed;left:84px;top:48px;z-index:99999;max-width:200px;background:rgba(40,32,18,.92);color:#f3ecd9;border-radius:10px;padding:8px 10px;font:11px/1.4 sans-serif;display:none;';
+    hint.textContent = '창을 바라본 뒤 노란 마커를 드래그해 빛 시작점(높이·좌우)을 옮기세요.';
+    document.body.appendChild(hint);
+
+    btn.onclick = function () {
+      self._raySourceEdit = !self._raySourceEdit;
+      marker.visible = self._raySourceEdit; hint.style.display = self._raySourceEdit ? 'block' : 'none';
+      btn.style.background = self._raySourceEdit ? '#9a7c3f' : '#5a4a2f';
+      syncMarker();
+    };
+
+    var rc = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(1, 0, 0), -SX), hit = new T.Vector3();
+    var dragging = false;
+    function setNdc(e) { var r = el.getBoundingClientRect(), cx = e.touches ? e.touches[0].clientX : e.clientX, cy = e.touches ? e.touches[0].clientY : e.clientY; ndc.x = (cx - r.left) / r.width * 2 - 1; ndc.y = -((cy - r.top) / r.height * 2 - 1); }
+    function apply(e) {
+      setNdc(e); rc.setFromCamera(ndc, self.camera);
+      if (rc.ray.intersectPlane(plane, hit)) {
+        self.weather.rayY = Math.max(0.3, Math.min(2.8, hit.y));
+        self.weather.rayZ = Math.max(-1.2, Math.min(1.2, hit.z));
+        syncMarker();
+        try { localStorage.setItem('MERRYON_WEATHER', JSON.stringify(self.weather)); } catch (x) {}
+      }
+    }
+    el.addEventListener('pointerdown', function (e) {
+      if (!self._raySourceEdit) return;
+      dragging = true; e.preventDefault(); apply(e);
+      if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {}
+    });
+    el.addEventListener('pointermove', function (e) { if (self._raySourceEdit && dragging) apply(e); });
+    function up() { dragging = false; }
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   };
 
   P._ease = function (x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
