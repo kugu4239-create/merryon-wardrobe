@@ -289,6 +289,7 @@
     this._buildGoldRack();
     this._buildTrunk();
     this._buildDisplayCase();
+    this._buildMannequin();   // 임시: 옷 사이즈 가늠용 사람 목업
     // this._buildScarves();   // 바닥 스카프 제거(요청)
     this._buildCurtains();
 
@@ -986,7 +987,7 @@
       ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스', { h: 2.0 }],
       ['up', '노에아 벨트 스커트.png', 'skirt', '노에아 벨트 스커트', { h: 2.0 }],
       ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스', { h: 2.0 }],
-      ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스', { h: 2.0, tint: 0xC7BEAF }]   // 색감 블로우아웃 보정
+      ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스', { h: 2.0, tint: 0xEDE5D8 }]   // 벨리나 스커트(크림)와 톤 매치
     ];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
@@ -1249,7 +1250,7 @@
         [up, dn].forEach(function (b) { b.style.cssText = 'width:24px;padding:2px;border:none;border-radius:5px;background:#4a4640;color:#f3ece0;cursor:pointer;font-size:11px;'; });
         up.onclick = function () { self._moveGarment(i, -1); }; dn.onclick = function () { self._moveGarment(i, 1); };
         title.appendChild(nm); title.appendChild(up); title.appendChild(dn); box.appendChild(title);
-        [['h', '높이', 0.4, 1.8, 0.01], ['dy', '상하위치', -0.35, 0.35, 0.005], ['hl', '옷걸이 ◀', 0.03, 0.42, 0.005], ['hr', '옷걸이 ▶', 0.03, 0.42, 0.005]].forEach(function (sp) {
+        [['h', '높이', 0.4, 4.0, 0.01], ['dy', '상하위치', -1.2, 1.2, 0.005], ['hl', '옷걸이 ◀', 0.02, 0.6, 0.005], ['hr', '옷걸이 ▶', 0.02, 0.6, 0.005]].forEach(function (sp) {
           var key = sp[0], cur = (s.cur[key] != null) ? s.cur[key] : 0;
           var row = document.createElement('label'); row.style.cssText = 'display:flex;align-items:center;gap:6px;margin:2px 0;';
           var lab = document.createElement('span'); lab.textContent = sp[1]; lab.style.cssText = 'width:54px;color:#cbb;';
@@ -2480,6 +2481,34 @@
       for (var n = 0; n < 5; n++) {
         good(g, -CW / 2 + 0.18 + n * ((CW - 0.36) / 4), sy + 0.009, sz, kinds[(n + si) % kinds.length]);
       }
+    });
+  };
+
+  /* 임시 사람 목업(약 1.7m 여성 실루엣) — 옷 사이즈 가늠용. 런칭 전 _buildMannequin 호출 제거. */
+  P._buildMannequin = function () {
+    var T = this.T, scene = this.scene;
+    var g = new T.Group(); g.position.set(2.3, 0, -3.6); g.rotation.y = 0; scene.add(g);   // 옷장 앞(가늠용)
+    var skin = new T.MeshStandardMaterial({ color: 0xD9CFC0, roughness: 0.85, metalness: 0.0 });
+    // 토르소(여성 실루엣) — LatheGeometry
+    var prof = [[0.001, 0.96], [0.16, 0.97], [0.135, 1.05], [0.11, 1.13], [0.118, 1.21], [0.155, 1.30], [0.16, 1.37], [0.14, 1.43], [0.06, 1.47], [0.001, 1.47]];
+    var pts = prof.map(function (p) { return new T.Vector2(p[0], p[1]); });
+    var torso = new T.Mesh(new T.LatheGeometry(pts, 28), skin); torso.castShadow = true; torso.receiveShadow = true; g.add(torso);
+    // 목 + 머리
+    var neck = new T.Mesh(new T.CylinderGeometry(0.034, 0.04, 0.08, 16), skin); neck.position.y = 1.50; g.add(neck);
+    var head = new T.Mesh(new T.SphereGeometry(0.092, 20, 16), skin); head.scale.set(0.92, 1.12, 0.92); head.position.y = 1.61; head.castShadow = true; g.add(head);
+    var bun = new T.Mesh(new T.SphereGeometry(0.05, 14, 12), skin); bun.position.set(0, 1.66, -0.07); g.add(bun);   // 낮은 번(머리)
+    // 어깨 + 팔(약간 벌림)
+    [-1, 1].forEach(function (s) {
+      var arm = new T.Mesh(new T.CylinderGeometry(0.036, 0.026, 0.54, 14), skin);
+      arm.position.set(s * 0.18, 1.15, 0.0); arm.rotation.z = s * 0.11; arm.castShadow = true; g.add(arm);
+      var hand = new T.Mesh(new T.SphereGeometry(0.033, 12, 10), skin); hand.position.set(s * 0.215, 0.89, 0); g.add(hand);
+    });
+    // 골반 + 다리 + 발
+    var pelvis = new T.Mesh(new T.SphereGeometry(0.155, 18, 14), skin); pelvis.scale.set(1.05, 0.55, 0.82); pelvis.position.y = 0.95; g.add(pelvis);
+    [-1, 1].forEach(function (s) {
+      var leg = new T.Mesh(new T.CylinderGeometry(0.062, 0.04, 0.9, 16), skin);
+      leg.position.set(s * 0.07, 0.49, 0); leg.castShadow = true; g.add(leg);
+      var foot = new T.Mesh(new T.BoxGeometry(0.07, 0.04, 0.17), skin); foot.position.set(s * 0.07, 0.025, 0.04); g.add(foot);
     });
   };
 
