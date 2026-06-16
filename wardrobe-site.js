@@ -327,7 +327,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 07:01 UTC', note: '커튼 A→B 크림 매칭 · 날씨 값 베이크 · 모바일 카메라 뒤로(전경 30%↑)' };
+  WardrobeScene.BUILD = { time: '06-16 07:06 UTC', note: '모바일 천장↓7% · 마샬 로고 깜빡임 수정 · 러그 이동가능' };
 
   var P = WardrobeScene.prototype;
 
@@ -2546,8 +2546,8 @@
       lg.fillText('Marshall', 256, 78);
       var lt = new T.CanvasTexture(lc); lt.colorSpace = T.SRGBColorSpace; lt.anisotropy = 4;
       var logo = new T.Mesh(new T.PlaneGeometry(SW - 0.10, (SW - 0.10) * 140 / 512),
-        new T.MeshBasicMaterial({ map: lt, transparent: true }));
-      logo.position.set(0, SH * 0.7, SD / 2 + 0.002); sg.add(logo);
+        new T.MeshBasicMaterial({ map: lt, transparent: true, depthWrite: false }));   // z-파이팅(깜빡임) 방지
+      logo.position.set(0, SH * 0.7, SD / 2 + 0.014); logo.renderOrder = 3; sg.add(logo);
       // 탑 브라스 컨트롤 플레이트 + 노브들
       var plate = new T.Mesh(new T.BoxGeometry(SW - 0.05, 0.012, 0.07), brass);
       plate.position.set(0, SH + 0.002, -SD / 2 + 0.06); sg.add(plate);
@@ -2858,19 +2858,20 @@
     var rugTex = this._herringboneFab('#D7CDBC', '96,84,68');
     rugTex.wrapS = rugTex.wrapT = T.RepeatWrapping; rugTex.repeat.set(8, 8);
     var rugBump = this._rugBump(); rugBump.repeat.set(8, 8);
+    var g = new T.Group(); g.position.set(RX, 0, RZ); scene.add(g); this._regProp('러그', g);
     var rug = new T.Mesh(new T.CircleGeometry(1.7, 64),
       new T.MeshStandardMaterial({ map: rugTex, bumpMap: rugBump, bumpScale: 0.01, color: 0xffffff, roughness: 1.0, metalness: 0.0 }));
     rug.rotation.x = -Math.PI / 2;
     rug.scale.set(1.0, 0.8, 1.0);
-    rug.position.set(RX, 0.015, RZ);
+    rug.position.set(0, 0.015, 0);
     rug.receiveShadow = true;
-    scene.add(rug);
+    g.add(rug);
     // 골드 보더
     var border = new T.Mesh(new T.RingGeometry(1.62, 1.7, 64),
       new T.MeshStandardMaterial({ color: PALETTE.gold, roughness: 0.5, metalness: 0.6 }));
     border.rotation.x = -Math.PI / 2; border.scale.set(1.0, 0.8, 1.0);
-    border.position.set(RX, 0.02, RZ);
-    scene.add(border);
+    border.position.set(0, 0.02, 0);
+    g.add(border);
 
     // 러그 중앙 merryon 블랙 심볼 로고 — cut() 으로 동일출처(GitHub Pages=로컬, 운영=cafe24).
     // crossOrigin 미설정(표시만 필요, 픽셀 read 안 함) → CORS 헤더 없어도 로드 성공.
@@ -2883,8 +2884,8 @@
       var lp = new T.Mesh(new T.PlaneGeometry(lw, lh),
         new T.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.35, roughness: 0.9, metalness: 0.0, depthWrite: false }));
       lp.rotation.x = -Math.PI / 2; lp.rotation.z = 0;   // 바닥에 눕히기(추가 180° 회전 → 정방향)
-      lp.position.set(RX, 0.028, RZ); lp.renderOrder = 3;
-      scene.add(lp);
+      lp.position.set(0, 0.028, 0); lp.renderOrder = 3;
+      g.add(lp);
     }, undefined, function () { });
 
     this._buildSofa();
@@ -3077,7 +3078,8 @@
     });
 
     // 카메라 구면 파라미터
-    this.cam = { theta: 0, phi: 1.373, phiInit: 1.373, radius: this.isMobile ? 4.42 : 3.4, targetTheta: 0, targetPhi: 1.373 };   // 초기 상하각(하향 틸트 ~11°), 모바일 더 뒤로
+    var _phi0 = this.isMobile ? 1.300 : 1.373;   // 모바일은 약간 더 아래로 틸트(천장 ~7% 덜 보이게)
+    this.cam = { theta: 0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 4.42 : 3.4, targetTheta: 0, targetPhi: _phi0 };   // 초기 상하각(하향 틸트), 모바일 더 뒤로
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스, 좌우만)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
