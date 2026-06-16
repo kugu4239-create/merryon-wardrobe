@@ -50,7 +50,11 @@
   }
 
   function boot() {
-    var container = document.querySelector('.main_image_1_background');
+    // 마운트 컨테이너 — 기본 .main_image_1_background, MERRYON_WARDROBE_CONFIG.container 로 변경 가능(예: Merris 섹션)
+    var _cfg = window.MERRYON_WARDROBE_CONFIG || {};
+    var container = _cfg.container
+      ? (typeof _cfg.container === 'string' ? document.querySelector(_cfg.container) : _cfg.container)
+      : document.querySelector('.main_image_1_background');
     if (!container) {
       // 메인 페이지가 아니면 조용히 종료
       return;
@@ -302,10 +306,15 @@
 
     this._setupComposer();
     this._setupInteraction();
-    this._buildGarmentEditor();   // 옷 편집 패널(?edit 또는 localStorage.MERRYON_EDIT='1')
-    this._buildPropEditor();      // 소품(아이폰/가방/목업) 드래그 편집
-    this._buildWeatherEditor();   // 창밖 날씨/조명 컨트롤
-    this._buildRaySourceEditor(); // X레이 빛점 드래그(갓레이 시작점)
+    // 에디터 모드 — 기본 숨김. URL ?edit=1 또는 localStorage.MERRYON_EDIT='1' 일 때만 편집 버튼/패널 노출.
+    this._editMode = /[?&]edit(=1)?\b/i.test(location.search) ||
+      (function () { try { return localStorage.getItem('MERRYON_EDIT') === '1'; } catch (e) { return false; } })();
+    if (this._editMode) {
+      this._buildGarmentEditor();   // 옷 편집 패널
+      this._buildPropEditor();      // 소품 드래그 편집
+      this._buildWeatherEditor();   // 창밖 날씨/조명 컨트롤
+      this._buildRaySourceEditor(); // X레이 빛점 드래그 + 빌드 배지
+    }
     this._resize();
     try { window.__MERRYON_SCENE__ = this; } catch (e) {}
 
@@ -327,7 +336,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 07:36 UTC', note: '모바일 렌더링 PC와 동일화(그림자/반사/MSAA/블룸/갓레이 전부) · 회전속도 동일' };
+  WardrobeScene.BUILD = { time: '06-16 08:00 UTC', note: '에디터 ?edit 게이팅(기본숨김) · 마운트 컨테이너 설정가능 · 모바일=PC 렌더' };
 
   var P = WardrobeScene.prototype;
 
@@ -1268,10 +1277,7 @@
    * 노출 조건: URL 에 ?edit 또는 localStorage.MERRYON_EDIT='1' (일반 방문자엔 숨김). */
   P._buildGarmentEditor = function () {
     var self = this;
-    // 개발 중: 항상 표시(런칭 전 아래 게이트로 되돌리면 ?edit=1 일 때만 노출)
-    var on = true; // /[?&]edit/i.test(location.search) || localStorage.getItem('MERRYON_EDIT') === '1';
-    if (!on) return;
-    try { localStorage.setItem('MERRYON_EDIT', '1'); } catch (e) {}
+    // 노출은 init 의 _editMode 게이트가 담당(여기선 항상 빌드). edit 모드 강제 영속(localStorage) 제거.
 
     var btn = document.createElement('button');
     btn.textContent = '✎ 옷 편집';
