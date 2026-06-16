@@ -332,11 +332,29 @@
     this._frame = 0;
 
     this._animate = this._animate.bind(this);
-    renderer.setAnimationLoop(this._animate);
+    // 화면에 보일 때만 렌더 루프 가동(다른 섹션/스크롤 중엔 정지 → 토글 스냅 방해 안 함, 배터리 절약)
+    var self2 = this, loopOn = false;
+    function setLoop(on) {
+      if (on === loopOn) return; loopOn = on;
+      renderer.setAnimationLoop(on ? self2._animate : null);
+      if (on && self2.clock) self2.clock.getDelta();   // 재개 시 누적 dt 점프 방지
+    }
+    if ('IntersectionObserver' in window) {
+      var vio = new IntersectionObserver(function (es) {
+        setLoop(!!(es[0] && es[0].isIntersecting));
+      }, { rootMargin: '60px' });
+      vio.observe(container);
+      this._visObserver = vio;
+      // 마운트 시 이미 보이면 즉시 가동, 아니면 대기
+      var r0 = container.getBoundingClientRect();
+      setLoop(r0.bottom > -60 && r0.top < (window.innerHeight || 0) + 60);
+    } else {
+      setLoop(true);
+    }
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:03 UTC', note: '스피커 로고 merryon · jsDelivr 자동 purge · 에디터 게이팅' };
+  WardrobeScene.BUILD = { time: '06-16 08:08 UTC', note: '화면 보일때만 렌더(스냅 방해X) · 섹션 도착후 로드 · 스피커 merryon' };
 
   var P = WardrobeScene.prototype;
 

@@ -1,15 +1,12 @@
 <!-- =====================================================================
-     MERRYON 3D 씬 — cafe24 메인 "Merris"(마지막) 섹션에 지연 로드 임베드
+     MERRYON 3D 씬 — cafe24 메인 "Merris"(마지막) 섹션 임베드
      ---------------------------------------------------------------------
-     · 기존 Merris(.main06) 내용은 가리고, 그 섹션을 3D 씬으로 대체.
-     · three.js / GLB / 이미지(약 18MB) 는 사용자가 마지막 섹션에 도달할 때만
-       로드 → 페이지 초기 로드에는 전혀 영향 없음(IntersectionObserver lazy).
-     · 에셋은 GitHub 레포를 jsDelivr CDN 으로 그대로 서빙(별도 업로드 불필요).
-     · 사용처: cafe24 [디자인 > 화면 검색]에서 main06(Merris) 모듈 또는
-       메인 템플릿 </body> 직전 어디든 1회 붙여넣기.
+     · 토글 스냅으로 마지막 섹션에 '완전히 도착한 뒤'에만 3D 를 로드/렌더.
+       → 내려가는 스냅 전환은 가볍게 끝나고, 그 다음 3D 가 뜸(전환 지연 없음).
+     · three.js / GLB / 이미지(~18MB)는 그때 jsDelivr CDN 에서 로드(초기 로드 0).
+     · 화면에서 벗어나면 렌더 루프 자동 정지(씬 내장) → 다른 섹션 스크롤 매끄럽게.
      ===================================================================== -->
 <style>
-  /* 기존 Merris 내용 숨김 + 섹션을 3D 컨테이너로 */
   .main06 { position: relative !important; }
   .main06 > *:not(#merryon3d) { display: none !important; }
   #merryon3d.main_image_1_background {
@@ -21,21 +18,30 @@
     position: absolute; inset: 0;
     width: 100% !important; height: 100% !important; display: block; z-index: 0;
   }
+  /* 로딩 플레이스홀더(3D 뜨기 전 잠깐) */
+  #merryon3d .m3d-load {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font: 500 13px/1 Georgia, serif; letter-spacing: .25em; color: #b9ac95;
+    text-transform: lowercase; background: #F6F0E4; transition: opacity .5s ease; z-index: 1;
+  }
+  #merryon3d.is-ready .m3d-load { opacity: 0; pointer-events: none; }
 </style>
 
-<div id="merryon3d" class="main_image_1_background"><div class="main_image_1_overlay"></div></div>
+<div id="merryon3d" class="main_image_1_background">
+  <div class="m3d-load">merryon</div>
+  <div class="main_image_1_overlay"></div>
+</div>
 
 <script>
 (function () {
-  var REPO = 'kugu4239-create/merryon-wardrobe@main';   // ← 즉시반영 필요하면 @커밋해시 또는 @태그
-  var CDN  = 'https://cdn.jsdelivr.net/gh/' + REPO;
+  var CDN = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main';
 
   var sec = document.querySelector('.main06');
   var box = document.getElementById('merryon3d');
   if (!sec || !box) return;
-  if (box.parentElement !== sec) sec.appendChild(box);   // 컨테이너를 Merris 섹션 안으로
+  if (box.parentElement !== sec) sec.appendChild(box);
 
-  var loaded = false;
+  var loaded = false, timer = null;
   function load() {
     if (loaded) return; loaded = true;
     window.MERRYON_WARDROBE_CONFIG = {
@@ -46,16 +52,31 @@
     var s = document.createElement('script');
     s.src = CDN + '/wardrobe-site.js';
     s.async = true;
+    s.onload = function () {
+      // 캔버스가 생기면 플레이스홀더 페이드아웃
+      var t = setInterval(function () {
+        if (box.querySelector('canvas')) { box.classList.add('is-ready'); clearInterval(t); }
+      }, 120);
+      setTimeout(function () { clearInterval(t); }, 8000);
+    };
     document.body.appendChild(s);
   }
 
   if ('IntersectionObserver' in window) {
+    // 섹션이 '대부분' 보일 때(=스냅 도착 후)만, 살짝 지연 두고 로드 → 전환 방해 0
     var io = new IntersectionObserver(function (ents) {
-      ents.forEach(function (e) { if (e.isIntersecting) { load(); io.disconnect(); } });
-    }, { rootMargin: '300px' });   // 섹션 도달 300px 전 미리 준비
+      ents.forEach(function (e) {
+        if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+          clearTimeout(timer);
+          timer = setTimeout(function () { load(); io.disconnect(); }, 180);
+        } else {
+          clearTimeout(timer);
+        }
+      });
+    }, { threshold: [0, 0.55, 0.9] });
     io.observe(sec);
   } else {
-    load();   // 폴백
+    load();
   }
 })();
 </script>
