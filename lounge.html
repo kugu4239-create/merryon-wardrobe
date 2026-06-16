@@ -1,0 +1,73 @@
+<!--@layout(/layout/basic/main.html)-->
+<!-- =====================================================================
+     MERRYON 3D LOUNGE — cafe24 단독 페이지
+     ---------------------------------------------------------------------
+     · @layout 으로 기본 레이아웃(헤더/푸터) 위에 얹히는 단독 페이지.
+     · 3D 씬을 PC·모바일 모두 화면 상하좌우 100%(풀블리드)로 덮음.
+     · three.js / GLB / 이미지는 jsDelivr CDN 에서 로드.
+     · 화면에서 벗어나면 WebGL 컨텍스트 완전 해제(씬 내장).
+     ===================================================================== -->
+<style>
+  /* 이 페이지에선 스크롤/여백 제거 — 3D 가 뷰포트를 꽉 채움 */
+  html, body { margin: 0 !important; padding: 0 !important; height: 100%; overflow: hidden; background: #F6F0E4; }
+
+  /* 3D 컨테이너: 뷰포트 전체 고정(레이아웃 헤더/푸터/여백 위로 풀블리드) */
+  #merryon3d {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw;
+    height: 100vh;     /* 폴백 */
+    height: 100dvh;    /* 모바일 주소창 대응 */
+    margin: 0; padding: 0;
+    background: #F6F0E4;
+    overflow: hidden;
+    z-index: 9999;     /* 헤더/배너 위로 덮어 풀스크린 */
+  }
+  #merryon3d > canvas {
+    position: absolute; inset: 0;
+    width: 100% !important; height: 100% !important;
+    display: block; z-index: 0;
+  }
+
+  /* 로딩 플레이스홀더(3D 뜨기 전 잠깐) — 러그에 쓰는 merryon 블랙 심볼 로고 */
+  #merryon3d .m3d-load {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #F6F0E4; transition: opacity .5s ease; z-index: 1;
+  }
+  #merryon3d .m3d-load img {
+    width: 132px; height: auto;
+    animation: m3dPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes m3dPulse { 0%, 100% { opacity: .5; } 50% { opacity: .92; } }
+  #merryon3d.is-ready .m3d-load { opacity: 0; pointer-events: none; }
+</style>
+
+<div id="merryon3d">
+  <div class="m3d-load"><img src="https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main/assets/products/%EB%B8%94%EB%9E%99%20%EC%8B%AC%EB%B3%BC.png" alt="merryon"></div>
+</div>
+
+<script>
+(function () {
+  var CDN = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main';
+  var box = document.getElementById('merryon3d');
+  if (!box) return;
+
+  window.MERRYON_WARDROBE_CONFIG = {
+    container: '#merryon3d',
+    assetBase: CDN + '/assets/garments/',
+    resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); }
+  };
+
+  var s = document.createElement('script');
+  s.src = CDN + '/wardrobe-site.js';
+  s.async = true;
+  s.onload = function () {
+    // 캔버스가 생기면 플레이스홀더 페이드아웃
+    var t = setInterval(function () {
+      if (box.querySelector('canvas')) { box.classList.add('is-ready'); clearInterval(t); }
+    }, 120);
+    setTimeout(function () { clearInterval(t); }, 8000);
+  };
+  document.body.appendChild(s);
+})();
+</script>

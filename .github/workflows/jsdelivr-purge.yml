@@ -12,6 +12,7 @@ on:
       - 'index.html'
       - 'demo.html'
       - 'embed-merris.html'
+      - 'lounge.html'
       - 'snippet.html'
   workflow_dispatch:
 
@@ -42,7 +43,7 @@ jobs:
           def deployable(f):
               return (f == 'wardrobe-site.js'
                       or f.startswith('assets/')
-                      or f in ('index.html', 'demo.html', 'embed-merris.html', 'snippet.html'))
+                      or f in ('index.html', 'demo.html', 'embed-merris.html', 'lounge.html', 'snippet.html'))
 
           files = []
           # 직전 커밋이 존재하면 변경분만, 아니면(첫 푸시/강제푸시) JS 만 폴백
