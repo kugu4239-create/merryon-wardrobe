@@ -202,7 +202,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.43;   // 섬광 저감
+    renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = isMobile ? T.PCFShadowMap : T.PCFSoftShadowMap;
     this.renderer = renderer;
@@ -2729,7 +2729,7 @@
         uSat: { value: 0.84 },                                // 필름 느낌 채도↓
         uContrast: { value: 0.09 },                           // 페이드 필름(대비 약)
         uVig: { value: 0.83 },
-        uGrain: { value: 0.032 },                             // 그레인↑(필름)
+        uGrain: { value: 0.020 },                             // 그레인↓(필름)
         uSplitS: { value: new T.Vector3(0.050, 0.018, 0.030) },  // 쉐도우 핑크
         uSplitH: { value: new T.Vector3(0.038, 0.024, 0.004) },  // 하이라이트 크림
         uLift: { value: 0.05 }                                // 블랙 페이드(웜)
