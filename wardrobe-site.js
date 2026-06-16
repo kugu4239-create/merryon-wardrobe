@@ -977,18 +977,20 @@
     // 실제 merryon 의류 컷아웃 [폴더, 파일, 종류, 이름, 베이크값?{h,hl,hr,dy}]
     // 종류: dress/top/skirt/pants (skirt·pants = 집게(바지)걸이). 베이크 없으면 자동(밴드 감지)
     var CUTS = [
-      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', '블루 원피스', { h: 1.150, hl: 0.030, hr: 0.030, dy: 0.045 }],
-      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', '크림 블라우스', { h: 0.720, hl: 0.065, hr: 0.075, dy: -0.075 }],
-      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', '블랙 가디건', { h: 1.280, hl: 0.050, hr: 0.045, dy: -0.010 }],
-      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', '블랙 플리츠 원피스', { h: 0.850, hl: 0.055, hr: 0.055, dy: 0.035 }],
-      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', '핑크 스커트', { h: 0.800, hl: 0.144, hr: 0.144, dy: 0.000 }],
-      ['up', '벨리나 스커트.png', 'skirt', '벨리나 스커트', { h: 2.0 }],
-      ['up', '이븐 레이스.png', 'top', '이븐 레이스', { h: 2.0 }],
-      ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스', { h: 2.0 }],
-      ['up', '노에아 벨트 스커트.png', 'skirt', '노에아 벨트 스커트', { h: 2.0 }],
-      ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스', { h: 2.0 }],
-      ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스', { h: 2.0, tint: 0xFCF7F6 }]   // 벨리나 스커트와 동일 톤(소스색 비율 매치)
+      ['up', '8dbdd3289854eef87e4b7b120803db73.png', 'dress', '블루 원피스', { h: 1.050, hl: 0.030, hr: 0.030, dy: 0.040 }],
+      ['st', '696d5959f7e267f4f3563e4aca916b01.png', 'top', '크림 블라우스', { h: 0.720, hl: 0.065, hr: 0.075, dy: -0.050 }],
+      ['up', 'daae53f5360161f404852168cfa80303.png', 'top', '블랙 가디건', { h: 1.050, hl: 0.035, hr: 0.035, dy: -0.010 }],
+      ['up', 'fddfc7c28b73ccccc67cb6245b7e1f6a.png', 'dress', '블랙 플리츠 원피스', { h: 0.700, hl: 0.055, hr: 0.055, dy: 0.035 }],
+      ['st', 'b6289b824b92eb00546b472548b31bf9.png', 'skirt', '핑크 스커트', { h: 0.600, hl: 0.130, hr: 0.125, dy: 0.000 }],
+      ['up', '벨리나 스커트.png', 'skirt', '벨리나 스커트', { h: 3.350, hl: 0.125, hr: 0.125, dy: 0.615 }],
+      ['up', '이븐 레이스.png', 'top', '이븐 레이스', { h: 3.380, hl: 0.126, hr: 0.126, dy: 0.530 }],
+      ['up', '넴프 슬랙스.png', 'pants', '넴프 슬랙스', { h: 2.580, hl: 0.130, hr: 0.140, dy: 0.550 }],
+      ['up', '노에아 벨트 스커트.png', 'skirt', '노에아 벨트 스커트', { h: 3.220, hl: 0.105, hr: 0.130, dy: 0.575 }],
+      ['up', '로엘 시어서커 원피스.png', 'dress', '로엘 시어서커 원피스', { h: 1.850, hl: 0.040, hr: 0.045, dy: 0.530 }],
+      ['up', '벨리나 블라우스.png', 'top', '벨리나 블라우스', { h: 2.230, hl: 0.060, hr: 0.060, dy: 0.405, tint: 0xFCF7F6 }]
     ];
+    // 편집 패널에서 확정한 표시 순서(garment index) — 핑크스커트,블루,크림블,블랙가디건,이븐레이스,벨리나블,벨리나스,블랙플리츠,넴프,노에아,로엘
+    var DEFAULT_ORDER = [4, 0, 1, 2, 6, 10, 5, 3, 7, 8, 9];
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
     var loader = new T.TextureLoader(); loader.setCrossOrigin('anonymous');
@@ -1102,7 +1104,7 @@
     function getTweaks() { try { return JSON.parse(localStorage.getItem('MERRYON_GARMENT_TWEAKS2') || '{}'); } catch (e) { return {}; } }
     function getOrder() {
       var o; try { o = JSON.parse(localStorage.getItem('MERRYON_GARMENT_ORDER2') || 'null'); } catch (e) { o = null; }
-      if (!o || o.length !== n) { o = []; for (var k = 0; k < n; k++) o.push(k); }
+      if (!o || o.length !== n) { o = (DEFAULT_ORDER && DEFAULT_ORDER.length === n) ? DEFAULT_ORDER.slice() : []; if (!o.length) for (var k = 0; k < n; k++) o.push(k); }
       return o;
     }
     function saveOrder(o) { try { localStorage.setItem('MERRYON_GARMENT_ORDER2', JSON.stringify(o)); } catch (e) {} }
@@ -1229,7 +1231,7 @@
       if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { copyBtn.textContent = '복사됨!'; setTimeout(function () { copyBtn.textContent = '값 복사'; }, 1200); });
       else { window.prompt('복사:', txt); }
     };
-    resetBtn.onclick = function () { saveTw({}); if (self._garmentState) for (var i = 0; i < self._garmentState.length; i++) if (self._garmentState[i]) self._rebuildGarment(i); self._ed.built = -1; self._refreshGarmentEditor(); };
+    resetBtn.onclick = function () { saveTw({}); try { localStorage.removeItem('MERRYON_GARMENT_ORDER2'); } catch (e) {} if (self._garmentState) for (var i = 0; i < self._garmentState.length; i++) if (self._garmentState[i]) self._rebuildGarment(i); self._ed.built = -1; self._refreshGarmentEditor(); };
 
     self._ed = { panel: panel, rows: rows, built: -1 };
 
