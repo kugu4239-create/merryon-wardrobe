@@ -986,6 +986,17 @@
       ['st', '9ff66e03d2b09d390ab2c132fe050951.png', 'pants', 1.2],  // 네이비 와이드 팬츠(7번째 20%↑)
       ['st', 'fe92285cae3666ee3cca9d573ce62166.png', 'dress', 0.86, 0.30, 0, 0.08]  // 블랙 오프숄더 롬퍼(마지막) — 옷걸이 왼쪽만 연장(옷에 닿게)
     ];
+    // 편집 패널에서 확정한 옷별 베이크값 {height, hangerL, hangerR, posY}
+    var BAKED = {
+      0: { h: 1.150, hl: 0.030, hr: 0.030, dy: 0.000 },
+      1: { h: 0.720, hl: 0.065, hr: 0.075, dy: -0.075 },
+      2: { h: 1.280, hl: 0.050, hr: 0.045, dy: -0.010 },
+      3: { h: 0.800, hl: 0.158, hr: 0.158, dy: 0.000 },
+      4: { h: 0.850, hl: 0.055, hr: 0.055, dy: -0.010 },
+      5: { h: 0.800, hl: 0.144, hr: 0.144, dy: 0.000 },
+      6: { h: 1.200, hl: 0.125, hr: 0.125, dy: 0.000 },
+      7: { h: 0.860, hl: 0.230, hr: 0.150, dy: 0.000 }
+    };
     var H0 = 1.2;   // 원피스 기준 높이(m)
     var HBY = { dress: H0, top: H0 / 2, skirt: H0 / 2, pants: H0 * 2 / 3 };
     var loader = new T.TextureLoader(); loader.setCrossOrigin('anonymous');
@@ -1105,21 +1116,22 @@
       var type = entry[2], clipType = (type === 'skirt' || type === 'pants');
       var fx = n > 1 ? (-spanW / 2 + spanW * (i / (n - 1))) : 0;
       var dz = ((type === 'dress') ? 0.10 : (type === 'top') ? 0.0 : -0.10) + (i % 2 ? 0.05 : -0.05);
-      // 기본값(디폴트)
-      var aspect = cc.aspect, band = cc.band;
-      var heightDef = entry[3] || 1;
+      // 기본값(디폴트) — 베이크값(BAKED)이 있으면 우선, 없으면 자동계산
+      var aspect = cc.aspect, band = cc.band, bk = BAKED[i] || {};
+      var heightDef = (bk.h != null) ? bk.h : (entry[3] || 1);
       var w0 = (HBY[type] || H0 / 2) * heightDef * aspect;
       var swDef = (entry[4] != null) ? entry[4]
                 : (band != null ? band * w0 * (clipType ? 0.82 : 0.74) : (clipType ? w0 * 0.6 : w0 * 0.28));
       swDef = Math.max(clipType ? 0.12 : 0.07, Math.min(0.42, swDef));
-      var hlDef = swDef / 2 + (clipType ? 0 : (entry[6] || 0));
-      var hrDef = swDef / 2;
-      // 트윅 적용
+      var hlDef = (bk.hl != null) ? bk.hl : (swDef / 2 + (clipType ? 0 : (entry[6] || 0)));
+      var hrDef = (bk.hr != null) ? bk.hr : (swDef / 2);
+      var dyDef = (bk.dy != null) ? bk.dy : 0;
+      // 트윅 적용(라이브 편집이 베이크값보다 우선)
       var t = getTweaks()[i] || {};
       var hmul = (t.h != null) ? t.h : heightDef;
       var hl = (t.hl != null) ? t.hl : hlDef;
       var hr = (t.hr != null) ? t.hr : hrDef;
-      var dyv = (t.dy != null) ? t.dy : 0;   // 상하 위치 오프셋(봉 기준)
+      var dyv = (t.dy != null) ? t.dy : dyDef;   // 상하 위치 오프셋(옷걸이 고정, 천만)
       // 기존 제거
       var prev = self._garmentState[i];
       if (prev && prev.pivot) { group.remove(prev.pivot); }
@@ -1138,7 +1150,7 @@
       });
       var plane = new T.Mesh(new T.PlaneGeometry(w, h), mat);
       plane.position.set(0, topY - h / 2 + dyv, dz); plane.castShadow = false; pivot.add(plane);   // 천만 상하 이동(옷걸이 고정)
-      self._garmentState[i] = { pivot: pivot, type: type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: 0 }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
+      self._garmentState[i] = { pivot: pivot, type: type, def: { h: heightDef, hl: hlDef, hr: hrDef, dy: dyDef }, cur: { h: hmul, hl: hl, hr: hr, dy: dyv } };
       // 빌보드 목록 재구성
       var bb = []; for (var k = 0; k < n; k++) { if (self._garmentState[k] && self._garmentState[k].pivot) bb.push(self._garmentState[k].pivot); }
       self.billboards = bb;
