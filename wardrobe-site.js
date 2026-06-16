@@ -1977,10 +1977,11 @@
     var c = document.createElement('canvas'); c.width = 128; c.height = 64; var g = c.getContext('2d');
     var img = g.createImageData(128, 64);
     for (var y = 0; y < 64; y++) for (var x = 0; x < 128; x++) {
-      var u = x / 127;                                  // u=1(+X, 창쪽)
-      var fx = Math.sin(Math.min(1.0, u * 1.15) * Math.PI * 0.5);   // 창쪽 부드럽게 차오름(점광원처럼 안 보이게)
+      var u = x / 127;                                  // u=0: 창쪽(밝음) → u=1: 방안쪽(사라짐)
+      var near = 1.0 - u;                               // 창쪽에서 1
+      var fx = Math.pow(near, 0.7);                     // 창쪽 밝고 방안으로 부드럽게 감쇠(점광원처럼 안 보이게)
       var fy = Math.pow(Math.sin((y / 63) * Math.PI), 1.4);   // 위/아래 가장자리 페더
-      var a = fx * fy * (0.55 + 0.45 * (1.0 - u));      // 창쪽 0.55~1.0, 안쪽으로 감쇠
+      var a = fx * fy;
       var i = (y * 128 + x) * 4;
       img.data[i] = 255; img.data[i + 1] = 248; img.data[i + 2] = 226; img.data[i + 3] = Math.min(255, a * 255);
     }
@@ -1995,7 +1996,7 @@
     // 겹쳐서 하나의 단일 샤프트로 보이게: [수직오프셋, 폭, 기본 불투명도]
     var beams = [[0.0, 2.0, 0.30], [0.18, 1.3, 0.22], [-0.18, 1.3, 0.22]];
     beams.forEach(function (b) {
-      var geo = new T.PlaneGeometry(L, b[1]); geo.translate(-L / 2, 0, 0);   // +X 끝(밝은 쪽)을 피벗(창)에 정렬
+      var geo = new T.PlaneGeometry(L, b[1]); geo.translate(L / 2, 0, 0);   // 로컬 +X(=태양 방향)로 뻗고, 밝은 끝(u=0)을 피벗(창)에 정렬 → 창→방안
       var mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, opacity: b[2], toneMapped: false });
       var pl = new T.Mesh(geo, mat);
       pl.position.set(0, b[0], 0);   // 로컬 수직 오프셋만(방향은 피벗 회전이 담당)
