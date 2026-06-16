@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 18:55 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
+  WardrobeScene.BUILD = { time: '06-16 19:05 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -2570,10 +2570,10 @@
     var BW = 1.0, BH = 0.80, BD = 0.42, legH = 0.16;
     var y0 = legH, y1 = legH + BH;
 
-    // 다리 4(테이퍼 + 골드 페럴)
+    // 다리 4(테이퍼, 골드톤 통일 + 골드 페럴)
     [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) {
       var lx = sx * (BW / 2 - 0.07), lz = sz * (BD / 2 - 0.07);
-      var leg = new T.Mesh(new T.CylinderGeometry(0.026, 0.018, legH, 12), cream);
+      var leg = new T.Mesh(new T.CylinderGeometry(0.026, 0.018, legH, 12), gold);
       leg.position.set(lx, legH / 2, lz); leg.castShadow = true; g.add(leg);
       var fer = new T.Mesh(new T.SphereGeometry(0.018, 10, 8), gold); fer.position.set(lx, 0.013, lz); g.add(fer);
     }); });
