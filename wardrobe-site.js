@@ -209,6 +209,8 @@
     renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = T.PCFSoftShadowMap;   // 모바일도 PC와 동일
+    // 그림자 맵을 매 프레임 재생성하지 않고 몇 프레임마다(=FPS↑, 회전 매끄럽게). 외형 동일.
+    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
     this.renderer = renderer;
     // 텍스처 선명도: 비등방 필터 최대치(보통 16) — 비스듬한 표면(바닥/벽)의 흐림 방지
     this.maxAniso = renderer.capabilities.getMaxAnisotropy();
@@ -354,7 +356,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 08:08 UTC', note: '화면 보일때만 렌더(스냅 방해X) · 섹션 도착후 로드 · 스피커 merryon' };
+  WardrobeScene.BUILD = { time: '06-16 08:19 UTC', note: '그림자 4프레임 스로틀(회전 매끄럽게) · 마지막섹션 띠배너/Q&A 숨김' };
 
   var P = WardrobeScene.prototype;
 
@@ -3202,6 +3204,8 @@
     this.elapsed += dt;
     var t = this.elapsed;
     this._frame++;
+    // 그림자 갱신 스로틀 — 4프레임마다(태양/날씨는 느려서 무체감, 회전 FPS↑)
+    if ((this._frame & 3) === 0) this.renderer.shadowMap.needsUpdate = true;
 
     /* ---- 인트로 시네마틱 (0 ~ 2.5s) ---- */
     if (!this.introDone) {
