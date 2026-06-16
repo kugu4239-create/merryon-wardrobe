@@ -1169,7 +1169,8 @@
    * 노출 조건: URL 에 ?edit 또는 localStorage.MERRYON_EDIT='1' (일반 방문자엔 숨김). */
   P._buildGarmentEditor = function () {
     var self = this;
-    var on = /[?&]edit/i.test(location.search) || localStorage.getItem('MERRYON_EDIT') === '1';
+    // 개발 중: 항상 표시(런칭 전 아래 게이트로 되돌리면 ?edit=1 일 때만 노출)
+    var on = true; // /[?&]edit/i.test(location.search) || localStorage.getItem('MERRYON_EDIT') === '1';
     if (!on) return;
     try { localStorage.setItem('MERRYON_EDIT', '1'); } catch (e) {}
     var NAMES = ['블루 원피스', '크림 블라우스', '블랙 가디건', '민트 스커트', '블랙 플리츠 원피스', '핑크 스커트', '네이비 팬츠', '오프숄더 롬퍼'];
