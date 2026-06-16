@@ -320,7 +320,7 @@
   P._makeRenderer = function (container) {
     var T = this.T;
     var renderer = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.isMobile ? 1.75 : 2));   // 모바일 DPR 캡(거의 무체감, 픽셀 −23%)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.isMobile ? 3 : 2));   // 해상도 타협 불가 — 모바일도 기기 원본 밀도(최대 3x)
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.48;   // 섬광 저감(살짝 밝게)
@@ -417,7 +417,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 14:20 UTC', note: 'ASSET_VER v12 + 회전 감도 약간↓(PC 0.005→0.0044, 모바일 0.0075→0.0066)' };
+  WardrobeScene.BUILD = { time: '06-16 14:30 UTC', note: '모바일 DPR 캡 1.75→3(기기 원본 해상도) + 회전감도↓·소파복구·무한로딩수정' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3011,7 +3011,7 @@
     var h = Math.max(1, this.container.clientHeight || window.innerHeight);
 
     // MSAA(멀티샘플) 렌더타깃 — 얇은 골드 몰딩/패널 모서리의 계단현상 제거.
-    var pr = Math.min(window.devicePixelRatio || 1, this.isMobile ? 1.75 : 2);   // 모바일 DPR 캡
+    var pr = Math.min(window.devicePixelRatio || 1, this.isMobile ? 3 : 2);   // 해상도 타협 불가 — 모바일 기기 원본 밀도(최대 3x)
     var samples = this.isMobile ? 2 : 4;   // 모바일 MSAA 2(가장자리만 미세, 대역폭↓)
     var msaaRT = new T.WebGLRenderTarget(
       Math.max(1, Math.floor(w * pr)), Math.max(1, Math.floor(h * pr)),
