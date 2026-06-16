@@ -1291,6 +1291,8 @@
     var rc = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3();
     var sel = null, dragging = false;
     self._propEdit = false;
+    var selBox = new T.BoxHelper(new T.Object3D(), 0xff5fbf); selBox.visible = false; this.scene.add(selBox);
+    function showBox() { if (sel && self._propEdit) { selBox.setFromObject(sel.obj); selBox.visible = true; } else selBox.visible = false; }
 
     function savePos() {
       var all = {}; try { all = JSON.parse(localStorage.getItem('MERRYON_PROP_POS') || '{}'); } catch (e) {}
@@ -1313,39 +1315,44 @@
     var panel = document.createElement('div');
     panel.style.cssText = 'position:fixed;left:12px;bottom:54px;z-index:99999;width:236px;background:rgba(24,22,30,.95);color:#f0ece6;border-radius:12px;padding:10px 12px;font:12px/1.4 sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);display:none;';
     document.body.appendChild(panel);
-    var infod = document.createElement('div'); infod.style.cssText = 'margin-bottom:6px;color:#b8aec8;'; infod.textContent = '소품을 탭/클릭 후 드래그=바닥 이동, 높이는 ▲▼. [위치 복사] 후 채팅에 붙여주세요.';
+    var infod = document.createElement('div'); infod.style.cssText = 'margin-bottom:6px;color:#b8aec8;'; infod.textContent = '소품/가구를 탭→드래그(바닥 이동), 미세조정은 좌우/앞뒤/높이 버튼. [위치 복사] 후 채팅에.';
     var selLbl = document.createElement('div'); selLbl.style.cssText = 'font-weight:600;color:#e8c0e8;margin-bottom:6px;'; selLbl.textContent = '선택: 없음';
-    var yrow = document.createElement('div'); yrow.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;';
-    var yUp = document.createElement('button'), yDn = document.createElement('button'); yUp.textContent = '높이 ▲'; yDn.textContent = '높이 ▼';
-    [yUp, yDn].forEach(function (b) { b.style.cssText = 'flex:1;padding:6px;border:none;border-radius:6px;background:#4a4258;color:#fff;cursor:pointer;'; });
-    yrow.appendChild(yUp); yrow.appendChild(yDn);
-    var foot = document.createElement('div'); foot.style.cssText = 'display:flex;gap:6px;';
+    function axisRow(label, axis, step) {
+      var row = document.createElement('div'); row.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px;';
+      var lab = document.createElement('span'); lab.textContent = label; lab.style.cssText = 'width:48px;color:#cbb;font-size:11px;';
+      var minus = document.createElement('button'), plus = document.createElement('button'); minus.textContent = '−'; plus.textContent = '+';
+      [minus, plus].forEach(function (b) { b.style.cssText = 'flex:1;padding:6px;border:none;border-radius:6px;background:#4a4258;color:#fff;cursor:pointer;font-size:15px;'; });
+      minus.onclick = function () { if (sel) { sel.obj.position[axis] -= step; savePos(); showBox(); } };
+      plus.onclick = function () { if (sel) { sel.obj.position[axis] += step; savePos(); showBox(); } };
+      row.appendChild(lab); row.appendChild(minus); row.appendChild(plus); return row;
+    }
+    var rowX = axisRow('좌우 X', 'x', 0.05), rowZ = axisRow('앞뒤 Z', 'z', 0.05), rowY = axisRow('높이 Y', 'y', 0.02);
+    var foot = document.createElement('div'); foot.style.cssText = 'display:flex;gap:6px;margin-top:2px;';
     var copyB = document.createElement('button'), resetB = document.createElement('button'); copyB.textContent = '위치 복사'; resetB.textContent = '초기화';
     [copyB, resetB].forEach(function (b) { b.style.cssText = 'flex:1;padding:7px;border:none;border-radius:8px;background:#cdb6e0;color:#221;cursor:pointer;'; });
     foot.appendChild(copyB); foot.appendChild(resetB);
-    panel.appendChild(infod); panel.appendChild(selLbl); panel.appendChild(yrow); panel.appendChild(foot);
+    panel.appendChild(infod); panel.appendChild(selLbl); panel.appendChild(rowX); panel.appendChild(rowZ); panel.appendChild(rowY); panel.appendChild(foot);
 
     btn.onclick = function () {
       self._propEdit = !self._propEdit;
       panel.style.display = self._propEdit ? 'block' : 'none';
       btn.style.background = self._propEdit ? '#7a5fae' : '#3a2f55';
       if (!self._propEdit) { sel = null; dragging = false; selLbl.textContent = '선택: 없음'; }
+      showBox();
     };
     el.addEventListener('pointerdown', function (e) {
       if (!self._propEdit) return;
       var p = pick(e);
-      if (p) { sel = p; dragging = true; selLbl.textContent = '선택: ' + p.name; e.preventDefault(); if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {} }
+      if (p) { sel = p; dragging = true; selLbl.textContent = '선택: ' + p.name; showBox(); e.preventDefault(); if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {} }
     });
     el.addEventListener('pointermove', function (e) {
       if (!self._propEdit || !dragging || !sel) return;
       setNdc(e); rc.setFromCamera(ndc, self.camera);
       plane.constant = -sel.obj.position.y;
-      if (rc.ray.intersectPlane(plane, hit)) { sel.obj.position.x = hit.x; sel.obj.position.z = hit.z; }
+      if (rc.ray.intersectPlane(plane, hit)) { sel.obj.position.x = hit.x; sel.obj.position.z = hit.z; showBox(); }
     });
     function up() { if (dragging) { dragging = false; savePos(); } }
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    yUp.onclick = function () { if (sel) { sel.obj.position.y += 0.02; savePos(); } };
-    yDn.onclick = function () { if (sel) { sel.obj.position.y -= 0.02; savePos(); } };
     copyB.onclick = function () {
       var lines = ['merryon 소품 위치 (name: x,y,z):'];
       props.forEach(function (p) { var q = p.obj.position; lines.push(p.name + ': ' + q.x.toFixed(3) + ', ' + q.y.toFixed(3) + ', ' + q.z.toFixed(3)); });
@@ -1353,7 +1360,7 @@
       if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function () { copyB.textContent = '복사됨!'; setTimeout(function () { copyB.textContent = '위치 복사'; }, 1200); });
       else window.prompt('복사:', txt);
     };
-    resetB.onclick = function () { try { localStorage.removeItem('MERRYON_PROP_POS'); } catch (e) {} props.forEach(function (p) { p.obj.position.copy(p.def); }); sel = null; selLbl.textContent = '선택: 없음'; };
+    resetB.onclick = function () { try { localStorage.removeItem('MERRYON_PROP_POS'); } catch (e) {} props.forEach(function (p) { p.obj.position.copy(p.def); }); sel = null; selLbl.textContent = '선택: 없음'; showBox(); };
   };
 
   /* GLB 의류 로딩 — 그룹별 GLB 를 불러와 오브젝트를 x 좌표로 옷별 클러스터링하고,
@@ -1558,7 +1565,7 @@
     var T = this.T, scene = this.scene;
     // 좌측 벽(갤러리 벽)에 등을 대고 붙임 — 그룹으로 묶어 회전 배치
     var W = this.ROOM.W;
-    var vg = new T.Group(); vg.position.set(-W / 2 + 0.5, 0, 0); vg.rotation.y = Math.PI / 2; scene.add(vg);
+    var vg = new T.Group(); vg.position.set(-W / 2 + 0.5, 0, 0); vg.rotation.y = Math.PI / 2; scene.add(vg); this._regProp('화장대', vg);
     this.vanityGroup = vg;
     var bx = 0, bz = 0;   // 그룹 로컬
 
@@ -1665,7 +1672,7 @@
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var mx = 3.3, mz = 1.9, ry = -0.95;    // 우-앞측(소파 옆)
     var orx = 0.40, ory = 0.62, cy = 0.98; // 오벌 반경, 중심 높이 → 셰발(전신) 미러
-    var g = new T.Group(); g.position.set(mx, 0, mz); g.rotation.y = ry; scene.add(g);
+    var g = new T.Group(); g.position.set(mx, 0, mz); g.rotation.y = ry; scene.add(g); this._regProp('체발 미러', g);
 
     // 오벌 골드 프레임(이중 링) + 상단 크레스트(오너먼트)
     function ovalRing(tube, scaleY, rad) {
@@ -2026,7 +2033,7 @@
     // 소파 중앙(0,0,0.35), 좌석 윗면 ≈ 0.46
     var seatY = 0.5;
     // 퀼팅 플랩백 — Blender GLB(다이아 퀼팅+골드 체인)
-    var bagG = new T.Group(); bagG.position.set(-0.4, seatY, 0.42); bagG.rotation.y = 0.5; scene.add(bagG);
+    var bagG = new T.Group(); bagG.position.set(-0.436, 0.5, 0.332); bagG.rotation.y = 0.5; scene.add(bagG);
     if (AD.GLTFLoader) {
       new AD.GLTFLoader().load(asset('bag.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -2129,7 +2136,7 @@
     var T = this.T, AD = this.AD, scene = this.scene;
     // 화장대 앞 대각 — Blender 프렌치 의자(카브리올 다리+카브드 오벌 등받이) GLB
     var W = this.ROOM.W;
-    var g = new T.Group(); g.position.set(-W / 2 + 1.05, 0, 0.05); g.rotation.y = Math.PI / 2; scene.add(g);   // 화장대(좌벽) 앞, 화장대 향함
+    var g = new T.Group(); g.position.set(-W / 2 + 1.05, 0, 0.05); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('화장대 의자', g);   // 화장대(좌벽) 앞
     if (AD.GLTFLoader) {
       new AD.GLTFLoader().load(asset('chair.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -2145,7 +2152,7 @@
     var D = this.ROOM.D;
     var g = new T.Group();
     var W = this.ROOM.W;
-    g.position.set(-W / 2 + 0.4, 0, 4.3); g.rotation.y = Math.PI / 2; scene.add(g);   // 화장대 있는 벽(반대편) 앞-코너, 실내(+x) 향함
+    g.position.set(-W / 2 + 0.4, 0, 4.3); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('주얼리 장식장', g);   // 화장대 벽 앞-코너
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xF1E9D8, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xF4FAFF, roughness: 0.05, metalness: 0.0, transmission: 0.92, transparent: true, opacity: 0.22, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
@@ -2248,7 +2255,7 @@
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(1.6, 0, D / 2 - 0.36); g.rotation.y = Math.PI; scene.add(g);   // 앞벽, 문(x=0) 쪽으로 더 당김
+    g.position.set(1.6, 0, D / 2 - 0.36); g.rotation.y = Math.PI; scene.add(g); this._regProp('2단 수납장', g);   // 앞벽, 문 쪽
 
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var panel = new T.MeshPhysicalMaterial({ color: 0xE7DDC8, roughness: 0.5, clearcoat: 0.3 });
@@ -2370,7 +2377,7 @@
   P._buildGoldRack = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(-4.9, 0, -3.3); g.rotation.y = Math.PI / 2; scene.add(g);   // 90° 회전, 좌측 벽에 붙임(실내 향함)
+    g.position.set(-4.9, 0, -3.3); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('골드 행거랙', g);   // 좌측 벽
     var goldS = new T.MeshStandardMaterial({ color: PALETTE.gold, metalness: 1.0, roughness: 0.26, envMapIntensity: 1.3 });
 
     var HW = 0.72, PH = 1.62, railY = 1.5;   // 포스트 반폭 / 높이 / 레일 높이
@@ -2428,7 +2435,7 @@
   P._buildTrunk = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat;
     var g = new T.Group();
-    g.position.set(-2.7, 0, 4.95); g.rotation.y = Math.PI; scene.add(g);   // 앞벽 갤러리 액자 밑, 벽에 flush
+    g.position.set(-2.7, 0, 4.95); g.rotation.y = Math.PI; scene.add(g); this._regProp('트렁크', g);   // 앞벽 갤러리 액자 밑
     var W = 1.02, H = 0.5, D = 0.58;
 
     // 모노그램 캔버스 텍스처(브라운 + 탄 모티프 — 제너릭)
@@ -2512,7 +2519,7 @@
   P._buildDisplayCase = function () {
     var T = this.T, scene = this.scene, gold = this.goldMat, D = this.ROOM.D;
     var g = new T.Group();
-    g.position.set(-4.85, 0, -1.5); g.rotation.y = Math.PI / 2; scene.add(g);   // 좌벽, 화장대 왼쪽(실내 +x 향함)
+    g.position.set(-4.85, 0, -1.5); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('잡화 진열장', g);   // 좌벽, 화장대 왼쪽
     var CW = 1.7, CD = 0.52, CH = 0.82, plinth = 0.12;
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.4, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
