@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayX: 7.0, rayY: 3.2, rayZ: 0.0, rayStr: 2.5, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayX: 7.0, rayY: 3.2, rayZ: 0.0, rayStr: 2.5, aimX: 0.0, aimZ: -1.5, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -327,7 +327,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 06:34 UTC', note: '창 밖 태양→창 패턴 투영(SpotLight gobo) · 빛점=밖 태양(거리/높이/좌우 드래그·슬라이더)' };
+  WardrobeScene.BUILD = { time: '06-16 06:48 UTC', note: '빛 조준점 추가(하늘색 마커=방안 어디로 쏠지) · 옷장 향하면 아치+옷 그림자 · 콘 넓힘' };
 
   var P = WardrobeScene.prototype;
 
@@ -665,7 +665,7 @@
   /* 창 밖 태양(빛점) → 창 패턴을 방안에 투영하는 SpotLight. 위치/타깃/세기는 매 프레임 빛점에서 파생. */
   P._buildWindowProjector = function () {
     var T = this.T, scene = this.scene;
-    var proj = new T.SpotLight(0xFFF0DC, 0.0, 30, 0.62, 0.4, 0.85);
+    var proj = new T.SpotLight(0xFFF0DC, 0.0, 34, 0.82, 0.35, 0.8);
     proj.map = this._windowMapTex();
     proj.position.set(7, 3.2, 0); proj.target.position.set(1.0, 0.2, 0);
     if (!this.isMobile) {
@@ -1464,7 +1464,9 @@
       ['rayX', '빛 거리(밖)', 5.5, 8.0, 0.05],
       ['rayY', '빛 높이(밖)', 0.5, 8.0, 0.05],
       ['rayZ', '빛 좌우(밖)', -5.0, 5.0, 0.05],
-      ['rayStr', '빛 세기', 0.0, 6.0, 0.05]
+      ['rayStr', '빛 세기', 0.0, 6.0, 0.05],
+      ['aimX', '조준 좌우(방안)', -5.0, 5.0, 0.05],
+      ['aimZ', '조준 앞뒤(방안)', -5.2, 5.0, 0.05]
     ];
     var valEls = {};
     rows.forEach(function (r) {
@@ -3329,9 +3331,8 @@
       var rt = this._sunTgt || (this._sunTgt = new this.T.Vector3());
       var rx = (w.rayX != null) ? w.rayX : 9.0;
       sp.set(rx, w.rayY, w.rayZ);                                     // 창 밖 태양(빛점)
-      // 조준점: 태양→창 중심(5.25,1.55,rayZ)을 지나 방안으로 연장 → 입사각이 태양 위치에 따라 변함
-      var wcx = this.ROOM.W / 2 - 0.05;
-      rt.set(wcx - (rx - wcx) * 1.6, 1.55 - (w.rayY - 1.55) * 1.6, w.rayZ - w.rayZ * 0.4);
+      // 조준점(방안에서 빛을 어디로 쏠지) — 사용자 조절(aim 마커/슬라이더)
+      rt.set((w.aimX != null ? w.aimX : 0.0), 0.15, (w.aimZ != null ? w.aimZ : -1.5));
       this.sunLight.position.copy(sp);
       this.sunLight.target.position.copy(rt); this.sunLight.target.updateMatrixWorld();
       this.sunLight.intensity = w.sunInt * 0.5;                       // 직사 디퓨즈는 약하게(투영이 메인)
@@ -3396,15 +3397,22 @@
   /* X레이 빛점 모드 — 갓레이 시작점(창 평면 x=5.25 위의 rayY/rayZ)을 마커로 표시하고 드래그 이동 */
   P._buildRaySourceEditor = function () {
     var self = this, T = this.T, el = this.container, R = this.ROOM, SX = R.W / 2 - 0.05;
-    // 마커(반투명 글로우 구 + 외곽 링)
-    var marker = new T.Group();
-    var core = new T.Mesh(new T.SphereGeometry(0.09, 16, 12),
-      new T.MeshBasicMaterial({ color: 0xFFD27A, transparent: true, opacity: 0.92, depthTest: false, toneMapped: false }));
-    var halo = new T.Mesh(new T.SphereGeometry(0.16, 16, 12),
-      new T.MeshBasicMaterial({ color: 0xFFE9B0, transparent: true, opacity: 0.28, depthTest: false, toneMapped: false }));
-    marker.add(halo); marker.add(core); marker.renderOrder = 999; marker.visible = false;
-    this.scene.add(marker); this.raySourceMarker = marker;
-    function syncMarker() { marker.position.set((self.weather.rayX != null ? self.weather.rayX : 9.0), self.weather.rayY, self.weather.rayZ); }
+    function mkMarker(coreCol, haloCol, r) {
+      var m = new T.Group();
+      var core = new T.Mesh(new T.SphereGeometry(r, 16, 12),
+        new T.MeshBasicMaterial({ color: coreCol, transparent: true, opacity: 0.92, depthTest: false, toneMapped: false }));
+      var halo = new T.Mesh(new T.SphereGeometry(r * 1.8, 16, 12),
+        new T.MeshBasicMaterial({ color: haloCol, transparent: true, opacity: 0.28, depthTest: false, toneMapped: false }));
+      m.add(halo); m.add(core); m.renderOrder = 999; m.visible = false; m.userData.core = core;
+      self.scene.add(m); return m;
+    }
+    var marker = mkMarker(0xFFD27A, 0xFFE9B0, 0.09);    // 태양(빛점)
+    var aimMk = mkMarker(0x6FD8FF, 0xBDEFFF, 0.08);     // 조준점(방안 바닥)
+    this.raySourceMarker = marker; this.rayAimMarker = aimMk;
+    function syncMarker() {
+      marker.position.set((self.weather.rayX != null ? self.weather.rayX : 7.0), self.weather.rayY, self.weather.rayZ);
+      aimMk.position.set((self.weather.aimX != null ? self.weather.aimX : 0.0), 0.08, (self.weather.aimZ != null ? self.weather.aimZ : -1.5));
+    }
     syncMarker();
 
     var btn = document.createElement('button'); btn.textContent = '◎ 빛점';
@@ -3417,31 +3425,46 @@
     document.body.appendChild(badge);
     var hint = document.createElement('div');
     hint.style.cssText = 'position:fixed;left:84px;top:48px;z-index:99999;max-width:200px;background:rgba(40,32,18,.92);color:#f3ecd9;border-radius:10px;padding:8px 10px;font:11px/1.4 sans-serif;display:none;';
-    hint.textContent = '창 밖 태양(노란 마커)을 드래그해 높이·좌우를 옮기세요. 거리는 날씨 패널 "빛 거리(밖)" 슬라이더.';
+    hint.innerHTML = '<b style="color:#FFD27A">노란</b> 마커=창 밖 태양(높이·좌우, 거리는 슬라이더), <b style="color:#6FD8FF">하늘색</b> 마커=빛 조준점(바닥에서 끌어 옷장 쪽으로). 옷장 향하면 아치+옷 그림자 생김.';
     document.body.appendChild(hint);
 
     btn.onclick = function () {
       self._raySourceEdit = !self._raySourceEdit;
-      marker.visible = self._raySourceEdit; hint.style.display = self._raySourceEdit ? 'block' : 'none';
+      marker.visible = aimMk.visible = self._raySourceEdit; hint.style.display = self._raySourceEdit ? 'block' : 'none';
       btn.style.background = self._raySourceEdit ? '#9a7c3f' : '#5a4a2f';
       syncMarker();
     };
 
-    var rc = new T.Raycaster(), ndc = new T.Vector2(), plane = new T.Plane(new T.Vector3(1, 0, 0), 0), hit = new T.Vector3();
-    var dragging = false;
+    var rc = new T.Raycaster(), ndc = new T.Vector2(), splane = new T.Plane(new T.Vector3(1, 0, 0), 0), fplane = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3();
+    var dragging = false, picked = 'sun';
     function setNdc(e) { var r = el.getBoundingClientRect(), cx = e.touches ? e.touches[0].clientX : e.clientX, cy = e.touches ? e.touches[0].clientY : e.clientY; ndc.x = (cx - r.left) / r.width * 2 - 1; ndc.y = -((cy - r.top) / r.height * 2 - 1); }
+    function save() { try { localStorage.setItem('MERRYON_WEATHER', JSON.stringify(self.weather)); } catch (x) {} }
     function apply(e) {
       setNdc(e); rc.setFromCamera(ndc, self.camera);
-      plane.constant = -(self.weather.rayX != null ? self.weather.rayX : 9.0);   // 태양 깊이(밖) 평면에서 y/z 드래그
-      if (rc.ray.intersectPlane(plane, hit)) {
-        self.weather.rayY = Math.max(0.5, Math.min(8.0, hit.y));
-        self.weather.rayZ = Math.max(-5.0, Math.min(5.0, hit.z));
-        syncMarker();
-        try { localStorage.setItem('MERRYON_WEATHER', JSON.stringify(self.weather)); } catch (x) {}
+      if (picked === 'sun') {
+        splane.constant = -(self.weather.rayX != null ? self.weather.rayX : 7.0);   // 태양 깊이(밖) 평면에서 y/z
+        if (rc.ray.intersectPlane(splane, hit)) {
+          self.weather.rayY = Math.max(0.5, Math.min(8.0, hit.y));
+          self.weather.rayZ = Math.max(-5.0, Math.min(5.0, hit.z));
+        }
+      } else {
+        if (rc.ray.intersectPlane(fplane, hit)) {   // 조준점: 방 바닥(y=0)에서 x/z
+          self.weather.aimX = Math.max(-5.0, Math.min(5.0, hit.x));
+          self.weather.aimZ = Math.max(-5.2, Math.min(5.0, hit.z));
+        }
       }
+      syncMarker(); save();
     }
     el.addEventListener('pointerdown', function (e) {
       if (!self._raySourceEdit) return;
+      setNdc(e); rc.setFromCamera(ndc, self.camera);
+      // 두 마커 중 클릭에 맞은 것 선택(없으면 화면상 가까운 쪽)
+      var hits = rc.intersectObjects([marker.userData.core, aimMk.userData.core], false);
+      if (hits.length) picked = (hits[0].object === aimMk.userData.core) ? 'aim' : 'sun';
+      else {
+        var ms = self._ndcOf(marker.position), as = self._ndcOf(aimMk.position);
+        picked = (Math.hypot(as.x - ndc.x, as.y - ndc.y) < Math.hypot(ms.x - ndc.x, ms.y - ndc.y)) ? 'aim' : 'sun';
+      }
       dragging = true; e.preventDefault(); apply(e);
       if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {}
     });
@@ -3449,6 +3472,8 @@
     function up() { dragging = false; }
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
   };
+
+  P._ndcOf = function (v3) { var p = v3.clone().project(this.camera); return { x: p.x, y: p.y }; };
 
   P._ease = function (x) { return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2; };
 
