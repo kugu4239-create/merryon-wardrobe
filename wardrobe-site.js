@@ -259,6 +259,7 @@
     this._buildJewelryCabinet();
     this._buildStorageAndSpeaker();
     this._buildBookshelfVase();
+    this._buildWritingStool();   // 소파 옆 둥글린 사각 스툴 + 종이 + 만년필(적는 공간)
     this._buildGoldRack();
     this._buildTrunk();
     this._buildDisplayCase();
@@ -418,7 +419,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 15:50 UTC', note: 'DPR 2 캡(3 크래시로 복귀) + 상하 드래그 기울기·모바일 5%축소' };
+  WardrobeScene.BUILD = { time: '06-16 16:35 UTC', note: '스툴 셋업 탭 핫스팟(merryon:hotspot 이벤트 + config.hotspots 링크/함수) + 드래그 이동 + DPR2' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3001,6 +3002,74 @@
     );
   };
 
+  /* 소파 옆 — 둥글린 사각 업홀스터리 스툴 + 종이 + 만년필 (무언가 적는 코너) */
+  P._buildWritingStool = function () {
+    var T = this.T, scene = this.scene, gold = this.goldMat;
+    var g = new T.Group();
+    g.position.set(1.85, 0, 0.85); scene.add(g);
+    this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
+    this._registerHotspot('writing', g);    // 탭 핫스팟 — cafe24 에서 링크/함수 연결 가능
+
+    // 둥글린 사각 라운드렉트 Shape
+    function roundRect(w, h, r) {
+      var s = new T.Shape(), x = -w / 2, y = -h / 2;
+      s.moveTo(x + r, y);
+      s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+      s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+      s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+      return s;
+    }
+
+    var uph = new T.MeshStandardMaterial({ color: 0xEDE4D2, roughness: 0.86, metalness: 0.0 });   // 크림 패브릭(소파 톤)
+    var SW = 0.52, SD = 0.52, bodyH = 0.30, legH = 0.13;
+
+    // 시트(라운드렉트 압출 + 베벨로 부드러운 모서리)
+    var geo = new T.ExtrudeGeometry(roundRect(SW, SD, 0.13),
+      { depth: bodyH, bevelEnabled: true, bevelThickness: 0.035, bevelSize: 0.035, bevelSegments: 3, curveSegments: 10 });
+    geo.rotateX(-Math.PI / 2); geo.computeBoundingBox();
+    var bb = geo.boundingBox, seatH = bb.max.y - bb.min.y;
+    geo.translate(-(bb.min.x + bb.max.x) / 2, legH - bb.min.y, -(bb.min.z + bb.max.z) / 2);
+    var seat = new T.Mesh(geo, uph); seat.castShadow = true; seat.receiveShadow = true; g.add(seat);
+    var seatTop = legH + seatH;
+
+    // 다리 4개(테이퍼 골드 + 페럴) — 방 골드 악센트와 통일
+    [-1, 1].forEach(function (sx) { [-1, 1].forEach(function (sz) {
+      var lx = sx * (SW / 2 - 0.085), lz = sz * (SD / 2 - 0.085);
+      var leg = new T.Mesh(new T.CylinderGeometry(0.018, 0.011, legH, 12), gold);
+      leg.position.set(lx, legH / 2, lz); leg.castShadow = true; g.add(leg);
+      var fer = new T.Mesh(new T.SphereGeometry(0.013, 10, 8), gold); fer.position.set(lx, 0.011, lz); g.add(fer);
+    }); });
+
+    // 종이 스택(연한 룰 라인, 글자 없음) — 살짝 어긋나게 겹침
+    var ruleTex = this._canvas(256, function (c, S) {
+      c.fillStyle = '#FBF7EE'; c.fillRect(0, 0, S, S);
+      c.strokeStyle = 'rgba(120,110,90,0.16)'; c.lineWidth = 1;
+      for (var y = S * 0.18; y < S * 0.92; y += S * 0.085) { c.beginPath(); c.moveTo(S * 0.1, y); c.lineTo(S * 0.9, y); c.stroke(); }
+    });
+    var paperMat = new T.MeshStandardMaterial({ color: 0xFBF7EE, roughness: 0.92, metalness: 0.0 });
+    var topMat = new T.MeshStandardMaterial({ map: ruleTex, roughness: 0.92, metalness: 0.0 });
+    for (var i = 0; i < 3; i++) {
+      var m = new T.Mesh(new T.BoxGeometry(0.205, 0.004, 0.285), i === 2 ? topMat : paperMat);
+      m.position.set(0.004 * i, seatTop + 0.006 + i * 0.004, -0.003 * i);
+      m.rotation.y = -0.14 + i * 0.025; m.castShadow = true; m.receiveShadow = true; g.add(m);
+    }
+    var paperTop = seatTop + 0.006 + 2 * 0.004 + 0.002;
+
+    // 만년필 — 종이 위에 대각선으로
+    var pen = new T.Group();
+    var bodyMat = new T.MeshStandardMaterial({ color: PALETTE.navy, roughness: 0.35, metalness: 0.15 });
+    var barrel = new T.Mesh(new T.CylinderGeometry(0.0075, 0.0072, 0.092, 16), bodyMat); barrel.rotation.z = Math.PI / 2; barrel.position.x = -0.018; pen.add(barrel);
+    var grip = new T.Mesh(new T.CylinderGeometry(0.0072, 0.0052, 0.026, 16), bodyMat); grip.rotation.z = Math.PI / 2; grip.position.x = 0.04; pen.add(grip);
+    var nib = new T.Mesh(new T.ConeGeometry(0.0052, 0.022, 16), gold); nib.rotation.z = -Math.PI / 2; nib.position.x = 0.064; pen.add(nib);
+    var band = new T.Mesh(new T.CylinderGeometry(0.0078, 0.0078, 0.007, 16), gold); band.rotation.z = Math.PI / 2; band.position.x = 0.026; pen.add(band);
+    var capEnd = new T.Mesh(new T.SphereGeometry(0.0078, 12, 10), bodyMat); capEnd.position.x = -0.064; pen.add(capEnd);
+    var clip = new T.Mesh(new T.BoxGeometry(0.032, 0.0025, 0.005), gold); clip.position.set(-0.05, 0.0086, 0); pen.add(clip);
+    pen.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+    pen.position.set(0.015, paperTop + 0.009, 0.022); pen.rotation.y = 0.6;
+    g.add(pen);
+  };
+
   /* ----------------------------------------------------------------------- *
    * 포스트프로세싱 파이프라인
    *   RenderPass → SSAO → UnrealBloom → Bokeh → SMAA → Output
@@ -3144,6 +3213,53 @@
   };
 
   /* ----------------------------------------------------------------------- *
+   * 핫스팟 — 특정 오브젝트를 탭/클릭하면 동작(추후 cafe24 에서 링크/함수 연결)
+   *   MERRYON_WARDROBE_CONFIG.hotspots = { writing: 'https://...url' | function }
+   *   또는 컨테이너의 'merryon:hotspot' 커스텀이벤트(detail.name) 청취
+   * ----------------------------------------------------------------------- */
+  P._registerHotspot = function (name, obj) {
+    this.hotspots = this.hotspots || [];
+    this.hotspots.push({ name: name, obj: obj });
+  };
+  P._hotspotAt = function (cx, cy) {
+    if (!this.hotspots || !this.hotspots.length || !this.camera) return null;
+    var r = this.container.getBoundingClientRect();
+    if (!this._rcTap) { this._rcTap = new this.T.Raycaster(); this._ndcTap = new this.T.Vector2(); }
+    this._ndcTap.set(((cx - r.left) / r.width) * 2 - 1, -(((cy - r.top) / r.height) * 2 - 1));
+    this._rcTap.setFromCamera(this._ndcTap, this.camera);
+    var objs = this.hotspots.map(function (h) { return h.obj; });
+    var hits = this._rcTap.intersectObjects(objs, true);
+    if (!hits.length) return null;
+    var o = hits[0].object;
+    while (o) { for (var i = 0; i < this.hotspots.length; i++) if (this.hotspots[i].obj === o) return this.hotspots[i]; o = o.parent; }
+    return null;
+  };
+  P._handleTap = function (cx, cy) {
+    var h = this._hotspotAt(cx, cy);
+    if (h) this._triggerHotspot(h.name);
+  };
+  P._triggerHotspot = function (name) {
+    // 1) 커스텀 이벤트(자사몰에서 addEventListener('merryon:hotspot', ...) 로 자유 처리)
+    try { this.container.dispatchEvent(new CustomEvent('merryon:hotspot', { detail: { name: name }, bubbles: true })); } catch (e) {}
+    // 2) 설정 매핑(문자열=URL 이동 / 함수=호출)
+    var cfg = window.MERRYON_WARDROBE_CONFIG || {};
+    var h = cfg.hotspots && cfg.hotspots[name];
+    if (typeof h === 'function') { try { h(name); } catch (e) {} }
+    else if (typeof h === 'string' && h) {
+      var tgt = cfg.hotspotTarget || '_self';
+      try { window.open(h, tgt); } catch (e) { location.href = h; }
+    }
+  };
+  P._hoverHotspot = function (cx, cy) {
+    var h = this._hotspotAt(cx, cy);
+    if (h === this._hoverHs) return;
+    if (this._hoverHs) this._hoverHs.obj.scale.setScalar(1.0);
+    this._hoverHs = h;
+    if (h) h.obj.scale.setScalar(1.04);          // 살짝 커져 '탭 가능' 표시(자기 그룹만 — 공유재질 영향 없음)
+    this.container.style.cursor = h ? 'pointer' : '';
+  };
+
+  /* ----------------------------------------------------------------------- *
    * 인터랙션 (마우스 호버 패럴랙스 / 드래그 오빗 / 터치 / 자이로)
    * ----------------------------------------------------------------------- */
   P._setupInteraction = function () {
@@ -3195,6 +3311,7 @@
         self.lastInteract = self.elapsed;
       } else {
         self.lastInteract = self.elapsed;
+        if (!self.isMobile) self._hoverHotspot(e.clientX, e.clientY);   // 데스크탑 호버: 핫스팟 커서/하이라이트
       }
     });
     el.addEventListener('pointerdown', function (e) {
@@ -3205,10 +3322,17 @@
       self.lastInteract = self.elapsed;
       if (el.setPointerCapture) try { el.setPointerCapture(e.pointerId); } catch (x) {}
     });
-    function endDrag() { self.drag.active = false; self.lastInteract = self.elapsed; }
+    function endDrag(e) {
+      var wasTap = self.drag.active && !dragMoved && !self._propEdit && !self._raySourceEdit;
+      self.drag.active = false; self.lastInteract = self.elapsed;
+      if (wasTap && e && typeof e.clientX === 'number') self._handleTap(e.clientX, e.clientY);   // 탭 → 핫스팟
+    }
     el.addEventListener('pointerup', endDrag);
-    el.addEventListener('pointercancel', endDrag);
-    el.addEventListener('pointerleave', function () { if (!self.drag.active) { self.pointer.x = 0; self.pointer.y = 0; } });
+    el.addEventListener('pointercancel', function () { self.drag.active = false; });
+    el.addEventListener('pointerleave', function () {
+      if (!self.drag.active) { self.pointer.x = 0; self.pointer.y = 0; }
+      if (self._hoverHs) { self._hoverHs.obj.scale.setScalar(1.0); self._hoverHs = null; el.style.cursor = ''; }   // 핫스팟 호버 해제
+    });
 
     /* 모바일: 터치 스와이프 = 가로 오빗 + 세로 상하 기울기 */
     var tStartX = 0, tTheta = 0, tStartY = 0, tPhi = 0;

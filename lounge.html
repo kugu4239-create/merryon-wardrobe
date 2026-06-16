@@ -10,7 +10,9 @@
      ===================================================================== -->
 <style>
   /* 이 페이지에선 스크롤/여백 제거 — 3D 가 뷰포트를 꽉 채움 */
-  html, body { margin: 0 !important; padding: 0 !important; height: 100%; overflow: hidden; background: #F6F0E4; }
+  html, body { margin: 0 !important; padding: 0 !important; height: 100%; overflow: hidden; background: #F6F0E4;
+    overscroll-behavior: none;   /* 세로 스와이프를 당겨서새로고침/스크롤이 가로채지 않게 */
+  }
 
   /* 단독 풀스크린 페이지 — 상단 띠배너 + Q&A 버튼 + 하단 푸터 숨김(완전 제거) */
   #promotionBanner2, .q6-qna-fab { display: none !important; }
@@ -26,12 +28,15 @@
     margin: 0; padding: 0;
     background: #F6F0E4;
     overflow: hidden;
+    touch-action: none;          /* 가로·세로 드래그(오빗/상하 기울기)를 3D 가 받게 — 스크롤로 안 뺏김 */
+    overscroll-behavior: none;
     /* z-index 기본값(미지정) — 헤더/로고가 3D 위로 정상 노출되도록 덮지 않음 */
   }
   #merryon3d > canvas {
     position: absolute; inset: 0;
     width: 100% !important; height: 100% !important;
     display: block; z-index: 0;
+    touch-action: none;
   }
 
   /* 로딩 플레이스홀더(3D 뜨기 전 잠깐) — 러그에 쓰는 merryon 블랙 심볼 로고 */
@@ -55,8 +60,9 @@
 (function () {
   // @main 고정 — cafe24 코드는 다시 안 고쳐도 됨.
   var CDN = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main';
-  // JS 캐시버스트: 1시간 버킷 → 배포 후 ~1시간 내 모든 기기가 새 JS 자동 수신(브라우저 캐시 우회).
-  var V = Math.floor(Date.now() / 3600000);
+  // JS 캐시 안 함: 매 로드마다 고유값 → 항상 최신 JS 즉시 반영(브라우저 캐시 미사용).
+  // (JS 208KB 라 매번 받아도 부담 적음. GLB·이미지는 코드 내부 av= 버전으로 캐시 유지)
+  var V = Date.now();
 
   var box = document.getElementById('merryon3d');
   if (!box) return;
