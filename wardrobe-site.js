@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayY: 1.60, rayZ: 0.0, rayStr: 1.0, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayY: 1.60, rayZ: 0.0, rayStr: 2.5, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -326,7 +326,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 06:16 UTC', note: '광원 오브=빛점 일치(드래그 이동) · 바닥 반사풀↓ · 옷 그림자' };
+  WardrobeScene.BUILD = { time: '06-16 06:23 UTC', note: '빛 세기↑·범위↑(노출0.11·감쇠0.985·게이트2.4·세기범위0~6) · 오브↑' };
 
   var P = WardrobeScene.prototype;
 
@@ -1422,7 +1422,7 @@
       ['skyBright', '하늘 밝기', 0.4, 1.6, 0.02],
       ['rayY', '빛 시작 높이', 0.3, 2.8, 0.02],
       ['rayZ', '빛 시작 좌우', -1.2, 1.2, 0.02],
-      ['rayStr', '빛 세기', 0.0, 3.0, 0.05]
+      ['rayStr', '빛 세기', 0.0, 6.0, 0.05]
     ];
     var valEls = {};
     rows.forEach(function (r) {
@@ -2966,10 +2966,10 @@
         tLight: { value: this.lightRT.texture },
         uSun: { value: new T.Vector2(0.5, 0.5) },
         uStrength: { value: 0.0 },
-        uDecay: { value: 0.96 },
-        uDensity: { value: 0.85 },
+        uDecay: { value: 0.985 },
+        uDensity: { value: 1.0 },
         uWeight: { value: 0.45 },
-        uExposure: { value: 0.05 },
+        uExposure: { value: 0.11 },
         uActive: { value: 0.0 },
         uAspect: { value: w / h }
       },
@@ -2992,7 +2992,7 @@
         '    illum *= uDecay;',
         '  }',
         '  vec2 dd = (vUv - uSun); dd.x *= uAspect;',                  // 창 주변 방사형 게이트(종횡비 보정)
-        '  float rad = smoothstep(1.25, 0.0, length(dd));',
+        '  float rad = smoothstep(2.4, 0.0, length(dd));',   // 범위 확대(더 넓게 퍼짐)
         '  accum *= uExposure * uStrength * uActive * (0.35 + 0.65 * rad);',
         '  float rl = clamp((accum.r + accum.g + accum.b) * 0.5, 0.0, 1.0);',   // 광선 세기(0..1)
         '  vec3 gold = vec3(1.0, 0.85, 0.58);',
@@ -3297,7 +3297,7 @@
         this.sunOrb.position.copy(sp);
         this.sunOrb.material.color.copy(this.sunLight.color);
         this.sunOrb.material.opacity = Math.min(1.0, 0.45 + w.sunInt * 0.35);
-        var os = 0.45 + w.sunInt * 0.32; this.sunOrb.scale.set(os, os, 1);
+        var os = (0.8 + w.sunInt * 0.6) * (1.0 + (w.rayStr != null ? w.rayStr : 1.0) * 0.25); this.sunOrb.scale.set(os, os, 1);
       }
       // 색온도: 기본 데이라이트 + temp(-1 쿨 ~ +1 웜)
       var warm = new this.T.Color(0xFFF0DC).lerp(new this.T.Color(0xFFE2C4), Math.sin(day * Math.PI));
