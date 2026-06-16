@@ -76,8 +76,7 @@
       import('three/addons/postprocessing/OutputPass.js'),
       import('three/addons/loaders/RGBELoader.js'),
       import('three/addons/loaders/GLTFLoader.js'),
-      import('three/addons/loaders/DRACOLoader.js'),
-      import('three/addons/libs/meshopt_decoder.module.js')
+      import('three/addons/loaders/DRACOLoader.js')
     ]).then(function (mods) {
       var T = mods[0];
       var addons = {
@@ -94,19 +93,8 @@
         OutputPass: mods[11].OutputPass,
         RGBELoader: mods[12].RGBELoader,
         GLTFLoader: mods[13].GLTFLoader,
-        DRACOLoader: mods[14].DRACOLoader,
-        MeshoptDecoder: mods[15].MeshoptDecoder
+        DRACOLoader: mods[14].DRACOLoader
       };
-      // 모든 GLTFLoader 생성 지점에 meshopt 디코더를 자동 주입(생성자가 설정된 인스턴스를 반환).
-      // → 코드 전역의 new AD.GLTFLoader() 가 그대로 meshopt 압축 GLB 를 디코드.
-      (function () {
-        var _GLTF = addons.GLTFLoader, _Meshopt = addons.MeshoptDecoder;
-        addons.GLTFLoader = function () {
-          var l = new _GLTF();
-          if (_Meshopt) l.setMeshoptDecoder(_Meshopt);
-          return l;   // 생성자가 객체를 반환 → new 결과로 이 인스턴스가 사용됨
-        };
-      })();
       try {
         new WardrobeScene(T, addons, container);
       } catch (e) {
@@ -426,7 +414,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 13:20 UTC', note: 'GLB 압축 되돌림(캐시 불일치로 가구 미표시 → 비압축 복원, 어떤 JS와도 로드) / 모바일 발열완화 + 이미지1280캡 + 렌더조정 유지' };
+  WardrobeScene.BUILD = { time: '06-16 13:35 UTC', note: 'meshopt import/래퍼 제거(무한로딩 원인) → 로더 원복·비압축 GLB / 모바일 발열완화 + 이미지1280캡 + 렌더조정 유지' };
 
   var P = WardrobeScene.prototype;
 
