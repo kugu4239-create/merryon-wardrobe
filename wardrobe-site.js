@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 0.70, sunHeight: 5.0, temp: 0.0, exposure: 0.48, fog: 0.022, skyBright: 1.0, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -563,8 +563,9 @@
 
     // 샹들리에 포인트 라이트 × 2 (인트로에서 0 → 페이드인)
     this.chandLights = [];
-    var p1 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p1.position.set(-0.25, R.H - 0.9, -0.6);
-    var p2 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p2.position.set(0.25, R.H - 0.9, -0.6);
+    // 천장에서 더 떨어뜨려(풀 확산·부드럽게) 천장의 '빛그림자' 단 완화
+    var p1 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p1.position.set(-0.25, R.H - 1.35, -0.6);
+    var p2 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p2.position.set(0.25, R.H - 1.35, -0.6);
     if (!this.isMobile) {
       p1.castShadow = p2.castShadow = true;
       p1.shadow.mapSize.set(1024, 1024); p2.shadow.mapSize.set(1024, 1024);
@@ -3038,8 +3039,8 @@
 
       // fog density (옅게 시작 → 거의 걷힘)
       this.scene.fog.density = 0.09 + (0.022 - 0.09) * this._ease(p);
-      // 샹들리에 0 → 1.2 (은은하게)
-      var inten = 2.1 * this._ease(p);
+      // 샹들리에 0 → 1.6 (은은하게, 천장 풀 완화)
+      var inten = 1.6 * this._ease(p);
       this.chandLights[0].intensity = inten;
       this.chandLights[1].intensity = inten;
     } else {
