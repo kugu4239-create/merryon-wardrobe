@@ -268,7 +268,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayY: 1.60, rayZ: 0.0, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 3.10, temp: 0.58, exposure: 0.55, fog: 0.0, skyBright: 1.60, rayY: 1.60, rayZ: 0.0, rayStr: 1.0, daycycle: true };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
 
@@ -1405,7 +1405,8 @@
       ['fog', '안개(흐림)', 0.0, 0.12, 0.002],
       ['skyBright', '하늘 밝기', 0.4, 1.6, 0.02],
       ['rayY', '빛 시작 높이', 0.3, 2.8, 0.02],
-      ['rayZ', '빛 시작 좌우', -1.2, 1.2, 0.02]
+      ['rayZ', '빛 시작 좌우', -1.2, 1.2, 0.02],
+      ['rayStr', '빛 세기', 0.0, 3.0, 0.05]
     ];
     var valEls = {};
     rows.forEach(function (r) {
@@ -3244,7 +3245,7 @@
         var active = (this.introDone ? 1.0 : 0.0) * inFront * onScreen * sunFade;
         this._grActive = (this._grActive || 0) + (active - (this._grActive || 0)) * 0.18;   // 팝 방지 스무딩
         this.godRayPass.uniforms.uActive.value = this._grActive;
-        this.godRayPass.uniforms.uStrength.value = Math.min(2.2, w.sunInt / 0.5);
+        this.godRayPass.uniforms.uStrength.value = Math.min(2.2, w.sunInt / 0.5) * (w.rayStr != null ? w.rayStr : 1.0);
         this.godRayPass.uniforms.uAspect.value = this.camera.aspect;
       }
     }
