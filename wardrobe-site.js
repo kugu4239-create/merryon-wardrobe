@@ -426,7 +426,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 13:05 UTC', note: '모바일 발열완화(권장): 30fps캡+유휴 5fps하트비트+샹들리에 그림자OFF+반사 6프레임+옷/창 그림자 512 / GLB meshopt 압축 / 화질무손실 렌더조정' };
+  WardrobeScene.BUILD = { time: '06-16 13:20 UTC', note: 'GLB 압축 되돌림(캐시 불일치로 가구 미표시 → 비압축 복원, 어떤 JS와도 로드) / 모바일 발열완화 + 이미지1280캡 + 렌더조정 유지' };
 
   var P = WardrobeScene.prototype;
 
