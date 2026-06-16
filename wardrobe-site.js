@@ -327,7 +327,7 @@
   }
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 07:10 UTC', note: '모바일 각도 7% 더 정면(수평)으로 · 마샬 로고 · 러그 이동' };
+  WardrobeScene.BUILD = { time: '06-16 07:13 UTC', note: '모바일 뒤로 30%→10%만(반경 3.74)' };
 
   var P = WardrobeScene.prototype;
 
@@ -3079,7 +3079,7 @@
 
     // 카메라 구면 파라미터
     var _phi0 = this.isMobile ? 1.450 : 1.373;   // 모바일은 약간 더 정면(수평)으로 ~7%
-    this.cam = { theta: 0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 4.42 : 3.4, targetTheta: 0, targetPhi: _phi0 };   // 초기 상하각(하향 틸트), 모바일 더 뒤로
+    this.cam = { theta: 0, phi: _phi0, phiInit: _phi0, radius: this.isMobile ? 3.74 : 3.4, targetTheta: 0, targetPhi: _phi0 };   // 초기 상하각, 모바일은 뒤로(전경↑)+10% 확대
     this.pointer = { x: 0, y: 0 };          // -1..1 (호버 패럴랙스, 좌우만)
     this.drag = { active: false, lastX: 0, lastY: 0, theta: 0 };
     this.lastInteract = -10;
@@ -3287,7 +3287,7 @@
     this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, phi));
 
     // radius 살짝 호흡
-    this.cam.radius = (this.isMobile ? 4.42 : 3.4) + Math.sin(t * 0.3) * 0.05;   // 모바일은 더 뒤로(전경 ~30%↑)
+    this.cam.radius = (this.isMobile ? 3.74 : 3.4) + Math.sin(t * 0.3) * 0.05;   // 모바일 뒤로(전경↑)+10% 확대
 
     // 스무딩
     this.cam.theta += (this.cam.targetTheta - this.cam.theta) * 0.06;
