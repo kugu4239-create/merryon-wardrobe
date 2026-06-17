@@ -216,6 +216,7 @@
     this.camera = camera;
     // 360° 체험형: 눈높이(≈1.45m) 피벗, 방 중앙 부근(어느 각도든 방 안)
     this.target = new T.Vector3(0, 1.45, -0.3);
+    this.baseTarget = this.target.clone();   // 기본 룩 포인트(포커스 원복 기준)
 
     AD.RectAreaLightUniformsLib.init();
 
@@ -420,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 01:45 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 02:15 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3017,7 +3018,7 @@
     var g = new T.Group();
     g.position.set(1.262, 0, 0.146); scene.add(g);
     this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
-    this._registerHotspot('writing', g);    // 탭 핫스팟 — cafe24 에서 링크/함수 연결 가능
+    this._registerHotspot('writing', g, new T.Vector3(0, 0.5, 0.0), 0.82);    // 탭 → 종이/펜으로 45° 근접
 
     // 둥글린 사각 라운드렉트 Shape
     function roundRect(w, h, r) {
@@ -3101,7 +3102,7 @@
     g.position.set(3.582, 0, 4.819); g.rotation.y = Math.PI;   // 바 정면이 방 안쪽
     scene.add(g);
     this._regProp('커피 바', g);
-    this._registerHotspot('coffee', g);   // 탭 핫스팟
+    this._registerHotspot('coffee', g, new T.Vector3(1.28, 1.16, 0.04), 0.78);   // 탭 → 메모지로 45° 근접
 
     // 2단 수납장과 통일된 크림(클리어코트) + 패널
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
@@ -3355,10 +3356,23 @@
    *   MERRYON_WARDROBE_CONFIG.hotspots = { writing: 'https://...url' | function }
    *   또는 컨테이너의 'merryon:hotspot' 커스텀이벤트(detail.name) 청취
    * ----------------------------------------------------------------------- */
-  P._registerHotspot = function (name, obj) {
+  P._registerHotspot = function (name, obj, lookOffset, focusDist) {
     this.hotspots = this.hotspots || [];
-    this.hotspots.push({ name: name, obj: obj });
+    this.hotspots.push({ name: name, obj: obj, lookOffset: lookOffset || null, focusDist: focusDist || 0.95 });
   };
+  // 핫스팟으로 카메라 45° 근접 포커스
+  P._focusHotspot = function (h) {
+    var T = this.T;
+    var look = h.lookOffset ? h.obj.localToWorld(h.lookOffset.clone()) : h.obj.getWorldPosition(new T.Vector3());
+    var hdir = new T.Vector3().subVectors(this.camera.position, look); hdir.y = 0;
+    if (hdir.lengthSq() < 1e-6) hdir.set(0, 0, 1);
+    hdir.normalize();
+    var k = 0.7071 * h.focusDist;   // 45° (수평=수직)
+    this._focusLook = look.clone();
+    this._focusPos = new T.Vector3(look.x + hdir.x * k, look.y + k, look.z + hdir.z * k);
+    this._focus = h; this._camAnim = true; this.lastInteract = this.elapsed;
+  };
+  P._unfocus = function () { this._focus = null; this._camAnim = true; this.lastInteract = this.elapsed; };
   P._hotspotAt = function (cx, cy) {
     if (!this.hotspots || !this.hotspots.length || !this.camera) return null;
     var r = this.container.getBoundingClientRect();
@@ -3374,7 +3388,8 @@
   };
   P._handleTap = function (cx, cy) {
     var h = this._hotspotAt(cx, cy);
-    if (h) this._triggerHotspot(h.name);
+    if (h) { this._focusHotspot(h); this._triggerHotspot(h.name); }   // 핫스팟 탭 → 45° 근접 + 이벤트
+    else if (this._focus) { this._unfocus(); }                        // 빈 곳 탭 → 원복
   };
   P._triggerHotspot = function (name) {
     // 1) 커스텀 이벤트(자사몰에서 addEventListener('merryon:hotspot', ...) 로 자유 처리)
@@ -3441,6 +3456,10 @@
         var dx = e.clientX - self.drag.lastX;
         var dy = e.clientY - self.drag.lastY;
         self.drag.lastX = e.clientX; self.drag.lastY = e.clientY;
+        if (self._focus) {   // 포커스 중 드래그 → 원복(오빗 안 함)
+          if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 8) { self._unfocus(); dragMoved = true; }
+          self.lastInteract = self.elapsed; return;
+        }
         self.drag.theta += dx * 0.0044;   // 좌우(theta)
         self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, self.drag.theta));
         // 세로 드래그 = 상하 기울기(phi). config.verticalDrag:false 면 비활성.
@@ -3486,6 +3505,10 @@
     el.addEventListener('touchmove', function (e) {
       if (self._propEdit || self._raySourceEdit || !e.touches.length) return;
       var dx = e.touches[0].clientX - tStartX;
+      if (self._focus) {   // 포커스 중 스와이프 → 원복(오빗 안 함)
+        if (Math.abs(dx) + Math.abs(e.touches[0].clientY - tStartY) > 12) self._unfocus();
+        self.lastInteract = self.elapsed; return;
+      }
       self.drag.theta = Math.max(-self.LIMIT.theta, Math.min(self.LIMIT.theta, tTheta + dx * 0.0066));   // 모바일 회전 감도
       // 세로 스와이프 = 상하 기울기(phi). config.verticalDrag:false 면 비활성.
       if (self._vDrag) {
@@ -3710,8 +3733,22 @@
     this.cam.phi += (this.cam.targetPhi - this.cam.phi) * sm;
 
     var pos = this._spherical(this.cam.theta, this.cam.phi, this.cam.radius);
-    this.camera.position.lerp(pos, 0.9);
-    this.camera.lookAt(this.target);
+
+    if (this._focus || this._camAnim) {
+      // 포커스 근접/원복 — 부드러운 글라이드
+      var destPos = this._focus ? this._focusPos : pos;
+      var destLook = this._focus ? this._focusLook : this.baseTarget;
+      this.camera.position.lerp(destPos, 0.10);
+      this.target.lerp(destLook, 0.10);
+      this.camera.lookAt(this.target);
+      var moving = this.camera.position.distanceTo(destPos) > 0.004 || this.target.distanceTo(destLook) > 0.004;
+      if (moving) this.lastInteract = t;   // 이동 중에만 렌더 유지(정지 후엔 온디맨드 정지)
+      else if (!this._focus) { this._camAnim = false; this.target.copy(this.baseTarget); }   // 원복 완료
+    } else {
+      this.camera.position.lerp(pos, 0.9);
+      this.target.copy(this.baseTarget);
+      this.camera.lookAt(this.target);
+    }
   };
 
   P._updateAmbient = function (t) {
