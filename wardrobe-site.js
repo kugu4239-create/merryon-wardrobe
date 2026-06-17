@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 16:00 UTC', note: '포커스 CTA 도트 파동 — 구체(3D) 음영(람베르트+포어쇼트닝+백드롭)' };
+  WardrobeScene.BUILD = { time: '06-17 16:30 UTC', note: '포커스 CTA — 카메라 근접 글라이드 완료 후 노출(이동 중 숨김)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3423,11 +3423,13 @@
     if (this._greetMsg) { clearTimeout(this._greetT); this._greetMsg.style.opacity = '0'; }   // 웰컴 문구 숨김
     // 포커스 안내 표시(중상단=오브젝트별 문구, 중하단=고정)
     if (this._focusMsgTop) { this._focusMsgTop.textContent = h.focusMsg || ''; this._focusMsgTop.style.opacity = '1'; this._focusMsgBot.style.opacity = '1'; }
-    this._showCTA(h.name);   // 중앙 리소그래프 도트 파동 원(탭 유도 → 누르면 링크 연결)
+    this._hideCTA();                  // 글라이드 동안은 숨김
+    this._ctaPending = h.name;        // 카메라 근접 글라이드 완료 후 노출(_updateCamera 에서)
   };
   P._unfocus = function () {
     this._focus = null; this._camAnim = true; this.lastInteract = this.elapsed;
     if (this._focusMsgTop) { this._focusMsgTop.style.opacity = '0'; this._focusMsgBot.style.opacity = '0'; }
+    this._ctaPending = null;
     this._hideCTA();
   };
   // 포커스 CTA(리소그래프 도트 파동 원) 표시/숨김 — #merryon-cta(data-hotspot) 셀렉터로 카페24 연결
@@ -3914,6 +3916,7 @@
       var moving = this.camera.position.distanceTo(destPos) > 0.004 || this.target.distanceTo(destLook) > 0.004;
       if (moving) this.lastInteract = t;   // 이동 중에만 렌더 유지(정지 후엔 온디맨드 정지)
       else if (!this._focus) { this._camAnim = false; this.target.copy(this.baseTarget); }   // 원복 완료
+      else if (this._ctaPending) { this._showCTA(this._ctaPending); this._ctaPending = null; }   // 근접 글라이드 완료 → CTA 노출
     } else {
       this.camera.position.lerp(pos, 0.9);
       this.target.copy(this.baseTarget);
