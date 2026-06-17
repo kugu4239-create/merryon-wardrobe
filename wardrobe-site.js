@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 00:45 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 01:00 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3649,6 +3649,13 @@
     if (this.gradePass) this.gradePass.uniforms.uTime.value = this.elapsed;
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
+
+    // 준비 완료 신호 — 인트로 끝 + 실제 렌더 1프레임 후(임베드 로딩화면 유지용)
+    if (this.introDone && !this._readyFired) {
+      this._readyFired = true;
+      try { window.__MERRYON_READY__ = true; } catch (e) {}
+      try { this.container.dispatchEvent(new CustomEvent('merryon:ready', { bubbles: true })); } catch (e) {}
+    }
   };
 
   P._spherical = function (theta, phi, r) {
