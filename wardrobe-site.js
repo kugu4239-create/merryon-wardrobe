@@ -421,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 02:35 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 02:55 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3194,29 +3194,41 @@
     var steam = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.11, 12), silver); steam.position.set(MW / 2 - 0.01, 0.13, 0.12); steam.rotation.z = 0.5; mc.add(steam);   // 스팀완드
     mc.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
 
-    // --- 메모 홀더 + 메모(우측 끝 위, 골드 홀더, 정면·크게 = 잘 보이게) — 추후 cafe24 터치 지점 ---
+    // --- 메모 홀더(슬롯형, 마블 베이스+골드 클립) + 메모지(러그 로고) — 추후 cafe24 터치 지점 ---
     var memo = new T.Group(); memo.position.set(1.28, TY, 0.04); memo.rotation.y = 0.18; g.add(memo);   // 정면(방쪽) 향하게
-    var mbase = new T.Mesh(new T.CylinderGeometry(0.075, 0.085, 0.04, 24), gold); mbase.position.y = 0.02; mbase.castShadow = true; memo.add(mbase);   // 골드 베이스
-    [-0.06, 0.06].forEach(function (px) {   // 양쪽 골드 포스트(카드를 끼움)
-      var post = new T.Mesh(new T.CylinderGeometry(0.006, 0.006, 0.24, 12), gold); post.position.set(px, 0.16, -0.012); memo.add(post);
+    var memoMar = new T.MeshPhysicalMaterial({ map: this._marbleTex(), bumpMap: this._marbleBump(), bumpScale: 0.004, color: 0xF3EFE6, roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.22, envMapIntensity: 0.9 });
+    // 마블 베이스(웨이티드) + 골드 림
+    var mbase = new T.Mesh(new T.CylinderGeometry(0.058, 0.07, 0.024, 30), memoMar); mbase.position.y = 0.012; mbase.castShadow = true; mbase.receiveShadow = true; memo.add(mbase);
+    var brim = new T.Mesh(new T.TorusGeometry(0.058, 0.0026, 10, 32), gold); brim.rotation.x = Math.PI / 2; brim.position.y = 0.024; memo.add(brim);
+    // 골드 슬롯 클립(카드 끼우는 바 + 슬릿)
+    var slotY = 0.05, slotW = 0.15;
+    [0.0075, -0.0075].forEach(function (pz) {
+      var plate = new T.Mesh(new T.BoxGeometry(slotW, 0.05, 0.004), gold); plate.position.set(0, slotY, pz); plate.castShadow = true; memo.add(plate);
     });
-    var clip = new T.Mesh(new T.TorusGeometry(0.03, 0.006, 8, 20), gold); clip.position.set(0, 0.27, -0.008); clip.rotation.x = Math.PI / 2; memo.add(clip);
-    // 메모 카드 — 블러시 헤더 밴드 + 골드 테두리 + 진한 줄 + 하트(글자 없음)
+    [-1, 1].forEach(function (sx) {   // 슬롯 양끝 마감
+      var cap = new T.Mesh(new T.BoxGeometry(0.006, 0.05, 0.019), gold); cap.position.set(sx * slotW / 2, slotY, 0); memo.add(cap);
+    });
+    // 메모지 — 핑크 하트 제거, 크림 + 골드 테두리 + 진한 줄(상단은 로고 자리로 비움)
     var cardTex = this._canvas(256, function (c, S) {
       c.fillStyle = '#FFFDF7'; c.fillRect(0, 0, S, S);
-      c.fillStyle = '#E7C9C7'; c.fillRect(0, 0, S, S * 0.2);                 // 블러시 헤더
-      c.strokeStyle = '#9C7629'; c.lineWidth = 11; c.strokeRect(S * 0.065, S * 0.065, S * 0.87, S * 0.87);   // 골드 테두리(굵게·진하게)
-      c.strokeStyle = 'rgba(156,118,41,0.5)'; c.lineWidth = 2; c.strokeRect(S * 0.115, S * 0.115, S * 0.77, S * 0.77);   // 안쪽 보조선
-      c.strokeStyle = 'rgba(80,72,55,0.32)'; c.lineWidth = 2.5;            // 진한 줄
-      for (var y = S * 0.36; y < S * 0.86; y += S * 0.13) { c.beginPath(); c.moveTo(S * 0.15, y); c.lineTo(S * 0.85, y); c.stroke(); }
-      // 헤더 중앙 하트(브랜드 모티프)
-      c.fillStyle = '#B0566A'; var hx = S * 0.5, hy = S * 0.10, r = S * 0.028;
-      c.beginPath(); c.arc(hx - r, hy, r, Math.PI, 0); c.arc(hx + r, hy, r, Math.PI, 0);
-      c.lineTo(hx, hy + r * 1.9); c.closePath(); c.fill();
+      c.strokeStyle = '#9C7629'; c.lineWidth = 11; c.strokeRect(S * 0.065, S * 0.065, S * 0.87, S * 0.87);   // 골드 테두리
+      c.strokeStyle = 'rgba(156,118,41,0.5)'; c.lineWidth = 2; c.strokeRect(S * 0.115, S * 0.115, S * 0.77, S * 0.77);
+      c.strokeStyle = 'rgba(80,72,55,0.3)'; c.lineWidth = 2.5;
+      for (var y = S * 0.44; y < S * 0.86; y += S * 0.13) { c.beginPath(); c.moveTo(S * 0.15, y); c.lineTo(S * 0.85, y); c.stroke(); }
     });
     var card = new T.Mesh(new T.BoxGeometry(0.20, 0.25, 0.006),
-      new T.MeshStandardMaterial({ map: cardTex, roughness: 0.82, emissive: 0xffffff, emissiveMap: cardTex, emissiveIntensity: 0.12 }));   // 살짝 발광 → 그늘에서도 또렷
-    card.position.set(0, 0.21, 0); card.rotation.set(-0.22, 0, 0); card.castShadow = true; memo.add(card);
+      new T.MeshStandardMaterial({ map: cardTex, roughness: 0.82, emissive: 0xffffff, emissiveMap: cardTex, emissiveIntensity: 0.1 }));
+    card.position.set(0, 0.165, 0.001); card.rotation.set(-0.1, 0, 0); card.castShadow = true; memo.add(card);
+    // 러그 로고(merryon 블랙 심볼)를 메모 상단에 데칼로
+    var lldr = new T.TextureLoader();
+    lldr.load(cut('up', '블랙 심볼.png'), function (tex) {
+      tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+      var asp = (tex.image && tex.image.width / tex.image.height) || 1;
+      var lw = 0.055, lh = lw / asp;
+      var lp = new T.Mesh(new T.PlaneGeometry(lw, lh),
+        new T.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.4, roughness: 0.9, metalness: 0.0, depthWrite: false }));
+      lp.position.set(0, 0.082, 0.0036); lp.renderOrder = 4; card.add(lp);   // 카드 상단 중앙, 앞면
+    }, undefined, function () { });
   };
 
   /* ----------------------------------------------------------------------- *
