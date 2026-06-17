@@ -435,7 +435,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 06:55 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 07:15 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -805,6 +805,7 @@
       var selfR = this, _obr = reflector.onBeforeRender;
       var rfEvery = this.isMobile ? 6 : 3;   // 모바일은 매 6프레임(발열↓), PC 매 3프레임
       reflector.onBeforeRender = function (rnd, scn, cam, geo, mat, grp) {
+        if (selfR._showcaseStart != null && !selfR._showcaseDone) return;   // 쇼케이스 중 반사 정지(부하↓·무체감)
         if (selfR._frame % rfEvery !== 0) return;
         _obr.call(this, rnd, scn, cam, geo, mat, grp);
       };
@@ -3710,7 +3711,9 @@
     }
 
     // ---- 갓레이 광원 버퍼: 레이어1(창/정원)만 검정 배경에 렌더 (창을 볼 때만) ----
-    if (this.composer && this.lightRT && this._grActive > 0.002 && (this._frame & 1) === 0) {   // 격프레임(블러 입력, 무체감)
+    var _showcasing = (this._showcaseStart != null && !this._showcaseDone);   // 쇼케이스 중 갓레이 정지(부하↓)
+    if (this.godRayPass) this.godRayPass.enabled = !_showcasing;
+    if (!_showcasing && this.composer && this.lightRT && this._grActive > 0.002 && (this._frame & 1) === 0) {   // 격프레임(블러 입력, 무체감)
       var rn = this.renderer, w2 = this.weather;
       var prevTarget = rn.getRenderTarget();
       var prevAutoClear = rn.autoClear;
@@ -3733,15 +3736,31 @@
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
 
-    // 준비 완료 신호 — 인트로 끝 + 에셋 로드 완료 + 실제 렌더 후(로딩화면 유지로 끊김 숨김)
+    // 준비 완료 신호 — 인트로 끝 + 에셋 로드 완료. 로고 해제/쇼케이스 전에 렌더 워밍을 모두 끝냄.
     if (this.introDone && this._assetsLoaded && t > 0.8 && !this._readyFired) {   // t>0.8: 로고 깜빡임 방지 최소 노출
       this._readyFired = true;
       this.renderer.shadowMap.needsUpdate = true;   // 에셋 다 로드된 최종 상태로 그림자 1회 굽기(이후 정적)
-      // 전체 셰이더/머티리얼 사전 컴파일 — 360 쇼케이스 중 first-use 컴파일 끊김 제거(로고 뒤라 미보임)
+      // ── 렌더 워밍(로고 뒤, 미보임) — PC·모바일 공통 ──
+      // 1) 전체 셰이더/머티리얼 사전 컴파일(first-use 컴파일 끊김 제거)
       try { this.renderer.compile(this.scene, this.camera); } catch (e) {}
+      // 2) 여러 각도로 미리 렌더 → 텍스처/지오메트리 GPU 업로드 강제(회전 중 업로드 끊김 제거)
+      try {
+        var _sp = this.camera.position.clone();
+        if (this.reflector) this.reflector.visible = false;   // 워밍 중 반사 8× 재렌더 방지
+        for (var _wi = 0; _wi < 8; _wi++) {
+          var _wth = this.cam.theta + _wi * (Math.PI / 4);
+          this.camera.position.copy(this._spherical(_wth, this.cam.phi, this.cam.radius));
+          this.camera.lookAt(this.target);
+          this.renderer.render(this.scene, this.camera);   // plain 렌더(빠름) — 업로드 강제
+        }
+        if (this.reflector) this.reflector.visible = true;
+        this.camera.position.copy(_sp); this.camera.lookAt(this.target);
+        this.renderer.shadowMap.needsUpdate = true;   // 워밍 후 최종 그림자 재굽기
+        if (this.clock) this.clock.getDelta();         // 워밍에 든 시간은 dt 에서 제외
+      } catch (e) {}
+      // ── 워밍 완료 → 로고 해제 + 쇼케이스 시작 ──
       try { window.__MERRYON_READY__ = true; } catch (e) {}
       try { this.container.dispatchEvent(new CustomEvent('merryon:ready', { bubbles: true })); } catch (e) {}
-      // 로딩 후 360° 쇼케이스 1회 시작(0.4s 뒤 — 로고 페이드와 살짝 텀)
       this._showcaseBase = this.drag.theta;
       this._showcaseStart = this.elapsed + 0.4;
       this._showcaseDone = false;
