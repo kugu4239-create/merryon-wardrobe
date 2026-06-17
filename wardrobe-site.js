@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 12:00 UTC', note: '책장 앞/옆 바닥에 책 무더기 2곳 추가(가로 스택)' };
+  WardrobeScene.BUILD = { time: '06-17 11:00 UTC', note: '핀터레스트 무드 ②③④ 되돌림(러그/텍스타일·갤러리월/몰딩·소품밀도/꽃) — 옷장 백라이트 글로우는 삭제 유지' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -2285,26 +2285,6 @@
           frameG.add(book); x += thick + 0.004 + (lean ? 0.02 : 0);
         }
       }
-    })();
-
-    // 책장 앞/옆 바닥에 책 무더기(조금) — 가로로 눕혀 쌓은 작은 더미 2곳
-    (function () {
-      var bx = W / 2 - 0.95, bz = -D / 2 + 0.28;
-      var stackCols = [0x8C4A3B, 0xC9B07A, 0x6B7A52, 0x9A6A8C, 0xC98A6B, 0xE3D7C0, 0x3B5A6B];
-      function pile(px, pz, n, ry) {
-        var g = new T.Group(); g.position.set(px, 0, pz); g.rotation.y = ry; scene.add(g);
-        var y = 0;
-        for (var i = 0; i < n; i++) {
-          var bw = 0.26 - i * 0.012, bd = 0.34 - i * 0.016, bh = 0.035 + Math.random() * 0.015;
-          var bk = new T.Mesh(new T.BoxGeometry(bw, bh, bd),
-            new T.MeshStandardMaterial({ color: stackCols[(Math.random() * stackCols.length) | 0], roughness: 0.85 }));
-          bk.position.set((Math.random() - 0.5) * 0.03, y + bh / 2, (Math.random() - 0.5) * 0.03);
-          bk.rotation.y = (Math.random() - 0.5) * 0.18; bk.castShadow = true; bk.receiveShadow = true;
-          g.add(bk); y += bh;
-        }
-      }
-      pile(bx - 0.18, bz + 0.45, 4, 0.25);    // 책장 앞 바닥
-      pile(bx - 0.82, bz + 0.30, 3, -0.4);    // 책장 좌측 옆 바닥
     })();
 
     // 책장 위 골드 테이블 램프(따뜻한 빛)
