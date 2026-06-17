@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-16 19:25 UTC', note: 'PC 호버 패럴랙스 off(클릭 드래그만 이동) + 커피바확장·머신리스타일·메모2배 + 세로드래그 config' };
+  WardrobeScene.BUILD = { time: '06-17 00:10 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3199,7 +3199,8 @@
     var cardTex = this._canvas(256, function (c, S) {
       c.fillStyle = '#FFFDF7'; c.fillRect(0, 0, S, S);
       c.fillStyle = '#E7C9C7'; c.fillRect(0, 0, S, S * 0.2);                 // 블러시 헤더
-      c.strokeStyle = '#C9A96E'; c.lineWidth = 4; c.strokeRect(S * 0.05, S * 0.05, S * 0.9, S * 0.9);   // 골드 테두리
+      c.strokeStyle = '#9C7629'; c.lineWidth = 11; c.strokeRect(S * 0.065, S * 0.065, S * 0.87, S * 0.87);   // 골드 테두리(굵게·진하게)
+      c.strokeStyle = 'rgba(156,118,41,0.5)'; c.lineWidth = 2; c.strokeRect(S * 0.115, S * 0.115, S * 0.77, S * 0.77);   // 안쪽 보조선
       c.strokeStyle = 'rgba(80,72,55,0.32)'; c.lineWidth = 2.5;            // 진한 줄
       for (var y = S * 0.36; y < S * 0.86; y += S * 0.13) { c.beginPath(); c.moveTo(S * 0.15, y); c.lineTo(S * 0.85, y); c.stroke(); }
       // 헤더 중앙 하트(브랜드 모티프)
