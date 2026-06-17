@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 15:00 UTC', note: '포커스 CTA — 리소그래프 도트 파동(가장자리 도트 축소)으로 교체, 보일 때만 rAF' };
+  WardrobeScene.BUILD = { time: '06-17 15:30 UTC', note: '포커스 CTA 도트 파동 — 더 진하게/촘촘하게/속도 약간↑' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3447,7 +3447,7 @@
   P._startCTAAnim = function () {
     if (this._ctaRAF || !this._ctaCtx) return;
     var ctx = this._ctaCtx, W = this._ctaCv.width, cx = W / 2, cy = W / 2, self = this;
-    var R = 112, step = 19, maxR = 4.4, sigma = 86, k = 0.085, speed = 3.2, col = '95,92,86';
+    var R = 112, step = 15, maxR = 3.9, sigma = 84, k = 0.10, speed = 4.2, col = '66,63,58';
     this._ctaT0 = this._ctaT0 || performance.now();
     var draw = function (now) {
       var t = (now - self._ctaT0) / 1000;
@@ -3460,7 +3460,7 @@
           var wave = 0.62 + 0.38 * Math.sin(d * k - t * speed);       // 안→밖 파동
           var rr = maxR * fall * wave;
           if (rr < 0.3) continue;
-          var a = 0.72 * (0.45 + 0.55 * fall);
+          var a = 0.92 * (0.5 + 0.5 * fall);
           ctx.beginPath(); ctx.arc(cx + gx, cy + gy, rr, 0, 6.283);
           ctx.fillStyle = 'rgba(' + col + ',' + a.toFixed(3) + ')'; ctx.fill();
         }
