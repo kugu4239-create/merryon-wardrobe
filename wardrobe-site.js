@@ -421,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 03:10 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 03:25 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3219,6 +3219,9 @@
     var card = new T.Mesh(new T.BoxGeometry(0.20, 0.25, 0.006),
       new T.MeshStandardMaterial({ map: cardTex, roughness: 0.82, emissive: 0xffffff, emissiveMap: cardTex, emissiveIntensity: 0.1 }));
     card.position.set(0, 0.165, 0.001); card.rotation.set(-0.1, 0, 0); card.castShadow = true; memo.add(card);
+    // 보이지 않는 넓은 히트박스 — 메모지 주변까지 탭 잡힘(렌더 X, 레이캐스트 O)
+    var memoHit = new T.Mesh(new T.BoxGeometry(0.34, 0.46, 0.16), new T.MeshBasicMaterial());
+    memoHit.visible = false; memoHit.position.set(0, 0.2, 0); memo.add(memoHit);
     // 러그 로고(merryon 블랙 심볼)를 메모 상단에 데칼로
     var lldr = new T.TextureLoader();
     lldr.load(cut('up', '블랙 심볼.png'), function (tex) {
