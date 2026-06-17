@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 13:10 UTC', note: '책장 앞/옆 책 무더기 삭제(원복)' };
+  WardrobeScene.BUILD = { time: '06-17 14:00 UTC', note: '포커스 CTA — 중앙 반투명 원+손가락 누름 모션(#merryon-cta), 누르면 핫스팟 링크 트리거' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3423,10 +3423,23 @@
     if (this._greetMsg) { clearTimeout(this._greetT); this._greetMsg.style.opacity = '0'; }   // 웰컴 문구 숨김
     // 포커스 안내 표시(중상단=오브젝트별 문구, 중하단=고정)
     if (this._focusMsgTop) { this._focusMsgTop.textContent = h.focusMsg || ''; this._focusMsgTop.style.opacity = '1'; this._focusMsgBot.style.opacity = '1'; }
+    this._showCTA(h.name);   // 중앙 손가락-누름 원(탭 유도 → 누르면 링크 연결)
   };
   P._unfocus = function () {
     this._focus = null; this._camAnim = true; this.lastInteract = this.elapsed;
     if (this._focusMsgTop) { this._focusMsgTop.style.opacity = '0'; this._focusMsgBot.style.opacity = '0'; }
+    this._hideCTA();
+  };
+  // 포커스 CTA(중앙 손가락-누름 원) 표시/숨김 — #merryon-cta(data-hotspot) 셀렉터로 카페24 연결
+  P._showCTA = function (name) {
+    var c = this._ctaEl; if (!c) return;
+    this._ctaName = name; c.setAttribute('data-hotspot', name);
+    c.style.opacity = '1'; c.style.pointerEvents = 'auto';
+  };
+  P._hideCTA = function () {
+    var c = this._ctaEl; if (!c) return;
+    this._ctaName = ''; c.removeAttribute('data-hotspot');
+    c.style.opacity = '0'; c.style.pointerEvents = 'none';
   };
   // 쇼케이스 종료 후 인사(웰컴) — 상단 15%, 3초 노출 후 사라짐
   P._showGreeting = function () {
@@ -3451,7 +3464,7 @@
   };
   P._handleTap = function (cx, cy) {
     var h = this._hotspotAt(cx, cy);
-    if (h) { this._focusHotspot(h); this._triggerHotspot(h.name); }   // 핫스팟 탭 → 45° 근접 + 이벤트
+    if (h) { this._focusHotspot(h); }   // 핫스팟 탭 → 45° 근접 + 중앙 CTA 노출(링크는 CTA 누를 때 트리거)
     else if (this._focus) { this._unfocus(); }                        // 빈 곳 탭 → 원복
   };
   P._triggerHotspot = function (name) {
@@ -3496,6 +3509,40 @@
       m.style.color = '#1a1a1a'; m.style.textShadow = '0 1px 6px rgba(255,255,255,.5)';
     });
     this._greetMsg = mkMsg(self.isMobile ? 'top:15%' : 'top:45%');         // 웰컴 — 모바일 상단15% / PC 상단45%
+
+    // 포커스 CTA — 화면 중앙 반투명 회색 원 + 손가락 누름 모션(탭 유도).
+    //  · 커피바 메모지/스툴 신청서에 포커스되면 노출, 누르면 해당 핫스팟 트리거(링크/함수).
+    //  · 카페24 연결: 안정적 셀렉터 #merryon-cta (data-hotspot = 'writing'|'coffee') 제공 →
+    //    (a) MERRYON_WARDROBE_CONFIG.hotspots={writing:'url',coffee:'url'} 매핑, 또는
+    //    (b) container 의 'merryon:hotspot'(detail.name) 이벤트, 또는
+    //    (c) document.querySelector('#merryon-cta') 에 직접 click 핸들러/래핑.
+    if (!document.getElementById('merryon-cta-style')) {
+      var st = document.createElement('style'); st.id = 'merryon-cta-style';
+      st.textContent =
+        '@keyframes m3dCtaRing{0%{transform:translate(-50%,-50%) scale(.5);opacity:.5}70%{opacity:0}100%{transform:translate(-50%,-50%) scale(1.3);opacity:0}}' +
+        '@keyframes m3dCtaPress{0%,100%{transform:translate(-50%,-50%) rotate(-12deg) scale(1)}42%{transform:translate(-44%,-32%) rotate(-12deg) scale(.84)}62%{transform:translate(-44%,-32%) rotate(-12deg) scale(.84)}}' +
+        '@keyframes m3dCtaDisc{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(.9)}}' +
+        '#merryon-cta .m3d-cta-disc{animation:m3dCtaDisc 1.4s ease-in-out infinite}' +
+        '#merryon-cta:active .m3d-cta-disc{transform:translate(-50%,-50%) scale(.86)!important}';
+      document.head.appendChild(st);
+    }
+    var cta = document.createElement('div');
+    cta.id = 'merryon-cta';
+    cta.style.cssText = 'position:absolute;left:50%;top:50%;width:120px;height:120px;transform:translate(-50%,-50%);z-index:7;opacity:0;pointer-events:none;transition:opacity .35s ease;cursor:pointer;';
+    cta.innerHTML =
+      '<span style="position:absolute;left:50%;top:50%;width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.6);transform:translate(-50%,-50%) scale(.5);animation:m3dCtaRing 1.8s ease-out infinite;"></span>' +
+      '<span class="m3d-cta-disc" style="position:absolute;left:50%;top:50%;width:86px;height:86px;border-radius:50%;background:rgba(120,120,120,.34);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);border:1px solid rgba(255,255,255,.4);box-shadow:0 8px 22px rgba(0,0,0,.2),inset 0 1px 5px rgba(255,255,255,.3);transform:translate(-50%,-50%);"></span>' +
+      '<span style="position:absolute;left:50%;top:50%;font-size:36px;line-height:1;transform:translate(-50%,-50%) rotate(-12deg);animation:m3dCtaPress 1.4s ease-in-out infinite;filter:drop-shadow(0 3px 4px rgba(0,0,0,.32));">👆</span>';
+    el.appendChild(cta);
+    this._ctaEl = cta; this._ctaName = '';
+    // 캔버스(오빗/탭)로 이벤트가 새지 않도록 차단 + 클릭 시 핫스팟 트리거
+    ['pointerdown', 'pointerup', 'pointermove', 'touchstart', 'touchend', 'touchmove'].forEach(function (ev) {
+      cta.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: false });
+    });
+    cta.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      if (self._ctaName) self._triggerHotspot(self._ctaName);
+    });
 
     // 배경이 <a href> 링크 안에 있으면 캔버스 드래그가 '링크/이미지 드래그'로 인식돼
     // pointercancel 이 발생→오빗이 끊긴다. 네이티브 드래그를 막아 오빗을 보장한다.
