@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 07:55 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 08:05 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3430,7 +3430,7 @@
   // 쇼케이스 종료 후 인사(웰컴) — 상단 15%, 3초 노출 후 사라짐
   P._showGreeting = function () {
     var m = this._greetMsg; if (!m) return;
-    m.textContent = '편안한 휴식이 되시길 바랍니다';
+    m.textContent = '즐거운 휴식이 되시길 바랍니다';
     m.style.opacity = '1';
     clearTimeout(this._greetT);
     this._greetT = setTimeout(function () { m.style.opacity = '0'; }, 3000);
