@@ -1826,9 +1826,9 @@
       var knob = new T.Mesh(new T.SphereGeometry(0.018, 12, 10), gold);
       knob.position.set(bx + dI * 0.38, 0.64, bz + 0.27); vg.add(knob);
     }
-    // 카브리올(살짝 휜) 다리 ×4 — 골드톤 통일, 위 굵고 아래 가늘게 + 바깥 스플레이
+    // 카브리올(살짝 휜) 화이트 다리 ×4 — 위 굵고 아래 가늘게 + 바깥 스플레이 (원래대로)
     [[-0.55, -0.18, -1], [0.55, -0.18, 1], [-0.55, 0.18, -1], [0.55, 0.18, 1]].forEach(function (lp) {
-      var leg = new T.Mesh(new T.CylinderGeometry(0.035, 0.018, 0.52, 12), gold);
+      var leg = new T.Mesh(new T.CylinderGeometry(0.035, 0.018, 0.52, 12), white);
       leg.position.set(bx + lp[0], 0.26, bz + lp[1]); leg.rotation.z = lp[2] * 0.07; leg.castShadow = true; vg.add(leg);
       var foot = new T.Mesh(new T.SphereGeometry(0.022, 10, 8), gold);
       foot.position.set(bx + lp[0] + lp[2] * 0.035, 0.01, bz + lp[1]); vg.add(foot);
@@ -2446,12 +2446,7 @@
     var g = new T.Group(); g.position.set(-3.8, 0, 0.0); g.rotation.y = Math.PI / 2; scene.add(g); this._regProp('화장대 의자', g);   // 화장대(좌벽) 앞
     if (AD.GLTFLoader) {
       new AD.GLTFLoader().load(asset('chair.glb'), function (gltf) {
-        var s = gltf.scene; s.traverse(function (o) {
-          if (o.isMesh) {
-            o.castShadow = true; o.receiveShadow = true;
-            if (o.material && o.material.name === 'wood') o.material = gold;   // 프레임(다리 포함) 골드톤 통일 — GLB상 다리/프레임 단일 메쉬
-          }
-        });
+        var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });   // 원래대로(우드 프레임)
         g.add(s);
       }, undefined, function () { });
     }
@@ -2858,10 +2853,10 @@
     var creamD = new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.55 });
     var glass = new T.MeshPhysicalMaterial({ color: 0xEAF1F4, roughness: 0.06, metalness: 0.0, transmission: 0.9, transparent: true, opacity: 0.2, thickness: 0.05, side: T.DoubleSide, envMapIntensity: 1.0 });
 
-    // 플린스 베이스 + 발 — 하부 골드톤 통일
-    var base = new T.Mesh(new T.BoxGeometry(CW, plinth, CD), gold); base.position.y = plinth / 2; base.castShadow = true; base.receiveShadow = true; g.add(base);
+    // 플린스 베이스 + 발 (원래 크림)
+    var base = new T.Mesh(new T.BoxGeometry(CW, plinth, CD), cream); base.position.y = plinth / 2; base.castShadow = true; base.receiveShadow = true; g.add(base);
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
-      var foot = new T.Mesh(new T.BoxGeometry(0.07, 0.04, 0.07), gold);
+      var foot = new T.Mesh(new T.BoxGeometry(0.07, 0.04, 0.07), creamD);
       foot.position.set(c[0] * (CW / 2 - 0.06), 0.0, c[1] * (CD / 2 - 0.06)); foot.position.y = -0.0; g.add(foot);
     });
     var y0 = plinth, y1 = CH, yc = (y0 + y1) / 2;
