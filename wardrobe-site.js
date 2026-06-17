@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 14:00 UTC', note: '포커스 CTA — 중앙 반투명 원+손가락 누름 모션(#merryon-cta), 누르면 핫스팟 링크 트리거' };
+  WardrobeScene.BUILD = { time: '06-17 15:00 UTC', note: '포커스 CTA — 리소그래프 도트 파동(가장자리 도트 축소)으로 교체, 보일 때만 rAF' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3423,23 +3423,55 @@
     if (this._greetMsg) { clearTimeout(this._greetT); this._greetMsg.style.opacity = '0'; }   // 웰컴 문구 숨김
     // 포커스 안내 표시(중상단=오브젝트별 문구, 중하단=고정)
     if (this._focusMsgTop) { this._focusMsgTop.textContent = h.focusMsg || ''; this._focusMsgTop.style.opacity = '1'; this._focusMsgBot.style.opacity = '1'; }
-    this._showCTA(h.name);   // 중앙 손가락-누름 원(탭 유도 → 누르면 링크 연결)
+    this._showCTA(h.name);   // 중앙 리소그래프 도트 파동 원(탭 유도 → 누르면 링크 연결)
   };
   P._unfocus = function () {
     this._focus = null; this._camAnim = true; this.lastInteract = this.elapsed;
     if (this._focusMsgTop) { this._focusMsgTop.style.opacity = '0'; this._focusMsgBot.style.opacity = '0'; }
     this._hideCTA();
   };
-  // 포커스 CTA(중앙 손가락-누름 원) 표시/숨김 — #merryon-cta(data-hotspot) 셀렉터로 카페24 연결
+  // 포커스 CTA(리소그래프 도트 파동 원) 표시/숨김 — #merryon-cta(data-hotspot) 셀렉터로 카페24 연결
   P._showCTA = function (name) {
     var c = this._ctaEl; if (!c) return;
     this._ctaName = name; c.setAttribute('data-hotspot', name);
     c.style.opacity = '1'; c.style.pointerEvents = 'auto';
+    this._startCTAAnim();
   };
   P._hideCTA = function () {
     var c = this._ctaEl; if (!c) return;
     this._ctaName = ''; c.removeAttribute('data-hotspot');
     c.style.opacity = '0'; c.style.pointerEvents = 'none';
+    this._stopCTAAnim();
+  };
+  // 리소그래프 하프톤 도트 + 안→밖 파동 — 보일 때만 구동(숨기면 cancelAnimationFrame → 비용 0)
+  P._startCTAAnim = function () {
+    if (this._ctaRAF || !this._ctaCtx) return;
+    var ctx = this._ctaCtx, W = this._ctaCv.width, cx = W / 2, cy = W / 2, self = this;
+    var R = 112, step = 19, maxR = 4.4, sigma = 86, k = 0.085, speed = 3.2, col = '95,92,86';
+    this._ctaT0 = this._ctaT0 || performance.now();
+    var draw = function (now) {
+      var t = (now - self._ctaT0) / 1000;
+      ctx.clearRect(0, 0, W, W);
+      for (var gy = -R; gy <= R; gy += step) {
+        for (var gx = -R; gx <= R; gx += step) {
+          var d = Math.sqrt(gx * gx + gy * gy);
+          if (d > R) continue;
+          var fall = Math.exp(-(d * d) / (2 * sigma * sigma));        // 중앙 크고 가장자리 작게
+          var wave = 0.62 + 0.38 * Math.sin(d * k - t * speed);       // 안→밖 파동
+          var rr = maxR * fall * wave;
+          if (rr < 0.3) continue;
+          var a = 0.72 * (0.45 + 0.55 * fall);
+          ctx.beginPath(); ctx.arc(cx + gx, cy + gy, rr, 0, 6.283);
+          ctx.fillStyle = 'rgba(' + col + ',' + a.toFixed(3) + ')'; ctx.fill();
+        }
+      }
+      self._ctaRAF = requestAnimationFrame(draw);
+    };
+    this._ctaRAF = requestAnimationFrame(draw);
+  };
+  P._stopCTAAnim = function () {
+    if (this._ctaRAF) { cancelAnimationFrame(this._ctaRAF); this._ctaRAF = 0; }
+    if (this._ctaCtx) this._ctaCtx.clearRect(0, 0, this._ctaCv.width, this._ctaCv.height);
   };
   // 쇼케이스 종료 후 인사(웰컴) — 상단 15%, 3초 노출 후 사라짐
   P._showGreeting = function () {
@@ -3510,31 +3542,24 @@
     });
     this._greetMsg = mkMsg(self.isMobile ? 'top:15%' : 'top:45%');         // 웰컴 — 모바일 상단15% / PC 상단45%
 
-    // 포커스 CTA — 화면 중앙 반투명 회색 원 + 손가락 누름 모션(탭 유도).
+    // 포커스 CTA — 화면 중앙 리소그래프 하프톤 도트 원 + 파동 모션(탭 유도).
+    //  · 중앙 도트가 크고 가장자리로 갈수록 작아짐, 안→밖으로 사인 파동.
     //  · 커피바 메모지/스툴 신청서에 포커스되면 노출, 누르면 해당 핫스팟 트리거(링크/함수).
     //  · 카페24 연결: 안정적 셀렉터 #merryon-cta (data-hotspot = 'writing'|'coffee') 제공 →
     //    (a) MERRYON_WARDROBE_CONFIG.hotspots={writing:'url',coffee:'url'} 매핑, 또는
     //    (b) container 의 'merryon:hotspot'(detail.name) 이벤트, 또는
     //    (c) document.querySelector('#merryon-cta') 에 직접 click 핸들러/래핑.
-    if (!document.getElementById('merryon-cta-style')) {
-      var st = document.createElement('style'); st.id = 'merryon-cta-style';
-      st.textContent =
-        '@keyframes m3dCtaRing{0%{transform:translate(-50%,-50%) scale(.5);opacity:.5}70%{opacity:0}100%{transform:translate(-50%,-50%) scale(1.3);opacity:0}}' +
-        '@keyframes m3dCtaPress{0%,100%{transform:translate(-50%,-50%) rotate(-12deg) scale(1)}42%{transform:translate(-44%,-32%) rotate(-12deg) scale(.84)}62%{transform:translate(-44%,-32%) rotate(-12deg) scale(.84)}}' +
-        '@keyframes m3dCtaDisc{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(.9)}}' +
-        '#merryon-cta .m3d-cta-disc{animation:m3dCtaDisc 1.4s ease-in-out infinite}' +
-        '#merryon-cta:active .m3d-cta-disc{transform:translate(-50%,-50%) scale(.86)!important}';
-      document.head.appendChild(st);
-    }
     var cta = document.createElement('div');
     cta.id = 'merryon-cta';
-    cta.style.cssText = 'position:absolute;left:50%;top:50%;width:120px;height:120px;transform:translate(-50%,-50%);z-index:7;opacity:0;pointer-events:none;transition:opacity .35s ease;cursor:pointer;';
-    cta.innerHTML =
-      '<span style="position:absolute;left:50%;top:50%;width:120px;height:120px;border-radius:50%;border:2px solid rgba(255,255,255,.6);transform:translate(-50%,-50%) scale(.5);animation:m3dCtaRing 1.8s ease-out infinite;"></span>' +
-      '<span class="m3d-cta-disc" style="position:absolute;left:50%;top:50%;width:86px;height:86px;border-radius:50%;background:rgba(120,120,120,.34);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);border:1px solid rgba(255,255,255,.4);box-shadow:0 8px 22px rgba(0,0,0,.2),inset 0 1px 5px rgba(255,255,255,.3);transform:translate(-50%,-50%);"></span>' +
-      '<span style="position:absolute;left:50%;top:50%;font-size:36px;line-height:1;transform:translate(-50%,-50%) rotate(-12deg);animation:m3dCtaPress 1.4s ease-in-out infinite;filter:drop-shadow(0 3px 4px rgba(0,0,0,.32));">👆</span>';
+    cta.style.cssText = 'position:absolute;left:50%;top:50%;width:118px;height:118px;transform:translate(-50%,-50%);z-index:7;opacity:0;pointer-events:none;transition:opacity .35s ease;cursor:pointer;';
+    var ctaCv = document.createElement('canvas');
+    ctaCv.width = 236; ctaCv.height = 236;   // 2x 내부 해상도(레티나 또렷)
+    ctaCv.style.cssText = 'width:100%;height:100%;display:block;';
+    cta.appendChild(ctaCv);
     el.appendChild(cta);
     this._ctaEl = cta; this._ctaName = '';
+    // 리소그래프 도트 파동 렌더 — 보일 때만 rAF 구동(숨기면 정지 → 비용 0)
+    this._ctaCv = ctaCv; this._ctaCtx = ctaCv.getContext('2d'); this._ctaRAF = 0; this._ctaT0 = 0;
     // 캔버스(오빗/탭)로 이벤트가 새지 않도록 차단 + 클릭 시 핫스팟 트리거
     ['pointerdown', 'pointerup', 'pointermove', 'touchstart', 'touchend', 'touchmove'].forEach(function (ev) {
       cta.addEventListener(ev, function (e) { e.stopPropagation(); }, { passive: false });
