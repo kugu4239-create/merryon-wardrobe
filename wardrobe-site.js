@@ -435,7 +435,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 05:50 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 06:05 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -678,7 +678,7 @@
     var p1 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p1.position.set(-0.25, R.H - 1.35, -0.6);
     var p2 = new T.PointLight(0xFFE8CC, 0.0, 9, 2); p2.position.set(0.25, R.H - 1.35, -0.6);
     p1.castShadow = p2.castShadow = !this.isMobile;   // 모바일: 샹들리에 그림자 OFF(발열↓, 폰에선 거의 안 보임)
-    p1.shadow.mapSize.set(1024, 1024); p2.shadow.mapSize.set(1024, 1024);
+    p1.shadow.mapSize.set(512, 512); p2.shadow.mapSize.set(512, 512);   // 1024→512: PointLight 큐브(6면) VRAM·1회 굽기 비용↓, 부드러운 천장그림자라 무체감
     p1.shadow.bias = p2.shadow.bias = -0.0006;
     scene.add(p1, p2);
     this.chandLights.push(p1, p2);
