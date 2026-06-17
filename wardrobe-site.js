@@ -236,9 +236,10 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 2.30, temp: 0.58, exposure: 0.50, fog: 0.0, skyBright: 1.60, rayX: 5.60, rayY: 4.15, rayZ: 0.0, rayStr: 6.0, aimX: 0.35, aimZ: -3.40, daycycle: true };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 2.30, temp: 0.58, exposure: 0.50, fog: 0.0, skyBright: 1.60, rayX: 5.60, rayY: 4.15, rayZ: 0.0, rayStr: 6.0, aimX: 0.35, aimZ: -3.40, daycycle: false };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
+    this.weather.daycycle = false;   // 하루주기 고정 — 모든 환경(저장값 무시). 태양/그림자 정적.
 
     this._buildLights();
     this._buildWindowProjector();   // 창 밖 태양 → 창 패턴 투영 SpotLight
@@ -428,11 +429,13 @@
     } else if (this.renderer && this.renderer.domElement) {
       this.renderer.domElement.style.display = 'block';
     }
+    // 복귀 직후 렌더 버스트 보장(컨텍스트 재생성 후 그림자/씬 재렌더 — 온디맨드 정지가 즉시 막지 않게)
+    this.lastInteract = this.elapsed; this._settle = 0;
     if (this._paused) { this._paused = false; if (this.clock) this.clock.getDelta(); this.renderer.setAnimationLoop(this._animate); }
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 05:30 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 05:50 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3658,9 +3661,9 @@
         if (this.isMobile && (this._frame & 1)) return;   // 활성: 모바일 30fps 캡
       }
     }
-    // 그림자 갱신 스로틀 — 16프레임마다. 그림자는 카메라 회전과 무관(광원/물체 기준), 샹들리에·스팟·
-    // 창투영은 정적이고 태양만 하루주기로 느리게 이동 → 16프레임도 무체감. 회전 시 그림자 패스 4×↓.
-    if ((this._frame & 15) === 0) this.renderer.shadowMap.needsUpdate = true;
+    // 그림자 갱신 — 하루주기 고정이라 그림자는 정적. 로드 중에는 16프레임마다 갱신해(늦게 오는 GLB 가
+    // 그림자를 받도록) 두고, ready(에셋완료) 이후엔 갱신 정지(정적). daycycle 켜면 계속 갱신.
+    if ((this.weather.daycycle || !this._readyFired) && (this._frame & 15) === 0) this.renderer.shadowMap.needsUpdate = true;
 
     /* ---- 인트로 시네마틱 (0 ~ 2.5s) ---- */
     if (!this.introDone) {
@@ -3743,6 +3746,7 @@
     // 준비 완료 신호 — 인트로 끝 + 에셋 로드 완료 + 실제 렌더 후(로딩화면 유지로 끊김 숨김)
     if (this.introDone && this._assetsLoaded && !this._readyFired) {
       this._readyFired = true;
+      this.renderer.shadowMap.needsUpdate = true;   // 에셋 다 로드된 최종 상태로 그림자 1회 굽기(이후 정적)
       try { window.__MERRYON_READY__ = true; } catch (e) {}
       try { this.container.dispatchEvent(new CustomEvent('merryon:ready', { bubbles: true })); } catch (e) {}
       // 로딩 후 360° 쇼케이스 1회 시작(0.4s 뒤 — 로고 페이드와 살짝 텀)
