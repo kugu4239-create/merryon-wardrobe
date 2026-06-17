@@ -435,7 +435,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 06:20 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 06:40 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3665,26 +3665,16 @@
     // 그림자를 받도록) 두고, ready(에셋완료) 이후엔 갱신 정지(정적). daycycle 켜면 계속 갱신.
     if ((this.weather.daycycle || !this._readyFired) && (this._frame & 15) === 0) this.renderer.shadowMap.needsUpdate = true;
 
-    /* ---- 인트로 시네마틱 (0 ~ 2.5s) ---- */
+    /* ---- 인트로 제거 — 첫 프레임에 최종 상태로 즉시 세팅(로고 뒤 시네마틱 불필요, 오프닝은 360 쇼케이스) ---- */
     if (!this.introDone) {
-      var p = t / 2.4;
-      if (p >= 1) { p = 1; this.introDone = true; }
-      // 천장 다이브 없이, 방을 넓게 잡았다가 옷장 정면으로 부드럽게 다가가는 establishing 샷
-      var settle = this._spherical(this.cam.theta, this.cam.phi, this.cam.radius);
-      var start = new T.Vector3(0, 1.58, 3.3);   // 인트로 시작 높이도 10%↓
-      var camPos = new T.Vector3().lerpVectors(start, settle, this._ease(p));
-      this.camera.position.copy(camPos);
+      this.introDone = true;
+      this.scene.fog.density = 0.022;                          // 최종 fog
+      this.chandLights[0].intensity = 1.6;                     // 샹들리에 최종 밝기
+      this.chandLights[1].intensity = 1.6;
+      this.camera.position.copy(this._spherical(this.cam.theta, this.cam.phi, this.cam.radius));
       this.camera.lookAt(this.target);
-
-      // fog density (옅게 시작 → 거의 걷힘)
-      this.scene.fog.density = 0.09 + (0.022 - 0.09) * this._ease(p);
-      // 샹들리에 0 → 1.6 (은은하게, 천장 풀 완화)
-      var inten = 1.6 * this._ease(p);
-      this.chandLights[0].intensity = inten;
-      this.chandLights[1].intensity = inten;
-    } else {
-      this._updateCamera(t, dt);
     }
+    this._updateCamera(t, dt);
 
     /* ---- 의류 컷아웃 빌보드: 항상 카메라를 향해(yaw) → 뒷면/옆모서리 노출 방지 ---- */
     if (this.billboards && this.billboards.length) {
@@ -3744,7 +3734,7 @@
     else this.renderer.render(this.scene, this.camera);
 
     // 준비 완료 신호 — 인트로 끝 + 에셋 로드 완료 + 실제 렌더 후(로딩화면 유지로 끊김 숨김)
-    if (this.introDone && this._assetsLoaded && !this._readyFired) {
+    if (this.introDone && this._assetsLoaded && t > 0.8 && !this._readyFired) {   // t>0.8: 로고 깜빡임 방지 최소 노출
       this._readyFired = true;
       this.renderer.shadowMap.needsUpdate = true;   // 에셋 다 로드된 최종 상태로 그림자 1회 굽기(이후 정적)
       try { window.__MERRYON_READY__ = true; } catch (e) {}
