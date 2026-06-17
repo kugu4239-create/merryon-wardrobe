@@ -421,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 04:10 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 04:25 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3396,6 +3396,7 @@
     this._focusLook = look.clone();
     this._focusPos = new T.Vector3(look.x + hdir.x * kh, look.y + kv, look.z + hdir.z * kh);
     this._focus = h; this._camAnim = true; this.lastInteract = this.elapsed;
+    if (this._greetMsg) { clearTimeout(this._greetT); this._greetMsg.style.opacity = '0'; }   // 웰컴 문구 숨김
     // 포커스 안내 표시(중상단=오브젝트별 문구, 중하단=고정)
     if (this._focusMsgTop) { this._focusMsgTop.textContent = h.focusMsg || ''; this._focusMsgTop.style.opacity = '1'; this._focusMsgBot.style.opacity = '1'; }
   };
@@ -3403,13 +3404,13 @@
     this._focus = null; this._camAnim = true; this.lastInteract = this.elapsed;
     if (this._focusMsgTop) { this._focusMsgTop.style.opacity = '0'; this._focusMsgBot.style.opacity = '0'; }
   };
-  // 쇼케이스 종료 후 인사 — 중상단 3초 노출 후 사라짐(중상단 오버레이 재사용)
+  // 쇼케이스 종료 후 인사(웰컴) — 상단 15%, 3초 노출 후 사라짐
   P._showGreeting = function () {
-    var m = this._focusMsgTop; if (!m) return;
+    var m = this._greetMsg; if (!m) return;
     m.textContent = '편안한 휴식이 되시길 바랍니다';
     m.style.opacity = '1';
-    var self = this; clearTimeout(this._greetT);
-    this._greetT = setTimeout(function () { if (!self._focus) m.style.opacity = '0'; }, 3000);
+    clearTimeout(this._greetT);
+    this._greetT = setTimeout(function () { m.style.opacity = '0'; }, 3000);
   };
   P._hotspotAt = function (cx, cy) {
     if (!this.hotspots || !this.hotspots.length || !this.camera) return null;
@@ -3463,9 +3464,10 @@
         ';color:#fff;font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;font-weight:500;letter-spacing:.02em;text-align:center;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .35s ease;z-index:5;text-shadow:0 1px 8px rgba(0,0,0,.45);';
       el.appendChild(d); return d;
     };
-    this._focusMsgTop = mkMsg('top:23%');                                  // 오브젝트별(개별 설정)
+    this._focusMsgTop = mkMsg('top:23%');                                  // 포커스: 오브젝트별(개별 설정)
     this._focusMsgBot = mkMsg('bottom:11%');
     this._focusMsgBot.textContent = '드래그하여 포커스 해제';              // 고정 문구
+    this._greetMsg = mkMsg('top:15%');                                     // 쇼케이스 인사(웰컴) — 상단 15%
 
     // 배경이 <a href> 링크 안에 있으면 캔버스 드래그가 '링크/이미지 드래그'로 인식돼
     // pointercancel 이 발생→오빗이 끊긴다. 네이티브 드래그를 막아 오빗을 보장한다.
