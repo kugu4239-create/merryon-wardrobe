@@ -299,13 +299,22 @@
     this._frame = 0;
     this._paused = true;   // 시작은 정지 상태 → 초기 _wake() 가 루프를 시작(루프 미시작 방지)
 
-    // 에셋 로드 완료 추적 — 로딩화면/쇼케이스를 에셋 도착까지 미뤄 느린 네트워크의 디코드 끊김을 로고 뒤로 숨김
+    // 에셋 로드 완료 추적 — 로딩화면/쇼케이스를 에셋 도착까지 미뤄 디코드 끊김을 로고 뒤로 숨김.
+    // 중첩(콜백 안에서 시작되는) 로드 때문에 onLoad 가 일찍 뜰 수 있어, 새 로드가 더 안 시작될 때까지
+    // 디바운스(400ms)로 '진짜 완료'를 잡음(쇼파/가방 등이 로고 닫힌 뒤 뜨는 문제 방지).
     this._assetsLoaded = false;
     var selfA = this;
-    try { T.DefaultLoadingManager.onLoad = function () { selfA._assetsLoaded = true; }; } catch (e) { this._assetsLoaded = true; }
+    try {
+      var _lm = T.DefaultLoadingManager;
+      _lm.onStart = function () { clearTimeout(selfA._loadDoneT); };                 // 새 로드 시작 → 완료 대기 취소
+      _lm.onLoad = function () {                                                      // 현재 펜딩 0 → 잠시 후에도 새 로드 없으면 완료
+        clearTimeout(selfA._loadDoneT);
+        selfA._loadDoneT = setTimeout(function () { selfA._assetsLoaded = true; }, 400);
+      };
+    } catch (e) { this._assetsLoaded = true; }
     var _conn = (navigator.connection || {});
     var _slowNet = (_conn.saveData === true || ['slow-2g', '2g', '3g'].indexOf(_conn.effectiveType) >= 0);
-    setTimeout(function () { selfA._assetsLoaded = true; }, _slowNet ? 14000 : 8000);   // 최대 대기(이후 강제 표시)
+    setTimeout(function () { selfA._assetsLoaded = true; }, _slowNet ? 16000 : 10000);   // 최대 대기(이후 강제 표시)
 
     this._animate = this._animate.bind(this);
     // 화면 밖: 즉시 렌더 정지(스크롤·다른 섹션에 영향 0), 잠시 뒤 sleep(VRAM 해제)
@@ -435,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 07:15 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 07:35 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
