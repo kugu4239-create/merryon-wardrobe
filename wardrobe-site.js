@@ -421,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 02:15 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 02:35 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3072,14 +3072,24 @@
     holderG.rotation.y = -0.3;
     g.add(holderG);
 
-    // 컵(크림 세라믹 + 골드 림)
-    var cupMat = new T.MeshStandardMaterial({ color: 0xEDE3CF, roughness: 0.5, metalness: 0.0 });
-    var cupH = 0.062, cupR = 0.026;
-    var cup = new T.Mesh(new T.CylinderGeometry(cupR, cupR * 0.82, cupH, 22), cupMat);
-    cup.position.y = cupH / 2; cup.castShadow = true; cup.receiveShadow = true; holderG.add(cup);
-    var rim = new T.Mesh(new T.TorusGeometry(cupR, 0.0035, 8, 24), gold); rim.rotation.x = Math.PI / 2; rim.position.y = cupH; holderG.add(rim);
-    // 컵 내부 바닥(펜이 떠 보이지 않게)
-    var cupBot = new T.Mesh(new T.CircleGeometry(cupR * 0.82, 20), cupMat); cupBot.rotation.x = -Math.PI / 2; cupBot.position.y = 0.004; holderG.add(cupBot);
+    // 컵 — 라테 프로파일(벽 두께·열린 입구·둥근 림 = 리얼) + 마블 재질 + 골드 림밴드
+    var mtex = this._marbleTex(); mtex.wrapS = mtex.wrapT = T.RepeatWrapping; mtex.repeat.set(1.5, 1.5);
+    var mbmp = this._marbleBump(); mbmp.wrapS = mbmp.wrapT = T.RepeatWrapping; mbmp.repeat.set(1.5, 1.5);
+    var cupMat = new T.MeshPhysicalMaterial({ map: mtex, bumpMap: mbmp, bumpScale: 0.004, color: 0xF3EFE6, roughness: 0.28, metalness: 0.0, clearcoat: 0.6, clearcoatRoughness: 0.22, envMapIntensity: 0.9, side: T.DoubleSide });
+    var cupH = 0.072;
+    // 프로파일: (반지름, y) 바닥→외벽→림→내벽→내바닥
+    var prof = [
+      [0.000, 0.000], [0.0205, 0.000], [0.0235, 0.006], [0.0255, 0.030],
+      [0.0275, cupH - 0.004], [0.0278, cupH],                 // 외벽 상단/림 바깥
+      [0.0246, cupH], [0.0238, cupH - 0.004],                 // 림 위를 넘어 안쪽으로
+      [0.0222, 0.020], [0.0190, 0.013], [0.000, 0.013]        // 내벽 → 내바닥
+    ].map(function (p) { return new T.Vector2(p[0], p[1]); });
+    var cup = new T.Mesh(new T.LatheGeometry(prof, 36), cupMat);
+    cup.castShadow = true; cup.receiveShadow = true; holderG.add(cup);
+    // 골드 림밴드(입구 테)
+    var rim = new T.Mesh(new T.TorusGeometry(0.0262, 0.0028, 10, 28), gold); rim.rotation.x = Math.PI / 2; rim.position.y = cupH - 0.001; holderG.add(rim);
+    // 베이스 골드 가는 띠(접지부 디테일)
+    var footBand = new T.Mesh(new T.TorusGeometry(0.0215, 0.0018, 8, 28), gold); footBand.rotation.x = Math.PI / 2; footBand.position.y = 0.004; holderG.add(footBand);
 
     // 만년필 — 수직(닙이 위), 살짝 기울여 꽂힘
     var pen = new T.Group();
@@ -3091,7 +3101,7 @@
     var band = new T.Mesh(new T.CylinderGeometry(0.0079, 0.0079, 0.007, 16), gold); band.position.y = 0.066; pen.add(band);
     var clip = new T.Mesh(new T.BoxGeometry(0.005, 0.03, 0.0025), gold); clip.position.set(0, 0.05, 0.0082); pen.add(clip);
     pen.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
-    pen.position.set(0.003, 0.035, 0.002); pen.rotation.set(0.12, 0, 0.16);   // 컵에 꽂혀 살짝 기울어짐
+    pen.position.set(0.004, 0.05, 0.002); pen.rotation.set(0.1, 0, 0.14);   // 컵 내바닥에 닿게 꽂힘(살짝 기울어짐)
     holderG.add(pen);
   };
 
