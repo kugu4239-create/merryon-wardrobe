@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 01:20 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 01:45 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3557,16 +3557,22 @@
     this.elapsed += dt;
     var t = this.elapsed;
     this._frame++;
-    // 프레임 캡 — 발열/스로틀 완화.
+    // 온디맨드 렌더 — 정착되면 렌더 완전 정지(GPU 0, 오래 둬도 발열 없음).
     if (this.introDone) {
-      var idle = !this.drag.active && (t - (this.lastInteract || 0) > (this.isMobile ? 1.2 : 0.5));
-      if (this.isMobile) {
-        // 모바일: 유휴 시 ~5fps 하트비트(사실상 정지·발열 0에 가깝게), 활성 시 30fps 캡
-        if (idle) { if (this._frame % 12 !== 0) return; }
-        else if (this._frame & 1) { return; }
+      var active = this.drag.active || (t - (this.lastInteract || 0) < (this.isMobile ? 1.2 : 0.5));
+      var showcasing = (this._showcaseStart != null && !this._showcaseDone);
+      if (!active && !showcasing) {
+        // 카메라가 목표에 도달했나(이전 프레임 잔차)
+        var settled = Math.abs(this.cam.theta - this.cam.targetTheta) < 3e-4 &&
+                      Math.abs(this.cam.phi - this.cam.targetPhi) < 3e-4;
+        if (settled) {
+          this._settle = (this._settle || 0) + 1;
+          if (this._settle > 4) return;   // 정착 후 몇 프레임 더 그리고 렌더 정지 → 재계산/발열 0
+        } else { this._settle = 0; }
+        if (this.isMobile ? (this._frame % 6 !== 0) : (this._frame & 1)) return;   // 멈추는 중엔 저프레임
       } else {
-        // PC: 유휴 시 30fps, 활성 시 60fps(기존)
-        if (idle && (this._frame & 1)) return;
+        this._settle = 0;
+        if (this.isMobile && (this._frame & 1)) return;   // 활성: 모바일 30fps 캡
       }
     }
     // 그림자 갱신 스로틀 — 4프레임마다(태양/날씨는 느려서 무체감, 회전 FPS↑)
@@ -3696,7 +3702,7 @@
     this.cam.targetPhi = Math.max(this.LIMIT.phiMin, Math.min(this.LIMIT.phiMax, phi));
 
     // radius 살짝 호흡
-    this.cam.radius = (this.isMobile ? 3.93 : 3.4) + Math.sin(t * 0.3) * 0.05;   // 모바일 뒤로(전경↑) — 추가 5% 더 축소
+    this.cam.radius = (this.isMobile ? 3.93 : 3.4);   // 호흡(미세 흔들림) 제거 → 정착 가능(온디맨드 정지)
 
     // 스무딩(관성) — PC·모바일 모두 거의 없게(거의 1:1 직접 회전, 미세 지터만 방지)
     var sm = 0.5;
