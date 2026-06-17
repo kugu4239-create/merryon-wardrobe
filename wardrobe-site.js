@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 09:10 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 11:00 UTC', note: '핀터레스트 무드 ②③④ 되돌림(러그/텍스타일·갤러리월/몰딩·소품밀도/꽃) — 옷장 백라이트 글로우는 삭제 유지' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -1095,12 +1095,6 @@
     var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.85 }));
     back.position.set(0, AH / 2, 0.02); back.receiveShadow = true; arm.add(back);   // 의류 그림자 받음
 
-    // 옷장 상단 웜 백라이트 글로우(핀터레스트 드레스룸 무드) — 섀도우 없는 가벼운 RectAreaLight + 보이는 글로우 라인
-    var shelfGlow = new T.RectAreaLight(0xFFE7C2, 1.4, AW - 0.6, 0.35);
-    shelfGlow.position.set(0, AH - 0.14, AD_ * 0.62); shelfGlow.lookAt(0, 0.6, AD_ * 0.62); arm.add(shelfGlow);
-    var glowStrip = new T.Mesh(new T.BoxGeometry(AW - 0.5, 0.018, 0.03),
-      new T.MeshStandardMaterial({ color: 0xFFEAC8, emissive: 0xFFD79C, emissiveIntensity: 1.1, roughness: 0.6 }));
-    glowStrip.position.set(0, AH - 0.07, AD_ * 0.86); arm.add(glowStrip);
     // 측면 안쪽 — 아이보리
     var inSide = new T.MeshStandardMaterial({ color: 0xDED3BE, roughness: 0.85 });
     var inL = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
