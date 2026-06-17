@@ -298,6 +298,14 @@
     this._frame = 0;
     this._paused = true;   // 시작은 정지 상태 → 초기 _wake() 가 루프를 시작(루프 미시작 방지)
 
+    // 에셋 로드 완료 추적 — 로딩화면/쇼케이스를 에셋 도착까지 미뤄 느린 네트워크의 디코드 끊김을 로고 뒤로 숨김
+    this._assetsLoaded = false;
+    var selfA = this;
+    try { T.DefaultLoadingManager.onLoad = function () { selfA._assetsLoaded = true; }; } catch (e) { this._assetsLoaded = true; }
+    var _conn = (navigator.connection || {});
+    var _slowNet = (_conn.saveData === true || ['slow-2g', '2g', '3g'].indexOf(_conn.effectiveType) >= 0);
+    setTimeout(function () { selfA._assetsLoaded = true; }, _slowNet ? 14000 : 8000);   // 최대 대기(이후 강제 표시)
+
     this._animate = this._animate.bind(this);
     // 화면 밖: 즉시 렌더 정지(스크롤·다른 섹션에 영향 0), 잠시 뒤 sleep(VRAM 해제)
     var self2 = this;
@@ -360,6 +368,9 @@
     scene.environmentIntensity = 0.72;
     this.envTex = envTex;
     (function (self) {
+      // 느린 네트워크에선 부가 HDRI(IBL/반사 보강)를 생략 — RoomEnvironment 유지(체감 차이 작음, 다운로드·로드 절감)
+      var conn = (navigator.connection || {});
+      if (conn.saveData === true || ['slow-2g', '2g', '3g'].indexOf(conn.effectiveType) >= 0) return;
       try {
         new AD.RGBELoader().load(GH + 'equirectangular/royal_esplanade_1k.hdr',
           function (hdr) {
@@ -421,7 +432,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 04:35 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 05:00 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3631,8 +3642,8 @@
     this.elapsed += dt;
     var t = this.elapsed;
     this._frame++;
-    // 온디맨드 렌더 — 정착되면 렌더 완전 정지(GPU 0, 오래 둬도 발열 없음).
-    if (this.introDone) {
+    // 온디맨드 렌더 — 정착되면 렌더 완전 정지(GPU 0, 오래 둬도 발열 없음). ready 전엔 항상 렌더(준비신호 발화 보장).
+    if (this.introDone && this._readyFired) {
       var active = this.drag.active || (t - (this.lastInteract || 0) < (this.isMobile ? 1.2 : 0.5));
       var showcasing = (this._showcaseStart != null && !this._showcaseDone);
       if (!active && !showcasing) {
@@ -3730,8 +3741,8 @@
     if (this.composer) this.composer.render();
     else this.renderer.render(this.scene, this.camera);
 
-    // 준비 완료 신호 — 인트로 끝 + 실제 렌더 1프레임 후(임베드 로딩화면 유지용)
-    if (this.introDone && !this._readyFired) {
+    // 준비 완료 신호 — 인트로 끝 + 에셋 로드 완료 + 실제 렌더 후(로딩화면 유지로 끊김 숨김)
+    if (this.introDone && this._assetsLoaded && !this._readyFired) {
       this._readyFired = true;
       try { window.__MERRYON_READY__ = true; } catch (e) {}
       try { this.container.dispatchEvent(new CustomEvent('merryon:ready', { bubbles: true })); } catch (e) {}
