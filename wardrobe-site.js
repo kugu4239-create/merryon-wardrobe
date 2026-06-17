@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 16:30 UTC', note: '포커스 CTA — 카메라 근접 글라이드 완료 후 노출(이동 중 숨김)' };
+  WardrobeScene.BUILD = { time: '06-17 17:00 UTC', note: '포커스 CTA 도트 — 음영 제거 + 밀도↑(곡률 포어쇼트닝만으로 구체감 강화)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3449,35 +3449,23 @@
   P._startCTAAnim = function () {
     if (this._ctaRAF || !this._ctaCtx) return;
     var ctx = this._ctaCtx, W = this._ctaCv.width, cx = W / 2, cy = W / 2, self = this;
-    var R = 112, step = 15, maxR = 4.6, k = 0.085, speed = 4.2;
-    // 구체(3D 공) 음영 — 좌상단-앞쪽 광원. 음영 쪽 도트 크게/진하게, 밝은 쪽 작게, 림은 곡률대로 축소.
-    var Lx = -0.42, Ly = -0.5, Lz = 0.757;   // 정규화된 광원 방향
+    // 음영 없음 — 곡률(구면)에 따른 도트 크기 변화만으로 입체 공 느낌. 밀도 높임(step↓).
+    var R = 112, step = 10, maxR = 3.7, k = 0.10, speed = 4.2, col = '60,57,52';
     this._ctaT0 = this._ctaT0 || performance.now();
     var draw = function (now) {
       var t = (now - self._ctaT0) / 1000;
       ctx.clearRect(0, 0, W, W);
-      // 은은한 구체 백드롭(볼륨감) — 좌상단 하이라이트 → 우하단 음영
-      var bg = ctx.createRadialGradient(cx - R * 0.32, cy - R * 0.36, R * 0.1, cx, cy, R);
-      bg.addColorStop(0, 'rgba(225,221,212,0.28)');
-      bg.addColorStop(0.65, 'rgba(150,146,138,0.14)');
-      bg.addColorStop(1, 'rgba(70,67,62,0.04)');
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fillStyle = bg; ctx.fill();
       for (var gy = -R; gy <= R; gy += step) {
         for (var gx = -R; gx <= R; gx += step) {
           var nx = gx / R, ny = gy / R, r2 = nx * nx + ny * ny;
           if (r2 > 1) continue;
           var nz = Math.sqrt(1 - r2);                                 // 구면 높이(법선 z)
-          var diff = nx * Lx + ny * Ly + nz * Lz;                     // 람베르트 음영(−1..1)
-          if (diff < 0) diff = 0;
-          var shade = 1 - diff;                                       // 0 밝음 → 1 음영
-          var fore = 0.34 + 0.66 * nz;                                // 림 포어쇼트닝(가장자리 작게)
-          var wave = 0.72 + 0.28 * Math.sin(r2 * R * k - t * speed);  // 안→밖 파동(곡면 따라)
-          var rr = maxR * fore * (0.30 + 0.95 * shade) * wave;        // 음영 쪽 도트 크게
+          var fore = nz * (0.55 + 0.45 * nz);                         // 곡률 포어쇼트닝(가장자리로 급격히 작게)
+          var wave = 0.74 + 0.26 * Math.sin(r2 * R * k - t * speed);  // 안→밖 파동(곡면 따라)
+          var rr = maxR * fore * wave;
           if (rr < 0.3) continue;
-          var g = (52 + 26 * diff) | 0;                               // 음영 진한 잉크 → 밝은 쪽 약간 옅게
-          var a = 0.42 + 0.55 * shade;                               // 음영 쪽 더 진하게
           ctx.beginPath(); ctx.arc(cx + gx, cy + gy, rr, 0, 6.283);
-          ctx.fillStyle = 'rgba(' + g + ',' + ((g - 3) | 0) + ',' + ((g - 8) | 0) + ',' + a.toFixed(3) + ')'; ctx.fill();
+          ctx.fillStyle = 'rgba(' + col + ',0.9)'; ctx.fill();
         }
       }
       self._ctaRAF = requestAnimationFrame(draw);
