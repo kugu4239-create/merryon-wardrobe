@@ -236,7 +236,7 @@
     this.ROOM = { W: 10.6, H: 2.9, D: 10.6 };
 
     // 창밖 날씨/조명 모델 — 편집 패널에서 조정(localStorage 영속)
-    this.weatherDef = { sunInt: 1.60, sunHeight: 2.30, temp: 0.58, exposure: 0.50, fog: 0.0, skyBright: 1.60, rayX: 5.60, rayY: 4.15, rayZ: 0.0, rayStr: 6.0, aimX: 0.35, aimZ: -3.40, daycycle: false };
+    this.weatherDef = { sunInt: 1.60, sunHeight: 2.30, temp: 0.58, exposure: 0.45, fog: 0.0, skyBright: 1.60, rayX: 5.60, rayY: 4.15, rayZ: 0.0, rayStr: 6.0, aimX: 0.35, aimZ: -3.40, daycycle: false };
     this.weather = {}; for (var wk in this.weatherDef) this.weather[wk] = this.weatherDef[wk];
     try { var ws = JSON.parse(localStorage.getItem('MERRYON_WEATHER') || '{}'); for (var wj in ws) if (wj in this.weather) this.weather[wj] = ws[wj]; } catch (e) {}
     this.weather.daycycle = false;   // 하루주기 고정 — 모든 환경(저장값 무시). 태양/그림자 정적.
@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 08:30 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 08:45 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
