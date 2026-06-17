@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 01:00 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 01:20 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3655,6 +3655,11 @@
       this._readyFired = true;
       try { window.__MERRYON_READY__ = true; } catch (e) {}
       try { this.container.dispatchEvent(new CustomEvent('merryon:ready', { bubbles: true })); } catch (e) {}
+      // 로딩 후 360° 쇼케이스 1회 시작(0.4s 뒤 — 로고 페이드와 살짝 텀)
+      this._showcaseBase = this.drag.theta;
+      this._showcaseStart = this.elapsed + 0.4;
+      this._showcaseDone = false;
+      this.lastInteract = this.elapsed;   // 유휴 프레임스킵 방지(쇼케이스 풀레이트)
     }
   };
 
@@ -3669,6 +3674,18 @@
 
   P._updateCamera = function (t, dt) {
     var DEG = Math.PI / 180;
+
+    // 로딩 후 360° 쇼케이스(1회) — 부드럽게 한 바퀴. 사용자가 잡으면 중단.
+    if (this._showcaseStart != null && !this._showcaseDone) {
+      if (this.drag.active) { this._showcaseDone = true; }
+      else if (t >= this._showcaseStart) {
+        var sp = (t - this._showcaseStart) / 6.5;   // 6.5초 1바퀴
+        if (sp >= 1) { sp = 1; this._showcaseDone = true; }
+        var es = sp < 0.5 ? 4 * sp * sp * sp : 1 - Math.pow(-2 * sp + 2, 3) / 2;   // easeInOutCubic
+        this.drag.theta = this._showcaseBase + es * Math.PI * 2;
+        this.lastInteract = t;   // 풀레이트 렌더 유지(유휴 스킵 방지)
+      }
+    }
 
     // 좌우(theta): 드래그/스크롤 + 마우스 호버 패럴랙스만(자이로는 좌우에 영향 없음)
     var base = this.drag.theta;
