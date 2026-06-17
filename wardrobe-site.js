@@ -421,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 04:25 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 04:35 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3018,7 +3018,7 @@
     var g = new T.Group();
     g.position.set(1.262, 0, 0.146); scene.add(g);
     this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
-    this._registerHotspot('writing', g, new T.Vector3(0, 0.5, 0.0), 0.82, 45, '라운지의 서비스가 준비 중 입니다.');    // 탭 → 종이/펜 근접 (중상단 문구: 개별)
+    this._registerHotspot('writing', g, new T.Vector3(0, 0.5, 0.0), 0.82, 45, '라운지의 서비스가 준비 중입니다.');    // 탭 → 종이/펜 근접 (중상단 문구: 개별)
 
     // 둥글린 사각 라운드렉트 Shape
     function roundRect(w, h, r) {
@@ -3112,7 +3112,7 @@
     g.position.set(3.582, 0, 4.819); g.rotation.y = Math.PI;   // 바 정면이 방 안쪽
     scene.add(g);
     this._regProp('커피 바', g);
-    this._registerHotspot('coffee', g, new T.Vector3(1.28, 1.16, 0.04), 0.78, 30, '라운지의 서비스가 준비 중 입니다.');   // 탭 → 메모지 근접(30°). 중상단 문구: 개별
+    this._registerHotspot('coffee', g, new T.Vector3(1.28, 1.16, 0.04), 0.78, 30, '라운지의 서비스가 준비 중입니다.');   // 탭 → 메모지 근접(30°). 중상단 문구: 개별
 
     // 2단 수납장과 통일된 크림(클리어코트) + 패널
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
