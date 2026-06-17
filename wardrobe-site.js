@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 17:00 UTC', note: '포커스 CTA 도트 — 음영 제거 + 밀도↑(곡률 포어쇼트닝만으로 구체감 강화)' };
+  WardrobeScene.BUILD = { time: '06-17 17:30 UTC', note: '포커스 CTA 도트 — 다크민트 컬러' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3450,7 +3450,7 @@
     if (this._ctaRAF || !this._ctaCtx) return;
     var ctx = this._ctaCtx, W = this._ctaCv.width, cx = W / 2, cy = W / 2, self = this;
     // 음영 없음 — 곡률(구면)에 따른 도트 크기 변화만으로 입체 공 느낌. 밀도 높임(step↓).
-    var R = 112, step = 10, maxR = 3.7, k = 0.10, speed = 4.2, col = '60,57,52';
+    var R = 112, step = 10, maxR = 3.7, k = 0.10, speed = 4.2, col = '36,84,74';   // 다크민트
     this._ctaT0 = this._ctaT0 || performance.now();
     var draw = function (now) {
       var t = (now - self._ctaT0) / 1000;
