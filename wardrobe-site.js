@@ -432,7 +432,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 05:00 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 05:15 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3531,10 +3531,8 @@
         }
         if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 5) dragMoved = true;
         self.lastInteract = self.elapsed;
-      } else {
-        self.lastInteract = self.elapsed;
-        // (호버 하이라이트 비활성 — 요청)
       }
+      // 호버(드래그 아님)만으로는 렌더 깨우지 않음 — PC 도 가만히 있으면(호버만) 온디맨드 정지.
     });
     el.addEventListener('pointerdown', function (e) {
       if (self._propEdit || self._raySourceEdit) return;   // 소품/빛점 편집 모드: 오빗 비활성
