@@ -264,6 +264,7 @@
     this._buildWritingStool();   // 소파 옆 둥글린 사각 스툴 + 종이 + 만년필(적는 공간)
     this._buildCoffeeBar();      // 셀프 커피 바(물병/접시/커피머신 + 메모홀더 = 터치 지점)
     this._buildGoldRack();
+    this._buildDecorStack();     // 사이드 소품 — 책 스택 + 글라스 캔들(은은한 포근함)
     this._buildTrunk();
     this._buildDisplayCase();
     // this._buildMannequin();   // 사람 목업 삭제(요청)
@@ -444,7 +445,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 09:10 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 10:00 UTC', note: '핀터레스트 무드 ②③④ — 러그/텍스타일·갤러리월/몰딩·소품밀도/꽃(과하지 않게) + 옷장 백라이트 글로우 삭제' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -1095,12 +1096,6 @@
     var back = new T.Mesh(new T.BoxGeometry(AW, AH, 0.1), new T.MeshStandardMaterial({ color: 0xE4DAC6, roughness: 0.85 }));
     back.position.set(0, AH / 2, 0.02); back.receiveShadow = true; arm.add(back);   // 의류 그림자 받음
 
-    // 옷장 상단 웜 백라이트 글로우(핀터레스트 드레스룸 무드) — 섀도우 없는 가벼운 RectAreaLight + 보이는 글로우 라인
-    var shelfGlow = new T.RectAreaLight(0xFFE7C2, 1.4, AW - 0.6, 0.35);
-    shelfGlow.position.set(0, AH - 0.14, AD_ * 0.62); shelfGlow.lookAt(0, 0.6, AD_ * 0.62); arm.add(shelfGlow);
-    var glowStrip = new T.Mesh(new T.BoxGeometry(AW - 0.5, 0.018, 0.03),
-      new T.MeshStandardMaterial({ color: 0xFFEAC8, emissive: 0xFFD79C, emissiveIntensity: 1.1, roughness: 0.6 }));
-    glowStrip.position.set(0, AH - 0.07, AD_ * 0.86); arm.add(glowStrip);
     // 측면 안쪽 — 아이보리
     var inSide = new T.MeshStandardMaterial({ color: 0xDED3BE, roughness: 0.85 });
     var inL = new T.Mesh(new T.BoxGeometry(0.06, AH, AD_ * 0.95), inSide);
@@ -2378,7 +2373,23 @@
     screen.rotation.x = -Math.PI / 2; screen.position.y = 0.013; phoneG.add(screen);
     this._regProp('아이폰', phoneG);
     this._regProp('핸드백', bagG);
-    // (스태거 등장 제거 — 로고 뒤라 안 보이고 닫힐 때 '볼록' 팝업되어, 처음부터 정상 크기로 둠)
+
+    // 쿠션 2 + 스로우 블랭킷 — 포근한 텍스타일(핀터레스트 무드, 과하지 않게)
+    function softMat(c) { var m = new T.MeshStandardMaterial({ color: c, roughness: 0.92, metalness: 0.0 }); if ('sheen' in m) { m.sheen = 0.5; m.sheenColor = new T.Color(0xffffff); } return m; }
+    var cush = new T.Group(); cush.position.set(0, 0, 0.35); scene.add(cush); this._regProp('쿠션', cush);
+    [[-0.78, 0xEAD9D6, 0.18], [0.8, 0xE7DECB, -0.16]].forEach(function (c) {   // 블러시 / 크림
+      var p = new T.Mesh(new T.BoxGeometry(0.34, 0.12, 0.34), softMat(c[0]));
+      p.position.set(c[0], 0.6, -0.16); p.rotation.set(0.32, c[2], 0); p.castShadow = true; p.receiveShadow = true;
+      cush.add(p);
+    });
+    // 접힌 스로우(좌석 우측에 늘어뜨림)
+    var throwG = new T.Group(); throwG.position.set(0.5, 0.5, 0.18); throwG.rotation.y = -0.15; scene.add(throwG); this._regProp('스로우', throwG);
+    var thr = softMat(0xDCC9C4);   // 더스티 로즈
+    [[0, 0.05, 0.6, 0.04, 0.42, 0.0], [0.0, 0.085, 0.58, 0.04, 0.4, 0.02], [0.0, -0.02, 0.16, 0.5, 0.42, 0.3]].forEach(function (b) {
+      var m = new T.Mesh(new T.BoxGeometry(b[2], b[3], b[4]), thr);
+      m.position.set(b[0], b[1], b[5]); m.rotation.x = b[5] ? 0.5 : 0; m.castShadow = true; throwG.add(m);
+    });
+
     this.bagProp = bagG; this.phoneProp = phoneG;
   };
 
@@ -2449,7 +2460,9 @@
       [0.64, 1.7, 0.36, 0.46, true],
       [-0.5, 1.12, 0.34, 0.42, false],
       [0.52, 1.16, 0.46, 0.34, false],
-      [0.02, 1.14, 0.28, 0.36, true]
+      [0.02, 1.14, 0.28, 0.36, true],
+      [0.66, 2.18, 0.3, 0.38, true],     // 추가(상단 우측) — 밀도↑
+      [-0.04, 2.32, 0.46, 0.3, false]    // 추가(상단 가로)
     ];
     frames.forEach(function (f, i) {
       var g = new T.Group(); g.position.set(cx + f[0], f[1], fz); g.rotation.y = Math.PI; scene.add(g);
@@ -2466,6 +2479,18 @@
           var bar = new T.Mesh(new T.BoxGeometry(b[2], b[3], 0.03), gold); bar.position.set(b[0], b[1], 0.02); g.add(bar);
         });
       }
+    });
+
+    // 클래식 웨인스코팅(몰딩 패널) — 갤러리 좌측 빈 벽(과하지 않게, 체어레일 + 패널 3)
+    var molMat = new T.MeshStandardMaterial({ color: 0xEDE4D2, roughness: 0.6, metalness: 0.0 });
+    var rail = new T.Mesh(new T.BoxGeometry(1.55, 0.045, 0.035), molMat);
+    rail.position.set(-4.05, 1.02, fz); scene.add(rail);
+    [-4.5, -4.05, -3.6].forEach(function (px) {
+      var pw = 0.34, ph = 0.62, py = 0.6;
+      [[0, ph / 2, pw, 0.026], [0, -ph / 2, pw, 0.026], [-pw / 2, 0, 0.026, ph], [pw / 2, 0, 0.026, ph]].forEach(function (b) {
+        var bar = new T.Mesh(new T.BoxGeometry(b[2], b[3], 0.022), molMat);
+        bar.position.set(px + b[0], py + b[1], fz); scene.add(bar);
+      });
     });
   };
 
@@ -2704,8 +2729,8 @@
     // 초록 꽃대(부케와 동시 등장하도록 GLB 로드 콜백에서 함께 추가)
     var addStems = function (parent) {
       var stemMat = new T.MeshStandardMaterial({ color: 0x6F8C54, roughness: 0.8, metalness: 0.0 });
-      for (var k = 0; k < 7; k++) {
-        var ang = (k / 7) * Math.PI * 2, rr = 0.045;
+      for (var k = 0; k < 10; k++) {
+        var ang = (k / 10) * Math.PI * 2, rr = 0.05;
         var topX = Math.cos(ang) * rr, topZ = Math.sin(ang) * rr;
         var stem = new T.Mesh(new T.CylinderGeometry(0.006, 0.008, 0.36, 6), stemMat);
         stem.position.set(topX * 0.5, 0.30, topZ * 0.5);
@@ -2717,10 +2742,31 @@
     if (this.AD.GLTFLoader) {
       new this.AD.GLTFLoader().load(asset('bouquet.glb'), function (gltf) {
         var s = gltf.scene; s.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-        s.position.set(0, 0.31, 0); s.scale.setScalar(1.0);   // 하단 꽃이 화병 림에 걸치게(떠보임 방지)
+        s.position.set(0, 0.32, 0); s.scale.setScalar(1.22);   // 더 풍성하게(1.0→1.22)
         g.add(s); addStems(g);
       }, undefined, function () { addStems(g); });
     } else { addStems(g); }
+  };
+
+  /* 데코 스택 — 책 3권 + 작은 캔들(포근한 스타일링 소품, 드래그 이동) */
+  P._buildDecorStack = function () {
+    var T = this.T, scene = this.scene;
+    var g = new T.Group(); g.position.set(1.85, 0, 1.5); g.rotation.y = 0.3; scene.add(g); this._regProp('책 스택', g);
+    var cols = [0xD9C9C0, 0xE7DECB, 0xB9C6A8];   // 더스티로즈/크림/세이지
+    var y = 0;
+    cols.forEach(function (c, i) {
+      var bw = 0.27 - i * 0.018, bd = 0.35 - i * 0.022, bh = 0.045;
+      var book = new T.Mesh(new T.BoxGeometry(bw, bh, bd), new T.MeshStandardMaterial({ color: c, roughness: 0.85 }));
+      book.position.set((i % 2 ? 0.012 : -0.01), y + bh / 2, (i % 2 ? -0.01 : 0.012)); book.rotation.y = (i - 1) * 0.05;
+      book.castShadow = true; book.receiveShadow = true; g.add(book); y += bh;
+    });
+    // 작은 글라스 캔들 + 불꽃(은은한 발광 → 포근)
+    var cup = new T.Mesh(new T.CylinderGeometry(0.035, 0.032, 0.06, 20), new T.MeshPhysicalMaterial({ color: 0xF6F1E8, roughness: 0.3, metalness: 0.0, transmission: 0.3, transparent: true, opacity: 0.72, thickness: 0.04 }));
+    cup.position.set(0, y + 0.03, 0); cup.castShadow = true; g.add(cup);
+    var wax = new T.Mesh(new T.CylinderGeometry(0.03, 0.03, 0.04, 18), new T.MeshStandardMaterial({ color: 0xF2E9D8, roughness: 0.7 }));
+    wax.position.set(0, y + 0.045, 0); g.add(wax);
+    var flame = new T.Mesh(new T.SphereGeometry(0.006, 8, 8), new T.MeshStandardMaterial({ color: 0xFFD9A0, emissive: 0xFFB060, emissiveIntensity: 2.5 }));
+    flame.scale.set(1, 1.8, 1); flame.position.set(0, y + 0.075, 0); g.add(flame);
   };
 
   /* 앤틱 골드 행거 랙 + 드레이프 천(아이보리/핑크) — 레퍼런스 빈티지 가먼트 랙
@@ -2981,21 +3027,21 @@
   P._buildRug = function () {
     var T = this.T, scene = this.scene;
     var RX = 0.0, RZ = -1.7;   // 소파 앞(소파~옷장 사이 빈 바닥)
-    var rugTex = this._herringboneFab('#D7CDBC', '96,84,68');
-    rugTex.wrapS = rugTex.wrapT = T.RepeatWrapping; rugTex.repeat.set(8, 8);
-    var rugBump = this._rugBump(); rugBump.repeat.set(8, 8);
+    var rugTex = this._herringboneFab('#E3DBCB', '150,134,110');   // 더 밝고 보드라운 크림
+    rugTex.wrapS = rugTex.wrapT = T.RepeatWrapping; rugTex.repeat.set(9, 9);
+    var rugBump = this._rugBump(); rugBump.repeat.set(9, 9);
     var g = new T.Group(); g.position.set(RX, 0, RZ); scene.add(g); this._regProp('러그', g);
-    var rug = new T.Mesh(new T.CircleGeometry(1.7, 64),
-      new T.MeshStandardMaterial({ map: rugTex, bumpMap: rugBump, bumpScale: 0.01, color: 0xffffff, roughness: 1.0, metalness: 0.0 }));
+    var rug = new T.Mesh(new T.CircleGeometry(2.05, 72),   // 1.7→2.05 (바닥 더 덮음)
+      new T.MeshStandardMaterial({ map: rugTex, bumpMap: rugBump, bumpScale: 0.02, color: 0xFBF6EC, roughness: 1.0, metalness: 0.0 }));
     rug.rotation.x = -Math.PI / 2;
-    rug.scale.set(1.0, 0.8, 1.0);
+    rug.scale.set(1.0, 0.82, 1.0);
     rug.position.set(0, 0.015, 0);
     rug.receiveShadow = true;
     g.add(rug);
     // 골드 보더
-    var border = new T.Mesh(new T.RingGeometry(1.62, 1.7, 64),
+    var border = new T.Mesh(new T.RingGeometry(1.97, 2.05, 72),
       new T.MeshStandardMaterial({ color: PALETTE.gold, roughness: 0.5, metalness: 0.6 }));
-    border.rotation.x = -Math.PI / 2; border.scale.set(1.0, 0.8, 1.0);
+    border.rotation.x = -Math.PI / 2; border.scale.set(1.0, 0.82, 1.0);
     border.position.set(0, 0.02, 0);
     g.add(border);
 
@@ -3006,7 +3052,7 @@
     ldr.load(logoUrl, function (tex) {
       tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
       var asp = (tex.image && tex.image.width / tex.image.height) || 1;
-      var lw = 0.95, lh = lw / asp;
+      var lw = 1.08, lh = lw / asp;
       var lp = new T.Mesh(new T.PlaneGeometry(lw, lh),
         new T.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.35, roughness: 0.9, metalness: 0.0, depthWrite: false }));
       lp.rotation.x = -Math.PI / 2; lp.rotation.z = 0;   // 바닥에 눕히기(추가 180° 회전 → 정방향)
