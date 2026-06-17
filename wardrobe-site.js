@@ -421,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 03:45 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 03:55 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3456,7 +3456,7 @@
       el.appendChild(d); return d;
     };
     this._focusMsgTop = mkMsg('top:23%');                                  // 오브젝트별(개별 설정)
-    this._focusMsgBot = mkMsg('bottom:19%');
+    this._focusMsgBot = mkMsg('bottom:11%');
     this._focusMsgBot.textContent = '드래그하여 포커스 해제';              // 고정 문구
 
     // 배경이 <a href> 링크 안에 있으면 캔버스 드래그가 '링크/이미지 드래그'로 인식돼
