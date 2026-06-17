@@ -420,7 +420,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 00:10 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 00:30 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3220,7 +3220,7 @@
 
     // MSAA(멀티샘플) 렌더타깃 — 얇은 골드 몰딩/패널 모서리의 계단현상 제거.
     var pr = Math.min(window.devicePixelRatio || 1, 2);   // DPR 2 캡(3 은 크래시)
-    var samples = this.isMobile ? 0 : 4;   // 모바일 MSAA off(메모리 확보 → DPR 3 가능, 모서리 AA 는 SMAA 가 처리)
+    var samples = this.isMobile ? 2 : 4;   // 모바일 MSAA 2 복원(DPR2 에서 메모리 여유) — 문/가구 모서리 계단현상 완화
     var msaaRT = new T.WebGLRenderTarget(
       Math.max(1, Math.floor(w * pr)), Math.max(1, Math.floor(h * pr)),
       { type: T.HalfFloatType, samples: samples }
