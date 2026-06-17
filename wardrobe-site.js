@@ -435,7 +435,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 06:40 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 06:55 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3737,6 +3737,8 @@
     if (this.introDone && this._assetsLoaded && t > 0.8 && !this._readyFired) {   // t>0.8: 로고 깜빡임 방지 최소 노출
       this._readyFired = true;
       this.renderer.shadowMap.needsUpdate = true;   // 에셋 다 로드된 최종 상태로 그림자 1회 굽기(이후 정적)
+      // 전체 셰이더/머티리얼 사전 컴파일 — 360 쇼케이스 중 first-use 컴파일 끊김 제거(로고 뒤라 미보임)
+      try { this.renderer.compile(this.scene, this.camera); } catch (e) {}
       try { window.__MERRYON_READY__ = true; } catch (e) {}
       try { this.container.dispatchEvent(new CustomEvent('merryon:ready', { bubbles: true })); } catch (e) {}
       // 로딩 후 360° 쇼케이스 1회 시작(0.4s 뒤 — 로고 페이드와 살짝 텀)
