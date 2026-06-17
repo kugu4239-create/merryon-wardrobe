@@ -75,15 +75,19 @@
     verticalDrag: false   // 자사몰: 세로 드래그 상하기울기 비활성(가로 회전만)
   };
 
+  // 로딩화면은 '렌더 준비 완료(merryon:ready)' 때까지 유지(캔버스 생성 시점 아님)
+  var revealed = false;
+  function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
+  box.addEventListener('merryon:ready', reveal);
+
   var s = document.createElement('script');
   s.src = JS + '/wardrobe-site.js?v=' + V;
   s.async = true;
   s.onload = function () {
-    // 캔버스가 생기면 플레이스홀더 페이드아웃
     var t = setInterval(function () {
-      if (box.querySelector('canvas')) { box.classList.add('is-ready'); clearInterval(t); }
-    }, 120);
-    setTimeout(function () { clearInterval(t); }, 8000);
+      if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }   // 이벤트 놓쳐도 플래그로 보강
+    }, 150);
+    setTimeout(function () { reveal(); clearInterval(t); }, 12000);    // 안전장치: 최대 12초 후 페이드
   };
   document.body.appendChild(s);
 })();

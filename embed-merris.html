@@ -62,15 +62,19 @@
       assetBase: CDN + '/assets/garments/',
       resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); }
     };
+    // 로딩화면은 '렌더 준비 완료(merryon:ready)' 때까지 유지
+    var revealed = false;
+    function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
+    box.addEventListener('merryon:ready', reveal);
+
     var s = document.createElement('script');
     s.src = CDN + '/wardrobe-site.js?v=' + Date.now();   // JS 캐시 안 함 — 항상 최신 즉시 반영
     s.async = true;
     s.onload = function () {
-      // 캔버스가 생기면 플레이스홀더 페이드아웃
       var t = setInterval(function () {
-        if (box.querySelector('canvas')) { box.classList.add('is-ready'); clearInterval(t); }
-      }, 120);
-      setTimeout(function () { clearInterval(t); }, 8000);
+        if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }
+      }, 150);
+      setTimeout(function () { reveal(); clearInterval(t); }, 12000);
     };
     document.body.appendChild(s);
   }
