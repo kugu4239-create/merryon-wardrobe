@@ -444,7 +444,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 07:35 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 07:55 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -2371,9 +2371,8 @@
     screen.rotation.x = -Math.PI / 2; screen.position.y = 0.013; phoneG.add(screen);
     this._regProp('아이폰', phoneG);
     this._regProp('핸드백', bagG);
-    // 초기화면 등장 순서: 쇼파 → 가방 → 핸드폰 (세 개 내 순서만 스케일 인 스태거)
+    // (스태거 등장 제거 — 로고 뒤라 안 보이고 닫힐 때 '볼록' 팝업되어, 처음부터 정상 크기로 둠)
     this.bagProp = bagG; this.phoneProp = phoneG;
-    bagG.scale.setScalar(0.001); phoneG.scale.setScalar(0.001);
   };
 
   /* 소품 편집 등록 — 드래그 이동 + 위치 저장(localStorage) 대상. */
@@ -3699,11 +3698,7 @@
       }
     }
 
-    /* ---- 초기 등장 스태거: 쇼파 → 가방 → 핸드폰 (스케일 인) ---- */
-    var eRev = this.elapsed;
-    if (this.sofaGroup) this.sofaGroup.scale.setScalar(Math.max(0.001, this._ss(0.3, 0.9, eRev)));
-    if (this.bagProp) this.bagProp.scale.setScalar(Math.max(0.001, this._ss(0.9, 1.4, eRev)));
-    if (this.phoneProp) this.phoneProp.scale.setScalar(Math.max(0.001, this._ss(1.4, 1.9, eRev)));
+    /* ---- (초기 등장 스태거 제거 — 처음부터 정상 크기) ---- */
 
     /* ---- 루프 앰비언트 ---- */
     this._updateAmbient(t);
