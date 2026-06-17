@@ -421,7 +421,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 03:25 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
+  WardrobeScene.BUILD = { time: '06-17 03:45 UTC', note: '잡화진열장·화장대·의자 다리 원복(수납장·주얼리장 골드 유지) + 메모 테두리 강화' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3018,7 +3018,7 @@
     var g = new T.Group();
     g.position.set(1.262, 0, 0.146); scene.add(g);
     this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
-    this._registerHotspot('writing', g, new T.Vector3(0, 0.5, 0.0), 0.82);    // 탭 → 종이/펜으로 45° 근접
+    this._registerHotspot('writing', g, new T.Vector3(0, 0.5, 0.0), 0.82, 45, '라운지의 서비스가 준비 중 입니다.');    // 탭 → 종이/펜 근접 (중상단 문구: 개별)
 
     // 둥글린 사각 라운드렉트 Shape
     function roundRect(w, h, r) {
@@ -3112,7 +3112,7 @@
     g.position.set(3.582, 0, 4.819); g.rotation.y = Math.PI;   // 바 정면이 방 안쪽
     scene.add(g);
     this._regProp('커피 바', g);
-    this._registerHotspot('coffee', g, new T.Vector3(1.28, 1.16, 0.04), 0.78, 30);   // 탭 → 메모지로 근접(30°, 더 정면)
+    this._registerHotspot('coffee', g, new T.Vector3(1.28, 1.16, 0.04), 0.78, 30, '라운지의 서비스가 준비 중 입니다.');   // 탭 → 메모지 근접(30°). 중상단 문구: 개별
 
     // 2단 수납장과 통일된 크림(클리어코트) + 패널
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
@@ -3381,9 +3381,9 @@
    *   MERRYON_WARDROBE_CONFIG.hotspots = { writing: 'https://...url' | function }
    *   또는 컨테이너의 'merryon:hotspot' 커스텀이벤트(detail.name) 청취
    * ----------------------------------------------------------------------- */
-  P._registerHotspot = function (name, obj, lookOffset, focusDist, focusAngle) {
+  P._registerHotspot = function (name, obj, lookOffset, focusDist, focusAngle, focusMsg) {
     this.hotspots = this.hotspots || [];
-    this.hotspots.push({ name: name, obj: obj, lookOffset: lookOffset || null, focusDist: focusDist || 0.95, focusAngle: focusAngle || 45 });
+    this.hotspots.push({ name: name, obj: obj, lookOffset: lookOffset || null, focusDist: focusDist || 0.95, focusAngle: focusAngle || 45, focusMsg: focusMsg || '' });
   };
   // 핫스팟 근접 포커스(focusAngle = 수평 기준 내려다보는 각도°, 작을수록 정면)
   P._focusHotspot = function (h) {
@@ -3396,8 +3396,13 @@
     this._focusLook = look.clone();
     this._focusPos = new T.Vector3(look.x + hdir.x * kh, look.y + kv, look.z + hdir.z * kh);
     this._focus = h; this._camAnim = true; this.lastInteract = this.elapsed;
+    // 포커스 안내 표시(중상단=오브젝트별 문구, 중하단=고정)
+    if (this._focusMsgTop) { this._focusMsgTop.textContent = h.focusMsg || ''; this._focusMsgTop.style.opacity = '1'; this._focusMsgBot.style.opacity = '1'; }
   };
-  P._unfocus = function () { this._focus = null; this._camAnim = true; this.lastInteract = this.elapsed; };
+  P._unfocus = function () {
+    this._focus = null; this._camAnim = true; this.lastInteract = this.elapsed;
+    if (this._focusMsgTop) { this._focusMsgTop.style.opacity = '0'; this._focusMsgBot.style.opacity = '0'; }
+  };
   P._hotspotAt = function (cx, cy) {
     if (!this.hotspots || !this.hotspots.length || !this.camera) return null;
     var r = this.container.getBoundingClientRect();
@@ -3442,6 +3447,17 @@
    * ----------------------------------------------------------------------- */
   P._setupInteraction = function () {
     var self = this, el = this.container;
+
+    // 포커스 안내 오버레이(흰색 Pretendard 12px, 인라인 스타일) — 중상단/중하단
+    var mkMsg = function (posCss) {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);' + posCss +
+        ';color:#fff;font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;font-weight:500;letter-spacing:.02em;text-align:center;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .35s ease;z-index:5;text-shadow:0 1px 8px rgba(0,0,0,.45);';
+      el.appendChild(d); return d;
+    };
+    this._focusMsgTop = mkMsg('top:23%');                                  // 오브젝트별(개별 설정)
+    this._focusMsgBot = mkMsg('bottom:19%');
+    this._focusMsgBot.textContent = '드래그하여 포커스 해제';              // 고정 문구
 
     // 배경이 <a href> 링크 안에 있으면 캔버스 드래그가 '링크/이미지 드래그'로 인식돼
     // pointercancel 이 발생→오빗이 끊긴다. 네이티브 드래그를 막아 오빗을 보장한다.
