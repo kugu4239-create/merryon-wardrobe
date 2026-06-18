@@ -81,37 +81,49 @@
 
 <script>
 (function () {
-  // 에셋(GLB/이미지)은 jsDelivr(@main, CORS 허용) — 코드 내부 av= 버전으로 캐시.
-  var CDN = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main';
-  // JS 는 GitHub Pages 에서 로드 → 머지 후 ~1분이면 안정적 반영(jsDelivr 엣지 지연 회피).
-  // + 매 로드 고유값으로 브라우저 캐시도 미사용 → 항상 최신.
-  var JS = 'https://kugu4239-create.github.io/merryon-wardrobe';
+  // JS 는 GitHub Pages 에서 로드(머지 후 ~1분 반영, 매 로드 고유값으로 항상 최신).
+  var JS   = 'https://kugu4239-create.github.io/merryon-wardrobe';
+  // 에셋(GLB/이미지)은 jsDelivr(무제한 대역폭, CORS 허용) — 커밋 SHA 로 고정해 영구 immutable 캐시.
+  var REPO = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe';
   var V = Date.now();
 
   var box = document.getElementById('merryon3d');
   if (!box) return;
 
-  window.MERRYON_WARDROBE_CONFIG = {
-    container: '#merryon3d',
-    assetBase: CDN + '/assets/garments/',
-    resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); },
-    verticalDrag: false   // 자사몰: 세로 드래그 상하기울기 비활성(가로 회전만)
-  };
+  // 배포 SHA 주입 파일(Pages, 수십 바이트)을 먼저 로드 → jsDelivr 를 @<SHA> 로 고정.
+  //  · @SHA = immutable → 전세계 영구 캐시(첫 방문자도 워밍 후 즉시 HIT), purge 불필요, 월 한도 없음.
+  //  · 실패하면 @main 으로 폴백(동작 보장).
+  var sh = document.createElement('script');
+  sh.src = JS + '/asset-sha.js?v=' + V;
+  sh.onload = boot; sh.onerror = boot;
+  document.head.appendChild(sh);
 
-  // 로딩화면은 '렌더 준비 완료(merryon:ready)' 때까지 유지(캔버스 생성 시점 아님)
-  var revealed = false;
-  function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
-  box.addEventListener('merryon:ready', reveal);
+  function boot() {
+    var SHA = window.__MERRYON_ASSET_SHA__ || 'main';
+    var CDN = REPO + '@' + SHA;
 
-  var s = document.createElement('script');
-  s.src = JS + '/wardrobe-site.js?v=' + V;
-  s.async = true;
-  s.onload = function () {
-    var t = setInterval(function () {
-      if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }   // 이벤트 놓쳐도 플래그로 보강
-    }, 150);
-    setTimeout(function () { reveal(); clearInterval(t); }, 12000);    // 안전장치: 최대 12초 후 페이드
-  };
-  document.body.appendChild(s);
+    window.MERRYON_WARDROBE_CONFIG = {
+      container: '#merryon3d',
+      assetBase: CDN + '/assets/garments/',
+      resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); },
+      verticalDrag: false   // 자사몰: 세로 드래그 상하기울기 비활성(가로 회전만)
+    };
+
+    // 로딩화면은 '렌더 준비 완료(merryon:ready)' 때까지 유지(캔버스 생성 시점 아님)
+    var revealed = false;
+    function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
+    box.addEventListener('merryon:ready', reveal);
+
+    var s = document.createElement('script');
+    s.src = JS + '/wardrobe-site.js?v=' + V;
+    s.async = true;
+    s.onload = function () {
+      var t = setInterval(function () {
+        if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }   // 이벤트 놓쳐도 플래그로 보강
+      }, 150);
+      setTimeout(function () { reveal(); clearInterval(t); }, 12000);    // 안전장치: 최대 12초 후 페이드
+    };
+    document.body.appendChild(s);
+  }
 })();
 </script>

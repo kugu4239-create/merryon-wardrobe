@@ -47,7 +47,8 @@
 
 <script>
 (function () {
-  var CDN = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main';
+  var JS   = 'https://kugu4239-create.github.io/merryon-wardrobe';                 // JS·SHA: Pages(항상 최신)
+  var REPO = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe';        // 에셋: jsDelivr(@SHA 고정)
 
   var sec = document.querySelector('.main06');
   var box = document.getElementById('merryon3d');
@@ -57,26 +58,36 @@
   var loaded = false, timer = null;
   function load() {
     if (loaded) return; loaded = true;
-    window.MERRYON_WARDROBE_CONFIG = {
-      container: '#merryon3d',
-      assetBase: CDN + '/assets/garments/',
-      resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); }
-    };
-    // 로딩화면은 '렌더 준비 완료(merryon:ready)' 때까지 유지
-    var revealed = false;
-    function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
-    box.addEventListener('merryon:ready', reveal);
+    // 배포 SHA 주입(Pages) → jsDelivr 를 @<SHA> immutable 고정(영구 캐시·purge 불필요·월 한도 없음). 실패 시 @main 폴백.
+    var V = Date.now();
+    var sh = document.createElement('script');
+    sh.src = JS + '/asset-sha.js?v=' + V;
+    sh.onload = boot; sh.onerror = boot;
+    document.head.appendChild(sh);
 
-    var s = document.createElement('script');
-    s.src = CDN + '/wardrobe-site.js?v=' + Date.now();   // JS 캐시 안 함 — 항상 최신 즉시 반영
-    s.async = true;
-    s.onload = function () {
-      var t = setInterval(function () {
-        if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }
-      }, 150);
-      setTimeout(function () { reveal(); clearInterval(t); }, 12000);
-    };
-    document.body.appendChild(s);
+    function boot() {
+      var CDN = REPO + '@' + (window.__MERRYON_ASSET_SHA__ || 'main');
+      window.MERRYON_WARDROBE_CONFIG = {
+        container: '#merryon3d',
+        assetBase: CDN + '/assets/garments/',
+        resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); }
+      };
+      // 로딩화면은 '렌더 준비 완료(merryon:ready)' 때까지 유지
+      var revealed = false;
+      function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
+      box.addEventListener('merryon:ready', reveal);
+
+      var s = document.createElement('script');
+      s.src = JS + '/wardrobe-site.js?v=' + V;   // Pages 에서 항상 최신
+      s.async = true;
+      s.onload = function () {
+        var t = setInterval(function () {
+          if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }
+        }, 150);
+        setTimeout(function () { reveal(); clearInterval(t); }, 12000);
+      };
+      document.body.appendChild(s);
+    }
   }
 
   if ('IntersectionObserver' in window) {
