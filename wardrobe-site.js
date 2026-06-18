@@ -446,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 21:00 UTC', note: '로딩 프로그래스바+문구를 로고 오버레이(.m3d-load) 안으로 → 로고와 동시 등장/퇴장' };
+  WardrobeScene.BUILD = { time: '06-17 22:00 UTC', note: "갤러리월 왼쪽 하단 액자 = 히든 트리거(포커스/표시 없이 'secret' 이벤트 발화)" };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -2462,6 +2462,8 @@
           var bar = new T.Mesh(new T.BoxGeometry(b[2], b[3], 0.03), gold); bar.position.set(b[0], b[1], 0.02); g.add(bar);
         });
       }
+      // 왼쪽 하단 액자 = 히든 트리거(시각 표시·포커스 없음, 탭하면 이벤트만)
+      if (i === 3) self._registerHiddenTrigger('secret', g);
     });
   };
 
@@ -3556,9 +3558,31 @@
     return null;
   };
   P._handleTap = function (cx, cy) {
+    var hid = this._hiddenAt(cx, cy);
+    if (hid) { this._triggerHotspot(hid); return; }   // 히든 트리거 — 포커스/CTA 없이 이벤트만 발화
     var h = this._hotspotAt(cx, cy);
     if (h) { this._focusHotspot(h); }   // 핫스팟 탭 → 45° 근접 + 중앙 CTA 노출(링크는 CTA 누를 때 트리거)
     else if (this._focus) { this._unfocus(); }                        // 빈 곳 탭 → 원복
+  };
+  // 히든 트리거 — 시각 표시·호버·포커스 없음. 탭하면 _triggerHotspot(name) 만 발화.
+  //   MERRYON_WARDROBE_CONFIG.hotspots = { secret: 'url' | function }  또는
+  //   container 'merryon:hotspot'(detail.name==='secret') 이벤트로 처리.
+  P._registerHiddenTrigger = function (name, obj) {
+    this._hidden = this._hidden || [];
+    this._hidden.push({ name: name, obj: obj });
+  };
+  P._hiddenAt = function (cx, cy) {
+    if (!this._hidden || !this._hidden.length || !this.camera) return null;
+    var r = this.container.getBoundingClientRect();
+    if (!this._rcTap) { this._rcTap = new this.T.Raycaster(); this._ndcTap = new this.T.Vector2(); }
+    this._ndcTap.set(((cx - r.left) / r.width) * 2 - 1, -(((cy - r.top) / r.height) * 2 - 1));
+    this._rcTap.setFromCamera(this._ndcTap, this.camera);
+    var objs = this._hidden.map(function (t) { return t.obj; });
+    var hits = this._rcTap.intersectObjects(objs, true);
+    if (!hits.length) return null;
+    var o = hits[0].object;
+    while (o) { for (var i = 0; i < this._hidden.length; i++) if (this._hidden[i].obj === o) return this._hidden[i].name; o = o.parent; }
+    return null;
   };
   P._triggerHotspot = function (name) {
     // 1) 커스텀 이벤트(자사몰에서 addEventListener('merryon:hotspot', ...) 로 자유 처리)
