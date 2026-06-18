@@ -446,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 20:00 UTC', note: '로딩 화면 미니멀 프로그래스바(실제 에셋 진행률, 컨테이너 내부)' };
+  WardrobeScene.BUILD = { time: '06-17 20:30 UTC', note: "로딩 프로그래스바 아래 '라운지 입장 중입니다' 문구(11px Pretendard #3c3934)" };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3499,7 +3499,14 @@
     var bar = document.createElement('div');
     bar.style.cssText = 'width:4%;height:100%;background:#3c3934;border-radius:2px;transition:width .35s ease;';
     wrap.appendChild(bar); el.appendChild(wrap);
-    this._progWrap = wrap; this._progBar = bar; this._progPct = 4;
+    // 바 아래 안내 문구 — "라운지 입장 중입니다"(11px Pretendard, 다크잉크)
+    var note = document.createElement('div');
+    note.textContent = '라운지 입장 중입니다';
+    note.style.cssText = 'position:absolute;left:50%;top:58%;transform:translateX(-50%);margin-top:12px;' +
+      'color:#3c3934;font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;font-size:11px;font-weight:500;' +
+      'letter-spacing:.02em;white-space:nowrap;z-index:2;pointer-events:none;transition:opacity .5s ease;';
+    el.appendChild(note);
+    this._progWrap = wrap; this._progBar = bar; this._progNote = note; this._progPct = 4;
     var self = this;
     // 큰 단일 파일 다운로드 중에도 멈춰 보이지 않게 미세 트리클(상한 88%)
     this._progTick = setInterval(function () { if (self._progPct < 88) self._setProg(self._progPct + 0.5); }, 220);
@@ -3513,9 +3520,12 @@
     if (!this._progBar) return;
     clearInterval(this._progTick);
     this._setProg(100);
-    var w = this._progWrap;
-    setTimeout(function () { if (w) w.style.opacity = '0'; }, 220);
-    setTimeout(function () { if (w && w.parentNode) w.parentNode.removeChild(w); }, 850);
+    var w = this._progWrap, n = this._progNote;
+    setTimeout(function () { if (w) w.style.opacity = '0'; if (n) n.style.opacity = '0'; }, 220);
+    setTimeout(function () {
+      if (w && w.parentNode) w.parentNode.removeChild(w);
+      if (n && n.parentNode) n.parentNode.removeChild(n);
+    }, 850);
     this._progBar = null;
   };
 
