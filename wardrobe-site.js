@@ -446,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 20:30 UTC', note: "로딩 프로그래스바 아래 '라운지 입장 중입니다' 문구(11px Pretendard #3c3934)" };
+  WardrobeScene.BUILD = { time: '06-17 21:00 UTC', note: '로딩 프로그래스바+문구를 로고 오버레이(.m3d-load) 안으로 → 로고와 동시 등장/퇴장' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3492,21 +3492,31 @@
    * 멈춤 방지 미세 트리클(상한 88%) → 준비완료(merryon:ready) 시 100% 후 페이드.
    * ----------------------------------------------------------------------- */
   P._buildProgressBar = function () {
-    var el = this.container; if (!el || this._progBar) return;
-    var wrap = document.createElement('div');
-    wrap.style.cssText = 'position:absolute;left:50%;top:58%;transform:translateX(-50%);width:128px;height:2px;' +
-      'background:rgba(60,57,52,.13);border-radius:2px;overflow:hidden;z-index:2;pointer-events:none;transition:opacity .5s ease;';
-    var bar = document.createElement('div');
-    bar.style.cssText = 'width:4%;height:100%;background:#3c3934;border-radius:2px;transition:width .35s ease;';
-    wrap.appendChild(bar); el.appendChild(wrap);
-    // 바 아래 안내 문구 — "라운지 입장 중입니다"(11px Pretendard, 다크잉크)
-    var note = document.createElement('div');
-    note.textContent = '라운지 입장 중입니다';
-    note.style.cssText = 'position:absolute;left:50%;top:58%;transform:translateX(-50%);margin-top:12px;' +
-      'color:#3c3934;font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;font-size:11px;font-weight:500;' +
-      'letter-spacing:.02em;white-space:nowrap;z-index:2;pointer-events:none;transition:opacity .5s ease;';
-    el.appendChild(note);
-    this._progWrap = wrap; this._progBar = bar; this._progNote = note; this._progPct = 4;
+    var el = this.container; if (!el || this._progBar || this._progDone) return;
+    var overlay = el.querySelector('.m3d-load');   // 로딩 로고 오버레이(있으면 그 안에 → 로고와 동시 등장/퇴장)
+    // 1) HTML 에 미리 심어둔 바(.m3d-prog-bar)가 있으면 그걸 사용 → 로고와 '동시에' 나타남.
+    var pre = el.querySelector('.m3d-prog-bar');
+    if (pre) {
+      this._progBar = pre; this._progWrap = null; this._progNote = null;
+      this._progInOverlay = true; this._progPct = 4;
+    } else {
+      // 2) 없으면 생성. .m3d-load 안에 넣어 is-ready 페이드를 로고와 함께 타게 함(없으면 컨테이너 루트).
+      var host = overlay || el;
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'position:absolute;left:50%;top:58%;transform:translateX(-50%);width:128px;height:2px;' +
+        'background:rgba(60,57,52,.13);border-radius:2px;overflow:hidden;z-index:2;pointer-events:none;transition:opacity .5s ease;';
+      var bar = document.createElement('div');
+      bar.style.cssText = 'width:4%;height:100%;background:#3c3934;border-radius:2px;transition:width .35s ease;';
+      wrap.appendChild(bar);
+      var note = document.createElement('div');
+      note.textContent = '라운지 입장 중입니다';   // 11px Pretendard 다크잉크
+      note.style.cssText = 'position:absolute;left:50%;top:58%;transform:translateX(-50%);margin-top:12px;' +
+        'color:#3c3934;font-family:Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;font-size:11px;font-weight:500;' +
+        'letter-spacing:.02em;white-space:nowrap;z-index:2;pointer-events:none;transition:opacity .5s ease;';
+      host.appendChild(wrap); host.appendChild(note);
+      this._progWrap = wrap; this._progBar = bar; this._progNote = note;
+      this._progInOverlay = !!overlay; this._progPct = 4;
+    }
     var self = this;
     // 큰 단일 파일 다운로드 중에도 멈춰 보이지 않게 미세 트리클(상한 88%)
     this._progTick = setInterval(function () { if (self._progPct < 88) self._setProg(self._progPct + 0.5); }, 220);
@@ -3517,15 +3527,18 @@
     this._progPct = pct; this._progBar.style.width = pct.toFixed(1) + '%';
   };
   P._finishProg = function () {
-    if (!this._progBar) return;
+    if (this._progDone) return; this._progDone = true;
     clearInterval(this._progTick);
     this._setProg(100);
+    // 오버레이(.m3d-load) 안에 있으면 로고와 '동시에' is-ready 페이드로 사라짐 → 직접 제거하지 않음.
+    if (this._progInOverlay) { this._progBar = null; return; }
+    // 루트 폴백(오버레이 없음): 직접 페이드/제거
     var w = this._progWrap, n = this._progNote;
-    setTimeout(function () { if (w) w.style.opacity = '0'; if (n) n.style.opacity = '0'; }, 220);
+    setTimeout(function () { if (w) w.style.opacity = '0'; if (n) n.style.opacity = '0'; }, 0);
     setTimeout(function () {
       if (w && w.parentNode) w.parentNode.removeChild(w);
       if (n && n.parentNode) n.parentNode.removeChild(n);
-    }, 850);
+    }, 600);
     this._progBar = null;
   };
 

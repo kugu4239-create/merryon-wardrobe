@@ -34,6 +34,17 @@
     animation: m3dPulse 1.6s ease-in-out infinite;
   }
   @keyframes m3dPulse { 0%, 100% { opacity: .5; } 50% { opacity: .92; } }
+  /* 로딩 프로그래스바 + 문구 — .m3d-load 안에 있어 로고와 동시에 나타나고 사라짐 */
+  #merryon3d .m3d-prog {
+    position: absolute; left: 50%; top: 58%; transform: translateX(-50%);
+    width: 128px; height: 2px; background: rgba(60,57,52,.13); border-radius: 2px; overflow: hidden;
+  }
+  #merryon3d .m3d-prog-bar { width: 4%; height: 100%; background: #3c3934; border-radius: 2px; transition: width .35s ease; }
+  #merryon3d .m3d-prog-note {
+    position: absolute; left: 50%; top: 58%; transform: translateX(-50%); margin-top: 12px;
+    color: #3c3934; font-family: Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;
+    font-size: 11px; font-weight: 500; letter-spacing: .02em; white-space: nowrap;
+  }
   #merryon3d.is-ready .m3d-load { opacity: 0; pointer-events: none; }
   /* 마지막(3D) 섹션에선 상단 띠배너 + Q&A 버튼 숨김(섹션 벗어나면 복귀) */
   body.merris-active #promotionBanner2,
@@ -41,7 +52,11 @@
 </style>
 
 <div id="merryon3d" class="main_image_1_background">
-  <div class="m3d-load"><img src="https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main/assets/products/%EB%B8%94%EB%9E%99%20%EC%8B%AC%EB%B3%BC.png" alt="merryon"></div>
+  <div class="m3d-load">
+    <img src="https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main/assets/products/%EB%B8%94%EB%9E%99%20%EC%8B%AC%EB%B3%BC.png" alt="merryon">
+    <div class="m3d-prog"><div class="m3d-prog-bar"></div></div>
+    <div class="m3d-prog-note">라운지 입장 중입니다</div>
+  </div>
   <div class="main_image_1_overlay"></div>
 </div>
 
