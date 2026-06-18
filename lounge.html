@@ -10,12 +10,17 @@
   /* 상단 헤더 16px 여유 여백 — #header 자체를 fixed top:16px 로 내림(padding/margin이 안 먹어서 top으로 확실히 처리.
      !important 라 레이아웃의 top:0 을 이김). 위 16px 구간엔 3D가 비쳐 여유 여백이 됨. */
   #header { top: 16px !important; }
-  /* 메뉴 모달·서치바는 16px 위(=뷰포트 0)까지 끌어올려 빈틈 없이 최상단을 덮음.
+  /* 헤더가 16px 내려간 만큼, 메뉴 모달·검색 오버레이를 16px 위(=뷰포트 0)로 끌어 빈틈 없이 최상단을 덮음.
      오버레이는 #header(16px) 기준이라 -16px 보정해야 뷰포트 0에서 시작. */
+  /* 검색 오버레이(PC·모바일 공통) → 뷰포트 0 */
+  #header .menu_v .right_area > li.sch_mo > ul.d1-wrap_m { top: -16px !important; }
+  @media (min-width:1025px){
+    #header .q6-sch-close { top: 36px !important; }   /* PC 검색 ✕: 0~105px 오버레이 중앙(뷰포트 52px) */
+  }
   @media (max-width:1024px){
-    #header .menu_v .left_area.gnbMobile .cate_biger ul.d1-wrap_m { top: -16px !important; }   /* 모바일 메뉴 모달 → 뷰포트 0 */
-    #header .menu_v .right_area > li.sch_mo > ul.d1-wrap_m { top: -16px !important; }           /* 모바일 검색 → 뷰포트 0 */
-    #header .q6-sch-close { top: 12px !important; }                                             /* 검색 ✕ (0~56px 오버레이 중앙=뷰포트 28px) */
+    /* 모바일 햄버거 메뉴 모달 → 뷰포트 0 (header2와 동일한 풀셀렉터로 우선순위 확보 — 짧은 셀렉터는 특정도에서 밀림) */
+    #header .header_wrap .group_nav .DB_lnb .menu_v .left_area.gnbMobile .cate_biger ul.d1-wrap_m { top: -16px !important; }
+    #header .q6-sch-close { top: 12px !important; }   /* 모바일 검색 ✕: 0~56px 오버레이 중앙(뷰포트 28px) */
   }
   #footer, .footer, footer, #xans-layout-footer, .xans-layout-footer { display: none !important; }
 
