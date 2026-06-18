@@ -1,145 +1,192 @@
 <!--@layout(/layout/basic/layout.html)-->
 <!-- =====================================================================
-     MERRYON 3D LOUNGE — cafe24 단독 페이지
-     ---------------------------------------------------------------------
-     · @layout 으로 기본 레이아웃(헤더) 위에 얹히는 단독 페이지.
-     · 3D 씬을 PC·모바일 모두 화면 상하좌우 100%(풀블리드)로 덮음.
-     · CDN 은 @main 고정 → cafe24 코드는 한 번 붙여넣으면 다시 안 고쳐도 됨.
-       JS 는 시간버킷 캐시버스트로 배포 후 ~1시간 내 자동 갱신(브라우저 캐시 우회).
-       GLB 는 비압축이라 어떤 JS 버전과도 안전하게 로드(깨짐 없음).
+     MERRYON 3D LOUNGE — 회원 전용 페이지
+     · 비로그인: 화면 중앙 로그인 게이트(radial halftone-dot pulse 버튼)
+     · 로그인  : 3D 라운지 (로그인 후 returnUrl로 바로 라운지 복귀)
      ===================================================================== -->
-<!-- 모듈 사전 로드 — three(+애드온) 다운로드를 메인 JS와 병렬화(ESM 워터폴 제거, 무손실).
-     wardrobe-site.js 는 importmap 이 이미 있으면 자체 주입을 건너뜀(충돌 없음). -->
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-<link rel="preconnect" href="https://kugu4239-create.github.io">
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
-} }
-</script>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/SMAAPass.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/OutputPass.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/Reflector.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/environments/RoomEnvironment.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lights/RectAreaLightUniformsLib.js" crossorigin>
-<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/RGBELoader.js" crossorigin>
 <style>
-  /* 이 페이지에선 스크롤/여백 제거 — 3D 가 뷰포트를 꽉 채움 */
-  html, body { margin: 0 !important; padding: 0 !important; height: 100%; overflow: hidden; background: #F6F0E4;
-    overscroll-behavior: none;   /* 세로 스와이프를 당겨서새로고침/스크롤이 가로채지 않게 */
-  }
-
-  /* 단독 풀스크린 페이지 — 상단 띠배너 + Q&A 버튼 + 하단 푸터 숨김(완전 제거) */
+  html, body { margin: 0 !important; padding: 0 !important; height: 100%; overflow: hidden; background: #F6F0E4; overscroll-behavior: none; }
   #promotionBanner2, .q6-qna-fab { display: none !important; }
+  /* 상단 헤더 16px 여유 여백 — #header 자체를 fixed top:16px 로 내림(padding/margin이 안 먹어서 top으로 확실히 처리.
+     !important 라 레이아웃의 top:0 을 이김). 위 16px 구간엔 3D가 비쳐 여유 여백이 됨. */
+  #header { top: 16px !important; }
+  /* 메뉴 모달·서치바는 16px 위(=뷰포트 0)까지 끌어올려 빈틈 없이 최상단을 덮음.
+     오버레이는 #header(16px) 기준이라 -16px 보정해야 뷰포트 0에서 시작. */
+  @media (max-width:1024px){
+    #header .menu_v .left_area.gnbMobile .cate_biger ul.d1-wrap_m { top: -16px !important; }   /* 모바일 메뉴 모달 → 뷰포트 0 */
+    #header .menu_v .right_area > li.sch_mo > ul.d1-wrap_m { top: -16px !important; }           /* 모바일 검색 → 뷰포트 0 */
+    #header .q6-sch-close { top: 12px !important; }                                             /* 검색 ✕ (0~56px 오버레이 중앙=뷰포트 28px) */
+  }
   #footer, .footer, footer, #xans-layout-footer, .xans-layout-footer { display: none !important; }
 
-  /* 3D 컨테이너: 뷰포트 전체 고정(레이아웃 헤더/여백 위로 풀블리드) */
-  #merryon3d {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    width: 100vw;
-    height: 100vh;     /* 폴백 */
-    height: 100dvh;    /* 모바일 주소창 대응 */
-    margin: 0; padding: 0;
+  /* ===== 로그인 게이트 (비로그인 시 화면 중앙) ===== */
+  .lounge-gate {
+    position: fixed; inset: 0; z-index: 900;   /* 헤더(z-index 1000)보다 아래 → 게이트 위에 헤더(로고·메뉴) 보임 */
     background: #F6F0E4;
-    overflow: hidden;
-    touch-action: none;          /* 가로·세로 드래그(오빗/상하 기울기)를 3D 가 받게 — 스크롤로 안 뺏김 */
-    overscroll-behavior: none;
-    /* z-index 기본값(미지정) — 헤더/로고가 3D 위로 정상 노출되도록 덮지 않음 */
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 30px; padding: 24px; box-sizing: border-box;
+    font-family: Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;
   }
-  #merryon3d > canvas {
-    position: absolute; inset: 0;
-    width: 100% !important; height: 100% !important;
-    display: block; z-index: 0;
-    touch-action: none;
+  .lounge-gate-msg {
+    margin: 0; color: #3c3934; text-align: center;
+    font-size: 15px; font-weight: 500; line-height: 1.75; letter-spacing: .02em;
   }
+  .lounge-login {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: transform .15s ease;
+  }
+  .lounge-login:active { transform: scale(.96); }
+  .lounge-login-cv { width: 132px; height: 132px; display: block; }
 
-  /* 로딩 플레이스홀더(3D 뜨기 전 잠깐) — 러그에 쓰는 merryon 블랙 심볼 로고 */
-  #merryon3d .m3d-load {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: #F6F0E4; transition: opacity .5s ease; z-index: 1;
+  /* ===== 3D 라운지 ===== */
+  #merryon3d {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh; height: 100dvh;
+    margin: 0; padding: 0; background: #F6F0E4; overflow: hidden;
+    touch-action: none; overscroll-behavior: none;
   }
-  #merryon3d .m3d-load img {
-    width: 132px; height: auto;
-    animation: m3dPulse 1.6s ease-in-out infinite;
-  }
+  #merryon3d > canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; z-index: 0; touch-action: none; }
+  #merryon3d .m3d-load { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #F6F0E4; transition: opacity .5s ease; z-index: 1; }
+  #merryon3d .m3d-load img { width: 132px; height: auto; animation: m3dPulse 1.6s ease-in-out infinite; }
   @keyframes m3dPulse { 0%, 100% { opacity: .5; } 50% { opacity: .92; } }
-  /* 로딩 프로그래스바 + 문구 — .m3d-load 안에 있어 로고와 '동시에' 나타나고 사라짐.
-     JS(.m3d-prog-bar)가 실제 진행률로 width 를 채움. */
-  #merryon3d .m3d-prog {
-    position: absolute; left: 50%; top: 58%; transform: translateX(-50%);
-    width: 128px; height: 2px; background: rgba(60,57,52,.13); border-radius: 2px; overflow: hidden;
-  }
+  #merryon3d .m3d-prog { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); width: 128px; height: 2px; background: rgba(60,57,52,.13); border-radius: 2px; overflow: hidden; }
   #merryon3d .m3d-prog-bar { width: 4%; height: 100%; background: #3c3934; border-radius: 2px; transition: width .35s ease; }
-  #merryon3d .m3d-prog-note {
-    position: absolute; left: 50%; top: 58%; transform: translateX(-50%); margin-top: 12px;
-    color: #3c3934; font-family: Pretendard,-apple-system,BlinkMacSystemFont,sans-serif;
-    font-size: 11px; font-weight: 500; letter-spacing: .02em; white-space: nowrap;
-  }
+  #merryon3d .m3d-prog-note { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); margin-top: 12px; color: #3c3934; font-family: Pretendard,-apple-system,BlinkMacSystemFont,sans-serif; font-size: 11px; font-weight: 500; letter-spacing: .02em; white-space: nowrap; }
   #merryon3d.is-ready .m3d-load { opacity: 0; pointer-events: none; }
 </style>
 
-<div id="merryon3d">
-  <div class="m3d-load">
-    <img src="https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main/assets/products/%EB%B8%94%EB%9E%99%20%EC%8B%AC%EB%B3%BC.png" alt="merryon">
-    <div class="m3d-prog"><div class="m3d-prog-bar"></div></div>
-    <div class="m3d-prog-note">라운지 입장 중입니다</div>
+<!-- ================= 비로그인: 로그인 게이트 ================= -->
+<div module="Layout_statelogoff">
+  <div class="lounge-gate">
+    <p class="lounge-gate-msg">원활한 라운지 서비스 제공을 위해<br>로그인해주세요</p>
+    <a class="lounge-login" href="/member/login.html" aria-label="로그인">
+      <canvas class="lounge-login-cv" width="236" height="236"></canvas>
+    </a>
   </div>
+  <script>
+  (function () {
+    /* 로그인 후 현재(라운지) 페이지로 바로 복귀 */
+    var a = document.querySelector('.lounge-login');
+    if (a) a.href = '/member/login.html?returnUrl=' + encodeURIComponent(location.pathname + location.search);
+
+    /* radial halftone-dot pulse 버튼 — 구면 포어쇼트닝 + 방사형 파동 (canvas 2D) */
+    var cv = document.querySelector('.lounge-login-cv');
+    if (!cv) return;
+    var ctx = cv.getContext('2d');
+    var SIZE = 236, R = 112, step = 2.5, maxR = 1.25, cx = SIZE / 2, cy = SIZE / 2;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = SIZE * dpr; cv.height = SIZE * dpr;
+    ctx.scale(dpr, dpr);
+    var t0 = null;
+    function frame(ts) {
+      if (t0 === null) t0 = ts;
+      var t = (ts - t0) / 1000;
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      /* 1) 방사형 하프톤 도트 */
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(166,196,172,0.9)'; /* 세이지민트 (#CDDFD1보다 조금 더 어둡게 → 크림 배경 대비 ↑) */
+      for (var gy = -R; gy <= R; gy += step) {
+        for (var gx = -R; gx <= R; gx += step) {
+          var nx = gx / R, ny = gy / R, r2 = nx * nx + ny * ny;
+          if (r2 > 1) continue;                                   /* 원 밖은 스킵 */
+          var nz = Math.sqrt(1 - r2);                             /* 구면 높이 */
+          var fore = nz * (0.55 + 0.45 * nz);                     /* 곡률 포어쇼트닝 → 구체감 */
+          var wave = 0.74 + 0.26 * Math.sin(r2 * R * 0.10 - t * 4.2); /* 방사형 파동 */
+          var dr = maxR * fore * wave;
+          if (dr <= 0.05) continue;
+          ctx.beginPath();
+          ctx.arc(cx + gx, cy + gy, dr, 0, 6.2832);
+          ctx.fill();
+        }
+      }
+      /* 2) "로그인" 글자 모양으로 도트를 파냄 → 가운데가 글자 모양 공백(배경 비침) */
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = '#000';
+      ctx.font = '700 35px Pretendard,-apple-system,BlinkMacSystemFont,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('로그인', cx, cy + 1);
+      ctx.globalCompositeOperation = 'source-over';
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  })();
+  </script>
 </div>
 
-<script>
-(function () {
-  // JS 는 GitHub Pages 에서 로드(머지 후 ~1분 반영, 매 로드 고유값으로 항상 최신).
-  var JS   = 'https://kugu4239-create.github.io/merryon-wardrobe';
-  // 에셋(GLB/이미지)은 jsDelivr(무제한 대역폭, CORS 허용) — 커밋 SHA 로 고정해 영구 immutable 캐시.
-  var REPO = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe';
-  var V = Date.now();
+<!-- ================= 로그인: 3D 라운지 ================= -->
+<div module="Layout_stateLogon">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="preconnect" href="https://kugu4239-create.github.io">
+  <script type="importmap">
+  { "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  } }
+  </script>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.min.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/SMAAPass.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/OutputPass.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/Reflector.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/environments/RoomEnvironment.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/lights/RectAreaLightUniformsLib.js" crossorigin>
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/RGBELoader.js" crossorigin>
 
-  var box = document.getElementById('merryon3d');
-  if (!box) return;
+  <div id="merryon3d">
+    <div class="m3d-load">
+      <img src="https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe@main/assets/products/%EB%B8%94%EB%9E%99%20%EC%8B%AC%EB%B3%BC.png" alt="merryon">
+      <div class="m3d-prog"><div class="m3d-prog-bar"></div></div>
+      <div class="m3d-prog-note">라운지 입장 중입니다</div>
+    </div>
+  </div>
 
-  // 배포 SHA 주입 파일(Pages, 수십 바이트)을 먼저 로드 → jsDelivr 를 @<SHA> 로 고정.
-  //  · @SHA = immutable → 전세계 영구 캐시(첫 방문자도 워밍 후 즉시 HIT), purge 불필요, 월 한도 없음.
-  //  · 실패하면 @main 으로 폴백(동작 보장).
-  var sh = document.createElement('script');
-  sh.src = JS + '/asset-sha.js?v=' + V;
-  sh.onload = boot; sh.onerror = boot;
-  document.head.appendChild(sh);
+  <script>
+  (function () {
+    var JS   = 'https://kugu4239-create.github.io/merryon-wardrobe';
+    var REPO = 'https://cdn.jsdelivr.net/gh/kugu4239-create/merryon-wardrobe';
+    var V = Date.now();
 
-  function boot() {
-    var SHA = window.__MERRYON_ASSET_SHA__ || 'main';
-    var CDN = REPO + '@' + SHA;
+    var box = document.getElementById('merryon3d');
+    if (!box) return;
 
-    window.MERRYON_WARDROBE_CONFIG = {
-      container: '#merryon3d',
-      assetBase: CDN + '/assets/garments/',
-      resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); },
-      verticalDrag: false   // 자사몰: 세로 드래그 상하기울기 비활성(가로 회전만)
-    };
+    var sh = document.createElement('script');
+    sh.src = JS + '/asset-sha.js?v=' + V;
+    sh.onload = boot; sh.onerror = boot;
+    document.head.appendChild(sh);
 
-    // 로딩화면은 '렌더 준비 완료(merryon:ready)' 때까지 유지(캔버스 생성 시점 아님)
-    var revealed = false;
-    function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
-    box.addEventListener('merryon:ready', reveal);
+    function boot() {
+      var SHA = window.__MERRYON_ASSET_SHA__ || 'main';
+      var CDN = REPO + '@' + SHA;
 
-    var s = document.createElement('script');
-    s.src = JS + '/wardrobe-site.js?v=' + V;
-    s.async = true;
-    s.onload = function () {
-      var t = setInterval(function () {
-        if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }   // 이벤트 놓쳐도 플래그로 보강
-      }, 150);
-      setTimeout(function () { reveal(); clearInterval(t); }, 12000);    // 안전장치: 최대 12초 후 페이드
-    };
-    document.body.appendChild(s);
-  }
-})();
-</script>
+      window.MERRYON_WARDROBE_CONFIG = {
+        container: '#merryon3d',
+        assetBase: CDN + '/assets/garments/',
+        resolveImage: function (p) { return CDN + '/assets/products/' + p.split('/').pop(); },
+        verticalDrag: false
+      };
+
+      var revealed = false;
+      function reveal() { if (revealed) return; revealed = true; box.classList.add('is-ready'); }
+      box.addEventListener('merryon:ready', reveal);
+
+      var s = document.createElement('script');
+      s.src = JS + '/wardrobe-site.js?v=' + V;
+      s.async = true;
+      s.onload = function () {
+        var t = setInterval(function () {
+          if (window.__MERRYON_READY__) { reveal(); clearInterval(t); }
+        }, 150);
+        setTimeout(function () { reveal(); clearInterval(t); }, 12000);
+      };
+      document.body.appendChild(s);
+    }
+  })();
+  </script>
+</div>
