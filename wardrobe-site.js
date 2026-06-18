@@ -36,7 +36,7 @@
       im.type = 'importmap';
       im.textContent = JSON.stringify({
         imports: {
-          'three': CDN + 'build/three.module.js',
+          'three': CDN + 'build/three.module.min.js',
           'three/addons/': CDN + 'examples/jsm/'
         }
       });
@@ -69,14 +69,12 @@
       import('three/addons/postprocessing/EffectComposer.js'),
       import('three/addons/postprocessing/RenderPass.js'),
       import('three/addons/postprocessing/ShaderPass.js'),
-      import('three/addons/postprocessing/SSAOPass.js'),
       import('three/addons/postprocessing/UnrealBloomPass.js'),
-      import('three/addons/postprocessing/BokehPass.js'),
       import('three/addons/postprocessing/SMAAPass.js'),
       import('three/addons/postprocessing/OutputPass.js'),
       import('three/addons/loaders/RGBELoader.js'),
-      import('three/addons/loaders/GLTFLoader.js'),
-      import('three/addons/loaders/DRACOLoader.js')
+      import('three/addons/loaders/GLTFLoader.js')
+      // SSAOPass·BokehPass(미사용), DRACOLoader(GLB 비압축 → 불필요) 임포트 제거 → 로딩 왕복 ↓
     ]).then(function (mods) {
       var T = mods[0];
       var addons = {
@@ -86,14 +84,11 @@
         EffectComposer: mods[4].EffectComposer,
         RenderPass: mods[5].RenderPass,
         ShaderPass: mods[6].ShaderPass,
-        SSAOPass: mods[7].SSAOPass,
-        UnrealBloomPass: mods[8].UnrealBloomPass,
-        BokehPass: mods[9].BokehPass,
-        SMAAPass: mods[10].SMAAPass,
-        OutputPass: mods[11].OutputPass,
-        RGBELoader: mods[12].RGBELoader,
-        GLTFLoader: mods[13].GLTFLoader,
-        DRACOLoader: mods[14].DRACOLoader
+        UnrealBloomPass: mods[7].UnrealBloomPass,
+        SMAAPass: mods[8].SMAAPass,
+        OutputPass: mods[9].OutputPass,
+        RGBELoader: mods[10].RGBELoader,
+        GLTFLoader: mods[11].GLTFLoader
       };
       try {
         new WardrobeScene(T, addons, container);
@@ -382,7 +377,9 @@
       var conn = (navigator.connection || {});
       if (conn.saveData === true || ['slow-2g', '2g', '3g'].indexOf(conn.effectiveType) >= 0) return;
       try {
-        new AD.RGBELoader().load(GH + 'equirectangular/royal_esplanade_1k.hdr',
+        // 별도 LoadingManager → DefaultLoadingManager(준비완료 게이트)와 분리.
+        // RoomEnvironment 폴백이 이미 표시되므로 HDRI 다운로드를 reveal 이 기다리지 않음(로딩 체감 ↓).
+        new AD.RGBELoader(new T.LoadingManager()).load(GH + 'equirectangular/royal_esplanade_1k.hdr',
           function (hdr) {
             if (!self.pmrem) { hdr.dispose(); return; }   // 재슬립 등으로 사라졌으면 무시
             hdr.mapping = T.EquirectangularReflectionMapping;
@@ -444,7 +441,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 18:00 UTC', note: '포커스 CTA 도트 — Q&A 버튼 세이지민트 컬러' };
+  WardrobeScene.BUILD = { time: '06-17 19:00 UTC', note: 'PC 로딩 가속 — three 최소화 빌드 + 미사용 애드온 임포트 제거 + HDRI 게이트 분리' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
