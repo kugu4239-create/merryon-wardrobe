@@ -190,6 +190,8 @@
     var self = this;
     this.T = T; this.AD = AD; this.container = container;
 
+    this._buildProgressBar();   // 로딩 화면 미니멀 프로그래스바(실제 에셋 진행률) — 컨테이너 내부 생성(cafe24 무관)
+
     var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
                    (window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
     this.isMobile = isMobile;
@@ -302,6 +304,9 @@
     try {
       var _lm = T.DefaultLoadingManager;
       _lm.onStart = function () { clearTimeout(selfA._loadDoneT); };                 // 새 로드 시작 → 완료 대기 취소
+      _lm.onProgress = function (url, loaded, total) {                               // 실제 진행률 → 프로그래스바(4~88%)
+        if (total > 0) selfA._setProg(4 + (loaded / total) * 84);
+      };
       _lm.onLoad = function () {                                                      // 현재 펜딩 0 → 잠시 후에도 새 로드 없으면 완료
         clearTimeout(selfA._loadDoneT);
         selfA._loadDoneT = setTimeout(function () { selfA._assetsLoaded = true; }, 400);
@@ -441,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 19:00 UTC', note: 'PC 로딩 가속 — three 최소화 빌드 + 미사용 애드온 임포트 제거 + HDRI 게이트 분리' };
+  WardrobeScene.BUILD = { time: '06-17 20:00 UTC', note: '로딩 화면 미니멀 프로그래스바(실제 에셋 진행률, 컨테이너 내부)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3481,6 +3486,39 @@
     clearTimeout(this._greetT);
     this._greetT = setTimeout(function () { m.style.opacity = '0'; }, 3000);
   };
+
+  /* ----------------------------------------------------------------------- *
+   * 로딩 프로그래스바 — 미니멀(컨테이너 내부, 로고 아래). 실제 에셋 진행률(4~88%) +
+   * 멈춤 방지 미세 트리클(상한 88%) → 준비완료(merryon:ready) 시 100% 후 페이드.
+   * ----------------------------------------------------------------------- */
+  P._buildProgressBar = function () {
+    var el = this.container; if (!el || this._progBar) return;
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute;left:50%;top:58%;transform:translateX(-50%);width:128px;height:2px;' +
+      'background:rgba(60,57,52,.13);border-radius:2px;overflow:hidden;z-index:2;pointer-events:none;transition:opacity .5s ease;';
+    var bar = document.createElement('div');
+    bar.style.cssText = 'width:4%;height:100%;background:#3c3934;border-radius:2px;transition:width .35s ease;';
+    wrap.appendChild(bar); el.appendChild(wrap);
+    this._progWrap = wrap; this._progBar = bar; this._progPct = 4;
+    var self = this;
+    // 큰 단일 파일 다운로드 중에도 멈춰 보이지 않게 미세 트리클(상한 88%)
+    this._progTick = setInterval(function () { if (self._progPct < 88) self._setProg(self._progPct + 0.5); }, 220);
+  };
+  P._setProg = function (pct) {
+    if (!this._progBar) return;
+    pct = Math.max(this._progPct || 0, Math.min(100, pct));   // 단조 증가(역행 방지)
+    this._progPct = pct; this._progBar.style.width = pct.toFixed(1) + '%';
+  };
+  P._finishProg = function () {
+    if (!this._progBar) return;
+    clearInterval(this._progTick);
+    this._setProg(100);
+    var w = this._progWrap;
+    setTimeout(function () { if (w) w.style.opacity = '0'; }, 220);
+    setTimeout(function () { if (w && w.parentNode) w.parentNode.removeChild(w); }, 850);
+    this._progBar = null;
+  };
+
   P._hotspotAt = function (cx, cy) {
     if (!this.hotspots || !this.hotspots.length || !this.camera) return null;
     var r = this.container.getBoundingClientRect();
@@ -3840,6 +3878,7 @@
         if (this.clock) this.clock.getDelta();         // 워밍에 든 시간은 dt 에서 제외
       } catch (e) {}
       // ── 워밍 완료 → 로고 해제 + 쇼케이스 시작 ──
+      this._finishProg();   // 프로그래스바 100% → 페이드
       try { window.__MERRYON_READY__ = true; } catch (e) {}
       try { this.container.dispatchEvent(new CustomEvent('merryon:ready', { bubbles: true })); } catch (e) {}
       this._showcaseBase = this.drag.theta;
