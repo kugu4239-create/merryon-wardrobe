@@ -446,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-17 22:00 UTC', note: "갤러리월 왼쪽 하단 액자 = 히든 트리거(포커스/표시 없이 'secret' 이벤트 발화)" };
+  WardrobeScene.BUILD = { time: '06-17 22:30 UTC', note: '스툴 신청서 포커스 중상단 문구 변경(시즌 기프트 안내)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3046,7 +3046,7 @@
     var g = new T.Group();
     g.position.set(1.262, 0, 0.146); scene.add(g);
     this._regProp('스툴 셋업', g);          // 편집 모드 드래그 이동(종이·만년필 함께)
-    this._registerHotspot('writing', g, new T.Vector3(0, 0.5, 0.0), 0.82, 45, '라운지의 서비스가 준비 중입니다.');    // 탭 → 종이/펜 근접 (중상단 문구: 개별)
+    this._registerHotspot('writing', g, new T.Vector3(0, 0.5, 0.0), 0.82, 45, 'Emliy 고객님의 시즌 기프트 신청이 가능합니다');    // 탭 → 종이/펜 근접 (중상단 문구: 개별)
 
     // 둥글린 사각 라운드렉트 Shape
     function roundRect(w, h, r) {
