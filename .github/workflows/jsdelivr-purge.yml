@@ -1,80 +1,54 @@
-name: jsDelivr purge (main 반영)
+name: jsDelivr warm (@SHA 프리워밍)
 
-# main 에 변경이 머지되면 jsDelivr 의 @main 캐시를 자동 purge → 운영(cafe24) 임베드는
-# @main 그대로 두고도 수 초 내 최신본 반영. 태그/버전 수정 불필요, cafe24 수정 불필요.
+# 운영(cafe24)은 에셋을 jsDelivr @<커밋SHA> 로 immutable 고정해서 받는다(영구 캐시·purge 불필요·월 한도 없음).
+# 배포 직후 그 SHA 의 배포 파일들을 한 번 GET 해서 jsDelivr 엣지를 미리 데워둠 → 첫 방문자 콜드 MISS 감소.
+# (브랜치 @main 은 더 이상 운영에서 참조하지 않으므로 purge 하지 않는다.)
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'wardrobe-site.js'
       - 'assets/**'
-      - 'index.html'
-      - 'demo.html'
-      - 'embed-merris.html'
-      - 'lounge.html'
-      - 'snippet.html'
+      - 'wardrobe-site.js'
   workflow_dispatch:
 
 concurrency:
-  group: jsdelivr-purge
+  group: jsdelivr-warm
   cancel-in-progress: false
 
 jobs:
-  purge:
+  warm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # diff 위해 전체 히스토리
 
-      - name: Purge changed deployable files on jsDelivr
+      - name: Warm deployable assets on jsDelivr (@SHA)
         env:
           REPO: ${{ github.repository }}
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
+          SHA: ${{ github.sha }}
         run: |
           python3 - <<'PY'
           import os, subprocess, urllib.parse, urllib.request
-          repo = os.environ['REPO']
-          before = os.environ.get('BEFORE') or ''
-          after = os.environ.get('AFTER') or 'HEAD'
+          repo = os.environ['REPO']; sha = os.environ['SHA']
 
           def deployable(f):
-              return (f == 'wardrobe-site.js'
-                      or f.startswith('assets/')
-                      or f in ('index.html', 'demo.html', 'embed-merris.html', 'lounge.html', 'snippet.html'))
+              return f.startswith('assets/') or f == 'wardrobe-site.js'
 
-          files = []
-          full = False
-          # 직전 커밋이 존재하면 변경분만, 아니면(첫 푸시/강제푸시/수동실행) 전체 배포파일 purge
-          if before and not set(before) <= {'0'}:
-              try:
-                  out = subprocess.check_output(['git', 'diff', '--name-only', before, after], text=True)
-                  files = [x for x in out.splitlines() if x]
-              except Exception as e:
-                  print('diff 실패, 전체 purge:', e); full = True
-          else:
-              full = True   # 수동 실행(workflow_dispatch) 등 → 전체 배포파일 purge
+          try:
+              out = subprocess.check_output(['git', 'ls-files'], text=True)
+              files = [x for x in out.splitlines() if x and deployable(x)]
+          except Exception as e:
+              print('ls-files 실패:', e); files = []
 
-          if full:
-              try:
-                  out = subprocess.check_output(['git', 'ls-files'], text=True)
-                  files = [x for x in out.splitlines() if x]
-              except Exception as e:
-                  print('ls-files 실패:', e)
-
-          files = [f for f in files if deployable(f)]
-          if 'wardrobe-site.js' not in files:
-              files.append('wardrobe-site.js')   # JS 는 항상
-
+          ok = 0
           for f in sorted(set(files)):
               enc = '/'.join(urllib.parse.quote(seg) for seg in f.split('/'))
-              url = 'https://purge.jsdelivr.net/gh/%s@main/%s' % (repo, enc)
+              url = 'https://cdn.jsdelivr.net/gh/%s@%s/%s' % (repo, sha, enc)
               try:
-                  urllib.request.urlopen(url, timeout=40).read()
-                  print('purged:', f)
+                  req = urllib.request.Request(url, headers={'User-Agent': 'merryon-warm'})
+                  urllib.request.urlopen(req, timeout=60).read()
+                  print('warmed:', f); ok += 1
               except Exception as e:
-                  print('warn(purge 실패, 무시):', f, e)
-          print('done. count =', len(set(files)))
+                  print('warn(워밍 실패, 무시):', f, e)
+          print('done. warmed =', ok, '/', len(set(files)), 'sha =', sha[:12])
           PY

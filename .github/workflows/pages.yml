@@ -32,6 +32,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 배포 커밋 SHA 를 asset-sha.js 에 도장(레포 원본엔 커밋하지 않음) →
+      # lounge/embed 가 이 SHA 로 jsDelivr 를 @<SHA> 고정(immutable 영구 캐시·purge 불필요·월 한도 없음).
+      - name: Stamp asset SHA (jsDelivr immutable 핀)
+        run: echo "window.__MERRYON_ASSET_SHA__='${{ github.sha }}';" > asset-sha.js
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
