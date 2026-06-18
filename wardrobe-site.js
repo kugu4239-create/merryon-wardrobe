@@ -446,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-18 07:30 UTC', note: '스툴 위 허공에 시즌 기프트 글로시 민트 "!" 부유(KST 7/1 00:00 자동 소멸)' };
+  WardrobeScene.BUILD = { time: '06-18 08:00 UTC', note: '핫스팟 포커스 글라이드 2배속(lerp 0.10→0.20)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3997,8 +3997,8 @@
       // 포커스 근접/원복 — 부드러운 글라이드
       var destPos = this._focus ? this._focusPos : pos;
       var destLook = this._focus ? this._focusLook : this.baseTarget;
-      this.camera.position.lerp(destPos, 0.10);
-      this.target.lerp(destLook, 0.10);
+      this.camera.position.lerp(destPos, 0.20);   // 포커스 온/원복 글라이드 2배속
+      this.target.lerp(destLook, 0.20);
       this.camera.lookAt(this.target);
       var moving = this.camera.position.distanceTo(destPos) > 0.004 || this.target.distanceTo(destLook) > 0.004;
       if (moving) this.lastInteract = t;   // 이동 중에만 렌더 유지(정지 후엔 온디맨드 정지)
