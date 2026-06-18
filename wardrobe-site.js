@@ -446,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-18 08:00 UTC', note: '핫스팟 포커스 글라이드 2배속(lerp 0.10→0.20)' };
+  WardrobeScene.BUILD = { time: '06-18 08:10 UTC', note: '핫스팟 포커스 2배속 + 시즌 "!" 크기 1/3 축소(높이 하향)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3140,7 +3140,8 @@
     // 시즌 기프트 "!" 부유 목업(글로시 민트) — 스툴 좌석 위 허공. KST 2026-07-01 00:00 이후 미표시.
     if (Date.now() <= _giftUntil) {
       var bangMat = new T.MeshPhysicalMaterial({ color: 0x6FC9A6, roughness: 0.22, metalness: 0.0, clearcoat: 0.7, clearcoatRoughness: 0.18, emissive: 0x2E8C6E, emissiveIntensity: 0.22, envMapIntensity: 1.0 });
-      var bang = new T.Group(); bang.position.set(0, 1.04, 0); g.add(bang);   // 좌석(~0.5) 위 허공
+      var bang = new T.Group(); bang.position.set(0, 0.86, 0); g.add(bang);   // 좌석(~0.5) 위 허공
+      bang.scale.setScalar(1 / 3);   // 크기 1/3
       var bar = new T.Mesh(new T.CapsuleGeometry(0.058, 0.20, 6, 18), bangMat);   // 위 막대
       bar.position.y = 0.15; bar.castShadow = true; bang.add(bar);
       var dot = new T.Mesh(new T.SphereGeometry(0.062, 20, 16), bangMat);          // 아래 점
