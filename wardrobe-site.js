@@ -446,7 +446,7 @@
   };
 
   // 빌드 정보(수정 시 갱신) — 빛점 버튼 옆 배지에 표시되어 최근 반영 여부 확인용
-  WardrobeScene.BUILD = { time: '06-18 09:00 UTC', note: 'CTA 도트 명도↓ + 노출 0.30 베이크' };
+  WardrobeScene.BUILD = { time: '06-18 09:30 UTC', note: '커피바 메모지 위 쿠폰 "!" + 문구(KST 6/18 14:00~6/30 23:00 시한부)' };
 
   /* ----------------------------------------------------------------------- *
    * 캔버스 텍스처 유틸 (최대 512×512)
@@ -3157,7 +3157,20 @@
     g.position.set(3.582, 0, 4.819); g.rotation.y = Math.PI;   // 바 정면이 방 안쪽
     scene.add(g);
     this._regProp('커피 바', g);
-    this._registerHotspot('coffee', g, new T.Vector3(1.28, 1.16, 0.04), 0.78, 30, '라운지의 서비스가 준비 중입니다.');   // 탭 → 메모지 근접(30°). 중상단 문구: 개별
+    // 라운지 전용 쿠폰 안내 — KST 2026-06-18 14:00 ~ 06-30 23:00 시한부(밖에선 원래 문구/“!” 없음)
+    var _coupFrom = Date.parse('2026-06-18T14:00:00+09:00');
+    var _coupUntil = Date.parse('2026-06-30T23:00:00+09:00');
+    var _coupOn = (Date.now() >= _coupFrom && Date.now() <= _coupUntil);
+    var _coffeeMsg = _coupOn ? '라운지 전용 쿠폰 발급이 가능합니다' : '라운지의 서비스가 준비 중입니다.';
+    this._registerHotspot('coffee', g, new T.Vector3(1.28, 1.16, 0.04), 0.78, 30, _coffeeMsg);   // 탭 → 메모지 근접(30°). 중상단 문구: 개별
+
+    // 쿠폰 "!" 부유 목업(글로시 민트) — 메모지 위 허공(쿠폰 기간에만)
+    if (_coupOn) {
+      var cBangMat = new T.MeshPhysicalMaterial({ color: 0x6FC9A6, roughness: 0.22, metalness: 0.0, clearcoat: 0.7, clearcoatRoughness: 0.18, emissive: 0x2E8C6E, emissiveIntensity: 0.22, envMapIntensity: 1.0 });
+      var cBang = new T.Group(); cBang.position.set(1.28, 1.58, 0.04); cBang.scale.setScalar(2 / 3); g.add(cBang);
+      var cBar = new T.Mesh(new T.CapsuleGeometry(0.058, 0.20, 6, 18), cBangMat); cBar.position.y = 0.15; cBar.castShadow = true; cBang.add(cBar);
+      var cDot = new T.Mesh(new T.SphereGeometry(0.062, 20, 16), cBangMat); cDot.position.y = -0.10; cDot.castShadow = true; cBang.add(cDot);
+    }
 
     // 2단 수납장과 통일된 크림(클리어코트) + 패널
     var cream = new T.MeshPhysicalMaterial({ color: 0xEFE7D6, roughness: 0.42, metalness: 0.0, clearcoat: 0.5, clearcoatRoughness: 0.25, envMapIntensity: 0.7 });
